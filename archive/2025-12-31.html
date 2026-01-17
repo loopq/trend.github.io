@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鱼盆趋势模型v2.0 - 2025.12.31</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>鱼盆趋势模型v2.0　日期：2025.12.31</h1>
+            <div class="update-type">盘后归档</div>
+        </div>
+        
+        <p class="disclaimer">数据仅供市场风格趋势分析，不提供投资建议</p>
+        
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a href="../index.html">🏠 返回首页</a>
+            <a href="index.html">📁 归档列表</a>
+        </div>
+        
+        <!-- 主要指数模块 -->
+        <h2 class="module-title">主要指数</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>1</td>
+                        <td>XAG</td>
+                        <td>白银现价</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-6.20%</td>
+                        <td>71.48</td>
+                        <td>65.89</td>
+                        <td class="change-positive">8.50%</td>
+                        <td>25.11.10</td>
+                        <td class="change-positive">
+                            
+                            41.60%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>2</td>
+                        <td>000905</td>
+                        <td>中证500</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.09%</td>
+                        <td>7465.57</td>
+                        <td>7221.28</td>
+                        <td class="change-positive">3.38%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            4.59%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>3</td>
+                        <td>000852</td>
+                        <td>中证1000</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.03%</td>
+                        <td>7595.28</td>
+                        <td>7407.32</td>
+                        <td class="change-positive">2.54%</td>
+                        <td>25.12.19</td>
+                        <td class="change-positive">
+                            
+                            3.62%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>4</td>
+                        <td>932000</td>
+                        <td>中证2000</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.10%</td>
+                        <td>3203.23</td>
+                        <td>3127.98</td>
+                        <td class="change-positive">2.41%</td>
+                        <td>25.12.19</td>
+                        <td class="change-positive">
+                            
+                            2.96%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>5</td>
+                        <td>399006</td>
+                        <td>创业板指</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-1.23%</td>
+                        <td>3203.17</td>
+                        <td>3176.85</td>
+                        <td class="change-positive">0.83%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            0.86%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>6</td>
+                        <td>000016</td>
+                        <td>上证50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.18%</td>
+                        <td>3031.13</td>
+                        <td>3007.19</td>
+                        <td class="change-positive">0.80%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            1.32%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>7</td>
+                        <td>000300</td>
+                        <td>沪深300</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.46%</td>
+                        <td>4629.94</td>
+                        <td>4595.66</td>
+                        <td class="change-positive">0.75%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            1.09%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>8</td>
+                        <td>000688</td>
+                        <td>科创50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-1.15%</td>
+                        <td>1344.20</td>
+                        <td>1334.82</td>
+                        <td class="change-positive">0.70%</td>
+                        <td>25.12.22</td>
+                        <td class="change-positive">
+                            
+                            0.67%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>9</td>
+                        <td>899050</td>
+                        <td>北证50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.70%</td>
+                        <td>1440.43</td>
+                        <td>1434.79</td>
+                        <td class="change-positive">0.39%</td>
+                        <td>25.12.11</td>
+                        <td class="change-negative">
+                            
+                            -0.19%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>10</td>
+                        <td>XAU</td>
+                        <td>黄金现价</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.45%</td>
+                        <td>4318.85</td>
+                        <td>4317.94</td>
+                        <td class="change-positive">0.02%</td>
+                        <td>25.11.18</td>
+                        <td class="change-positive">
+                            
+                            6.18%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>11</td>
+                        <td>SPY</td>
+                        <td>标普500</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.74%</td>
+                        <td>6845.50</td>
+                        <td>6856.23</td>
+                        <td class="change-negative">-0.16%</td>
+                        <td>25.12.31</td>
+                        <td class="change-negative">
+                            
+                            0.00%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>12</td>
+                        <td>HSI</td>
+                        <td>恒生指数</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.87%</td>
+                        <td>25630.54</td>
+                        <td>25708.07</td>
+                        <td class="change-negative">-0.30%</td>
+                        <td>25.12.31</td>
+                        <td class="change-negative">
+                            
+                            0.00%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>13</td>
+                        <td>HSTECH</td>
+                        <td>恒生科技</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-1.12%</td>
+                        <td>5515.98</td>
+                        <td>5537.82</td>
+                        <td class="change-negative">-0.39%</td>
+                        <td>25.12.31</td>
+                        <td class="change-negative">
+                            
+                            0.00%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>14</td>
+                        <td>HSCEI</td>
+                        <td>国企指数</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.86%</td>
+                        <td>8913.68</td>
+                        <td>8966.56</td>
+                        <td class="change-negative">-0.59%</td>
+                        <td>25.12.31</td>
+                        <td class="change-negative">
+                            
+                            0.00%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>15</td>
+                        <td>QQQ</td>
+                        <td>纳指100</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.84%</td>
+                        <td>25249.85</td>
+                        <td>25431.91</td>
+                        <td class="change-negative">-0.72%</td>
+                        <td>25.12.31</td>
+                        <td class="change-negative">
+                            
+                            0.00%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 板块轮动模块 -->
+        <h2 class="module-title">板块轮动数据　日期：2025.12.31</h2>
+        <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>1</td>
+                        <td>930708</td>
+                        <td>有色金属</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+1.06%</td>
+                        <td>3084.20</td>
+                        <td>2901.88</td>
+                        <td class="change-positive">6.28%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            8.82%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>2</td>
+                        <td>930713</td>
+                        <td>传媒</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-1.01%</td>
+                        <td>5281.97</td>
+                        <td>5184.76</td>
+                        <td class="change-positive">1.87%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            2.45%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>3</td>
+                        <td>399808</td>
+                        <td>新能源</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-1.05%</td>
+                        <td>2814.99</td>
+                        <td>2773.31</td>
+                        <td class="change-positive">1.50%</td>
+                        <td>25.12.23</td>
+                        <td class="change-positive">
+                            
+                            0.86%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>4</td>
+                        <td>000922</td>
+                        <td>中证红利</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.09%</td>
+                        <td>5503.98</td>
+                        <td>5480.60</td>
+                        <td class="change-positive">0.43%</td>
+                        <td>25.12.26</td>
+                        <td class="change-negative">
+                            
+                            -0.18%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>5</td>
+                        <td>399975</td>
+                        <td>证券公司</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.48%</td>
+                        <td>852.64</td>
+                        <td>849.11</td>
+                        <td class="change-positive">0.42%</td>
+                        <td>25.12.12</td>
+                        <td class="change-positive">
+                            
+                            1.16%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>6</td>
+                        <td>931167</td>
+                        <td>光伏产业</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.63%</td>
+                        <td>7741.55</td>
+                        <td>7734.29</td>
+                        <td class="change-positive">0.09%</td>
+                        <td>25.12.05</td>
+                        <td class="change-negative">
+                            
+                            -0.20%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>7</td>
+                        <td>399989</td>
+                        <td>中证医疗</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.68%</td>
+                        <td>6760.06</td>
+                        <td>6838.95</td>
+                        <td class="change-negative">-1.15%</td>
+                        <td>25.12.30</td>
+                        <td class="change-negative">
+                            
+                            -0.68%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-no">NO</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>8</td>
+                        <td>000932</td>
+                        <td>中证消费</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.65%</td>
+                        <td>15248.57</td>
+                        <td>15456.28</td>
+                        <td class="change-negative">-1.34%</td>
+                        <td>25.11.20</td>
+                        <td class="change-negative">
+                            
+                            -5.39%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-no">NO</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>9</td>
+                        <td>931152</td>
+                        <td>半导体</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.43%</td>
+                        <td>1894.17</td>
+                        <td>1943.37</td>
+                        <td class="change-negative">-2.53%</td>
+                        <td>25.11.17</td>
+                        <td class="change-negative">
+                            
+                            -6.67%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>Powered by AkShare | 归档时间：00:00:00</p>
+        </div>
+    </div>
+</body>
+</html>
