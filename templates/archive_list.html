@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史归档 - 鱼盆趋势模型</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>鱼盆趋势模型 - 历史归档</h1>
+        </div>
+        
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a href="../index.html">🏠 返回首页</a>
+        </div>
+        
+        <!-- 归档列表 -->
+        <div class="archive-list">
+            {% for month, dates in archives.items() %}
+            <div class="archive-month">
+                <h3>{{ month }}</h3>
+                <ul>
+                    {% for date_info in dates %}
+                    <li>
+                        <a href="{{ date_info.filename }}">{{ date_info.day }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+            
+            {% if not archives %}
+            <p style="text-align: center; color: #999; margin-top: 50px;">暂无历史数据</p>
+            {% endif %}
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>Powered by AkShare</p>
+        </div>
+    </div>
+</body>
+</html>

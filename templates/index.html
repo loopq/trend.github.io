@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鱼盆趋势模型v2.0 - {{ date }}</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>鱼盆趋势模型v2.0　日期：{{ date }}</h1>
+            <div class="update-type">更新时间：{{ update_time }}（{{ update_type }}）</div>
+            <div class="schedule-info">定时更新：尾盘 14:30 | 盘后 16:30（交易日）</div>
+        </div>
+        
+        <p class="disclaimer">数据仅供市场风格趋势分析，不提供投资建议</p>
+        
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a href="archive/index.html">📁 历史归档</a>
+        </div>
+        
+        <!-- 主要指数模块 -->
+        <h2 class="module-title">主要指数</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in major_indices %}
+                    <tr>
+                        <td>{{ item.rank }}</td>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.name }}</td>
+                        {% if item.error %}
+                        <td class="status-error" colspan="8">{{ item.error }}</td>
+                        {% elif item.closed %}
+                        <td class="status-closed" colspan="8">休市</td>
+                        {% else %}
+                        <td class="{{ 'status-yes' if item.status == 'YES' else 'status-no' }}">{{ item.status }}</td>
+                        <td class="{{ 'change-positive' if item.change >= 0 else 'change-negative' }}">{{ '%+.2f'|format(item.change) }}%</td>
+                        <td>{{ '%.2f'|format(item.current_price) }}</td>
+                        <td>{{ '%.2f'|format(item.ma20) }}</td>
+                        <td class="{{ 'change-positive' if item.deviation >= 0 else 'change-negative' }}">{{ '%.2f'|format(item.deviation) }}%</td>
+                        <td>{{ item.change_date_str if item.change_date_str else '未查询到' }}</td>
+                        <td class="{{ 'change-positive' if item.interval_change and item.interval_change >= 0 else 'change-negative' }}">
+                            {% if item.interval_change is not none %}
+                            {{ '%.2f'|format(item.interval_change) }}%
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set parts = item.big_cycle_status.split('-') %}
+                            <span class="{{ 'status-yes' if parts[0] == 'YES' else ('status-no' if parts[0] == 'NO' else '') }}">{{ parts[0] }}</span>-<span class="{{ 'status-yes' if parts[1] == 'YES' else ('status-no' if parts[1] == 'NO' else '') }}">{{ parts[1] }}</span>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 板块轮动模块 -->
+        <h2 class="module-title">板块轮动数据　日期：{{ date }}</h2>
+        <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in sector_indices %}
+                    <tr>
+                        <td>{{ item.rank }}</td>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.name }}</td>
+                        {% if item.error %}
+                        <td class="status-error" colspan="8">{{ item.error }}</td>
+                        {% elif item.closed %}
+                        <td class="status-closed" colspan="8">休市</td>
+                        {% else %}
+                        <td class="{{ 'status-yes' if item.status == 'YES' else 'status-no' }}">{{ item.status }}</td>
+                        <td class="{{ 'change-positive' if item.change >= 0 else 'change-negative' }}">{{ '%+.2f'|format(item.change) }}%</td>
+                        <td>{{ '%.2f'|format(item.current_price) }}</td>
+                        <td>{{ '%.2f'|format(item.ma20) }}</td>
+                        <td class="{{ 'change-positive' if item.deviation >= 0 else 'change-negative' }}">{{ '%.2f'|format(item.deviation) }}%</td>
+                        <td>{{ item.change_date_str if item.change_date_str else '未查询到' }}</td>
+                        <td class="{{ 'change-positive' if item.interval_change and item.interval_change >= 0 else 'change-negative' }}">
+                            {% if item.interval_change is not none %}
+                            {{ '%.2f'|format(item.interval_change) }}%
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set parts = item.big_cycle_status.split('-') %}
+                            <span class="{{ 'status-yes' if parts[0] == 'YES' else ('status-no' if parts[0] == 'NO' else '') }}">{{ parts[0] }}</span>-<span class="{{ 'status-yes' if parts[1] == 'YES' else ('status-no' if parts[1] == 'NO' else '') }}">{{ parts[1] }}</span>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>Powered by AkShare | 数据更新时间：{{ update_time }}</p>
+        </div>
+    </div>
+</body>
+</html>

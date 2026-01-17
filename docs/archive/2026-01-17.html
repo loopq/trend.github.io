@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鱼盆趋势模型v2.0 - 2026.01.17</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>鱼盆趋势模型v2.0　日期：2026.01.17</h1>
+            <div class="update-type">盘后归档</div>
+        </div>
+        
+        <p class="disclaimer">数据仅供市场风格趋势分析，不提供投资建议</p>
+        
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a href="../index.html">🏠 返回首页</a>
+            <a href="index.html">📁 归档列表</a>
+        </div>
+        
+        <!-- 主要指数模块 -->
+        <h2 class="module-title">主要指数</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>1</td>
+                        <td>XAG</td>
+                        <td>白银现价</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-2.50%</td>
+                        <td>90.04</td>
+                        <td>77.85</td>
+                        <td class="change-positive">15.66%</td>
+                        <td>25.11.10</td>
+                        <td class="change-positive">
+                            
+                            82.65%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>2</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000688" target="_blank">000688</a></td>
+                        <td>科创50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+1.35%</td>
+                        <td>1514.07</td>
+                        <td>1404.24</td>
+                        <td class="change-positive">7.82%</td>
+                        <td>25.12.22</td>
+                        <td class="change-positive">
+                            
+                            14.36%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>3</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000905" target="_blank">000905</a></td>
+                        <td>中证500</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.11%</td>
+                        <td>8232.67</td>
+                        <td>7686.36</td>
+                        <td class="change-positive">7.11%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            16.90%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>4</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000852" target="_blank">000852</a></td>
+                        <td>中证1000</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.10%</td>
+                        <td>8232.73</td>
+                        <td>7789.89</td>
+                        <td class="change-positive">5.68%</td>
+                        <td>25.12.19</td>
+                        <td class="change-positive">
+                            
+                            12.73%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>5</td>
+                        <td>N225</td>
+                        <td>日经225</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.32%</td>
+                        <td>53936.17</td>
+                        <td>51294.76</td>
+                        <td class="change-positive">5.15%</td>
+                        <td>25.12.22</td>
+                        <td class="change-positive">
+                            
+                            7.93%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>6</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=932000" target="_blank">932000</a></td>
+                        <td>中证2000</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.05%</td>
+                        <td>3445.07</td>
+                        <td>3278.95</td>
+                        <td class="change-positive">5.07%</td>
+                        <td>25.12.19</td>
+                        <td class="change-positive">
+                            
+                            11.81%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>7</td>
+                        <td>HSIII</td>
+                        <td>恒生互联</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.28%</td>
+                        <td>3157.75</td>
+                        <td>3034.08</td>
+                        <td class="change-positive">4.08%</td>
+                        <td>26.01.02</td>
+                        <td class="change-positive">
+                            
+                            6.86%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>8</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=899050" target="_blank">899050</a></td>
+                        <td>北证50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.23%</td>
+                        <td>1548.33</td>
+                        <td>1490.73</td>
+                        <td class="change-positive">3.86%</td>
+                        <td>25.12.11</td>
+                        <td class="change-positive">
+                            
+                            9.01%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>9</td>
+                        <td>XAU</td>
+                        <td>黄金现价</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.44%</td>
+                        <td>4595.53</td>
+                        <td>4467.00</td>
+                        <td class="change-positive">2.88%</td>
+                        <td>25.11.18</td>
+                        <td class="change-positive">
+                            
+                            13.58%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>10</td>
+                        <td>HSTECH</td>
+                        <td>恒生科技</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.11%</td>
+                        <td>5822.18</td>
+                        <td>5663.46</td>
+                        <td class="change-positive">2.80%</td>
+                        <td>26.01.02</td>
+                        <td class="change-positive">
+                            
+                            5.17%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>11</td>
+                        <td>HSI</td>
+                        <td>恒生指数</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.29%</td>
+                        <td>26844.96</td>
+                        <td>26181.71</td>
+                        <td class="change-positive">2.53%</td>
+                        <td>26.01.02</td>
+                        <td class="change-positive">
+                            
+                            4.37%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>12</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=399673" target="_blank">399673</a></td>
+                        <td>创业板50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.21%</td>
+                        <td>3518.73</td>
+                        <td>3449.66</td>
+                        <td class="change-positive">2.00%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            7.59%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>13</td>
+                        <td>HSCEI</td>
+                        <td>国企指数</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.50%</td>
+                        <td>9220.81</td>
+                        <td>9062.42</td>
+                        <td class="change-positive">1.75%</td>
+                        <td>26.01.02</td>
+                        <td class="change-positive">
+                            
+                            2.84%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>14</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000300" target="_blank">000300</a></td>
+                        <td>沪深300</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.41%</td>
+                        <td>4731.87</td>
+                        <td>4688.28</td>
+                        <td class="change-positive">0.93%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            4.13%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>15</td>
+                        <td>SPY</td>
+                        <td>标普500</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.06%</td>
+                        <td>6940.01</td>
+                        <td>6908.66</td>
+                        <td class="change-positive">0.45%</td>
+                        <td>26.01.02</td>
+                        <td class="change-positive">
+                            
+                            1.22%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>16</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000016" target="_blank">000016</a></td>
+                        <td>上证50</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.83%</td>
+                        <td>3079.76</td>
+                        <td>3074.52</td>
+                        <td class="change-positive">0.17%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            3.31%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>17</td>
+                        <td>QQQ</td>
+                        <td>纳指100</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.07%</td>
+                        <td>25529.26</td>
+                        <td>25510.00</td>
+                        <td class="change-positive">0.08%</td>
+                        <td>26.01.06</td>
+                        <td class="change-positive">
+                            
+                            0.51%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 板块轮动模块 -->
+        <h2 class="module-title">板块轮动数据　日期：2026.01.17</h2>
+        <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>1</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=881121" target="_blank">881121</a></td>
+                        <td>半导体</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+4.25%</td>
+                        <td>14051.77</td>
+                        <td>12529.83</td>
+                        <td class="change-positive">12.15%</td>
+                        <td>25.12.22</td>
+                        <td class="change-positive">
+                            
+                            21.45%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>2</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=1B0819" target="_blank">1B0819</a></td>
+                        <td>有色金属</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-0.93%</td>
+                        <td>10530.11</td>
+                        <td>9607.26</td>
+                        <td class="change-positive">9.61%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            25.46%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>3</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=881279" target="_blank">881279</a></td>
+                        <td>光伏设备</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+1.38%</td>
+                        <td>8760.37</td>
+                        <td>8172.76</td>
+                        <td class="change-positive">7.19%</td>
+                        <td>25.12.24</td>
+                        <td class="change-positive">
+                            
+                            14.01%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>4</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=931087" target="_blank">931087</a></td>
+                        <td>科技龙头</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.76%</td>
+                        <td>5705.89</td>
+                        <td>5414.55</td>
+                        <td class="change-positive">5.38%</td>
+                        <td>25.12.17</td>
+                        <td class="change-positive">
+                            
+                            13.00%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>5</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=399989" target="_blank">399989</a></td>
+                        <td>医疗</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-negative">-2.48%</td>
+                        <td>7490.27</td>
+                        <td>7158.44</td>
+                        <td class="change-positive">4.64%</td>
+                        <td>26.01.05</td>
+                        <td class="change-positive">
+                            
+                            9.29%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>6</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000941" target="_blank">000941</a></td>
+                        <td>新能源</td>
+                        
+                        <td class="status-yes">YES</td>
+                        <td class="change-positive">+0.69%</td>
+                        <td>2709.19</td>
+                        <td>2620.65</td>
+                        <td class="change-positive">3.38%</td>
+                        <td>25.12.23</td>
+                        <td class="change-positive">
+                            
+                            7.05%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-yes">YES</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>7</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=000922" target="_blank">000922</a></td>
+                        <td>中证红利</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.87%</td>
+                        <td>5493.39</td>
+                        <td>5525.93</td>
+                        <td class="change-negative">-0.59%</td>
+                        <td>26.01.16</td>
+                        <td class="change-negative">
+                            
+                            -0.59%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>8</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=399975" target="_blank">399975</a></td>
+                        <td>证券</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-0.82%</td>
+                        <td>849.13</td>
+                        <td>863.97</td>
+                        <td class="change-negative">-1.72%</td>
+                        <td>26.01.15</td>
+                        <td class="change-negative">
+                            
+                            -1.76%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>9</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=1B0932" target="_blank">1B0932</a></td>
+                        <td>中证消费</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-1.17%</td>
+                        <td>15035.57</td>
+                        <td>15390.38</td>
+                        <td class="change-negative">-2.31%</td>
+                        <td>26.01.13</td>
+                        <td class="change-negative">
+                            
+                            -2.62%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-no">NO</span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>10</td>
+                        <td><a href="https://www.csindex.com.cn/#/indices/family/detail?indexCode=399986" target="_blank">399986</a></td>
+                        <td>银行</td>
+                        
+                        <td class="status-no">NO</td>
+                        <td class="change-negative">-1.45%</td>
+                        <td>7228.44</td>
+                        <td>7526.59</td>
+                        <td class="change-negative">-3.96%</td>
+                        <td>26.01.07</td>
+                        <td class="change-negative">
+                            
+                            -4.50%
+                            
+                        </td>
+                        <td>
+                            
+                            <span class="status-no">NO</span>-<span class="status-yes">YES</span>
+                        </td>
+                        
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>Powered by AkShare | 归档时间：22:42:15</p>
+        </div>
+    </div>
+</body>
+</html>

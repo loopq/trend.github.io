@@ -1,0 +1,105 @@
+# ===== 时间配置（北京时间）=====
+schedule:
+  mid_term: "14:30"      # 尾盘更新时间
+  final_term: "16:00"    # 盘后归档时间
+
+# ===== 回溯配置 =====
+lookback_days: 250       # 状态转变时间最大回溯天数
+
+# ===== 主要指数 =====
+# 使用官方中证指数代码 (https://www.csindex.com.cn)
+major_indices:
+  # ---- 贵金属 ----
+  - code: "XAU"
+    name: "黄金现价"
+    source: "spot_price"
+  - code: "XAG"
+    name: "白银现价"
+    source: "spot_price"
+  # ---- A股指数 ----
+  - code: "000688"
+    name: "科创50"
+    source: "cn_index"
+  - code: "000905"
+    name: "中证500"
+    source: "cn_index"
+  - code: "000852"
+    name: "中证1000"
+    source: "cn_index"
+  - code: "932000"
+    name: "中证2000"
+    source: "cn_index"
+  - code: "899050"
+    name: "北证50"
+    source: "cn_index"
+  - code: "399673"
+    name: "创业板50"
+    source: "cn_index"
+  - code: "000300"
+    name: "沪深300"
+    source: "cn_index"
+  - code: "000016"
+    name: "上证50"
+    source: "cn_index"
+  # ---- 港股指数 ----
+  - code: "HSI"
+    name: "恒生指数"
+    source: "hk"
+  - code: "HSCEI"
+    name: "国企指数"
+    source: "hk"
+  - code: "HSTECH"
+    name: "恒生科技"
+    source: "hk"
+  - code: "HSIII"
+    name: "恒生互联"
+    source: "hk"
+  # ---- 美股指数 ----
+  - code: "SPY"
+    name: "标普500"
+    source: "us"
+  - code: "QQQ"
+    name: "纳指100"
+    source: "us"
+  # ---- 日本指数 ----
+  - code: "N225"
+    name: "日经225"
+    source: "jp"
+
+# ===== 行业板块 =====
+# 使用官方中证指数代码
+sector_indices:
+  # ---- 科技赛道 ----
+  - code: "881121"
+    name: "半导体"
+    source: "cn_index"
+  - code: "931087"
+    name: "科技龙头"
+    source: "cn_index"
+  # ---- 强周期板块 ----
+  - code: "1B0819"
+    name: "有色金属"
+    source: "cn_index"
+  - code: "881279"
+    name: "光伏设备"
+    source: "cn_index"
+  - code: "000941"
+    name: "新能源"
+    source: "cn_index"  
+   # ---- 大消费板块 ----
+  - code: "1B0932"
+    name: "中证消费"
+    source: "cn_index"
+  - code: "399989"
+    name: "医疗"
+    source: "cn_index"
+  # ---- 高股息红利 ----
+  - code: "399986"
+    name: "银行"
+    source: "cn_index"
+  - code: "399975"
+    name: "证券"
+    source: "cn_index"
+  - code: "000922"
+    name: "中证红利"
+    source: "cn_index"

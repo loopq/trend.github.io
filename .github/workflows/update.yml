@@ -1,0 +1,93 @@
+name: Update Trend Data
+
+on:
+  schedule:
+    # 尾盘更新：北京时间 14:30 = UTC 06:30
+    - cron: '30 6 * * 1-5'
+    # 盘后更新：北京时间 16:30 = UTC 08:30
+    - cron: '30 8 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '运行模式'
+        required: true
+        default: 'final_term'
+        type: choice
+        options:
+          - mid_term
+          - final_term
+      force:
+        description: '强制运行（周末测试用）'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine run mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
+          # 根据 cron 表达式判断运行模式
+          elif [ "${{ github.event.schedule }}" = "30 6 * * 1-5" ]; then
+            echo "mode=mid_term" >> $GITHUB_OUTPUT
+          else
+            echo "mode=final_term" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run update script
+        run: |
+          FORCE_FLAG=""
+          # 手动触发时检查 force 参数
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          python scripts/main.py --mode ${{ steps.mode.outputs.mode }} $FORCE_FLAG
+        env:
+          TZ: Asia/Shanghai
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Update trend data - ${{ steps.mode.outputs.mode }}'
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Trend 数据更新完成 - ${{ steps.mode.outputs.mode }}"
+          to: ${{ secrets.GMAIL_USER }}
+          from: ${{ secrets.GMAIL_USER }}
+          body: |
+            构建模式: ${{ steps.mode.outputs.mode }}
+            运行时间: ${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
+            状态: 成功
+            
+            查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
