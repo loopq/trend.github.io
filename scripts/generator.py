@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 class Generator:
     """HTML 生成模块 - 渲染模板生成静态页面"""
     
+    SPARKLINE_WIDTH = 80
+    SPARKLINE_HEIGHT = 24
+    BULL_COLOR = "#E53935"
+    BEAR_COLOR = "#43A047"
+    
     def __init__(self, template_dir: str, output_dir: str):
         """
         初始化生成器
@@ -45,6 +50,75 @@ class Generator:
         """格式化显示日期为 YYYY.MM.DD"""
         return date.strftime("%Y.%m.%d")
     
+    def calculate_bull_bear_ratio(self, major_indices: List[Dict]) -> Dict[str, Any]:
+        """
+        计算多空比例（仅统计主要指数）
+        
+        Args:
+            major_indices: 主要指数数据
+            
+        Returns:
+            包含多空比例的字典
+        """
+        valid_indices = [item for item in major_indices 
+                         if not item.get("error") and item.get("status")]
+        
+        total = len(valid_indices)
+        if total == 0:
+            return {"bull_count": 0, "bear_count": 0, "bull_ratio": 50, "bear_ratio": 50, "total": 0}
+        
+        bull_count = sum(1 for item in valid_indices if item.get("status") == "YES")
+        bear_count = total - bull_count
+        
+        bull_ratio = round(bull_count / total * 100)
+        bear_ratio = 100 - bull_ratio
+        
+        return {
+            "bull_count": bull_count,
+            "bear_count": bear_count,
+            "bull_ratio": bull_ratio,
+            "bear_ratio": bear_ratio,
+            "total": total
+        }
+    
+    def generate_sparkline_svg(self, prices: List[float], status: str) -> str:
+        """
+        生成迷你趋势图 SVG
+        
+        Args:
+            prices: 价格列表（最近20日）
+            status: 当前状态 ('YES' 或 'NO')
+            
+        Returns:
+            SVG 字符串
+        """
+        if not prices or len(prices) < 2:
+            return ""
+        
+        color = self.BULL_COLOR if status == "YES" else self.BEAR_COLOR
+        
+        min_price = min(prices)
+        max_price = max(prices)
+        price_range = max_price - min_price
+        
+        if price_range == 0:
+            price_range = 1
+        
+        points = []
+        n = len(prices)
+        for i, price in enumerate(prices):
+            x = (i / (n - 1)) * self.SPARKLINE_WIDTH
+            y = self.SPARKLINE_HEIGHT - ((price - min_price) / price_range) * (self.SPARKLINE_HEIGHT - 2) - 1
+            points.append(f"{x:.1f},{y:.1f}")
+        
+        points_str = " ".join(points)
+        
+        svg = f'''<svg width="{self.SPARKLINE_WIDTH}" height="{self.SPARKLINE_HEIGHT}" viewBox="0 0 {self.SPARKLINE_WIDTH} {self.SPARKLINE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="{color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="{points_str}"/>
+</svg>'''
+        
+        return svg
+    
     def prepare_index_data(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         准备指数数据用于模板渲染
@@ -59,25 +133,26 @@ class Generator:
         for item in items:
             formatted = item.copy()
             
-            # 格式化状态转变时间
             if formatted.get("change_date"):
                 formatted["change_date_str"] = self.format_change_date(formatted["change_date"])
             else:
                 formatted["change_date_str"] = None
             
+            sparkline_prices = formatted.get("sparkline_prices", [])
+            status = formatted.get("status", "NO")
+            formatted["sparkline_svg"] = self.generate_sparkline_svg(sparkline_prices, status)
+            
             result.append(formatted)
         
         return result
     
-    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict], 
-                       update_type: str = "盘后") -> str:
+    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict]) -> str:
         """
         生成首页 HTML
         
         Args:
             major_indices: 主要指数数据
             sector_indices: 行业板块数据
-            update_type: 更新类型（尾盘/盘后）
             
         Returns:
             生成的 HTML 文件路径
@@ -86,12 +161,17 @@ class Generator:
         
         now = datetime.now()
         
+        bull_bear = self.calculate_bull_bear_ratio(major_indices)
+        
         html_content = template.render(
             date=self.format_display_date(now),
             update_time=now.strftime("%H:%M:%S"),
-            update_type=update_type,
             major_indices=self.prepare_index_data(major_indices),
-            sector_indices=self.prepare_index_data(sector_indices)
+            sector_indices=self.prepare_index_data(sector_indices),
+            bull_ratio=bull_bear["bull_ratio"],
+            bear_ratio=bull_bear["bear_ratio"],
+            bull_count=bull_bear["bull_count"],
+            bear_count=bull_bear["bear_count"]
         )
         
         output_path = os.path.join(self.output_dir, "index.html")
@@ -119,11 +199,17 @@ class Generator:
         if date is None:
             date = datetime.now()
         
+        bull_bear = self.calculate_bull_bear_ratio(major_indices)
+        
         html_content = template.render(
             date=self.format_display_date(date),
             update_time=date.strftime("%H:%M:%S"),
             major_indices=self.prepare_index_data(major_indices),
-            sector_indices=self.prepare_index_data(sector_indices)
+            sector_indices=self.prepare_index_data(sector_indices),
+            bull_ratio=bull_bear["bull_ratio"],
+            bear_ratio=bull_bear["bear_ratio"],
+            bull_count=bull_bear["bull_count"],
+            bear_count=bull_bear["bear_count"]
         )
         
         filename = f"{date.strftime('%Y-%m-%d')}.html"
@@ -201,26 +287,23 @@ class Generator:
         return output_path
     
     def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict],
-                     mode: str = "final_term") -> Dict[str, str]:
+                     mode: str = "evening") -> Dict[str, str]:
         """
         生成所有页面
         
         Args:
             major_indices: 主要指数数据
             sector_indices: 行业板块数据
-            mode: 运行模式 (mid_term/final_term)
+            mode: 运行模式 (morning/evening)
             
         Returns:
             生成的文件路径字典
         """
         result = {}
         
-        # 生成首页
-        update_type = "尾盘" if mode == "mid_term" else "盘后"
-        result["index"] = self.generate_index(major_indices, sector_indices, update_type)
+        result["index"] = self.generate_index(major_indices, sector_indices)
         
-        # 盘后模式才生成归档
-        if mode == "final_term":
+        if mode == "evening":
             result["archive_detail"] = self.generate_archive_detail(major_indices, sector_indices)
             result["archive_list"] = self.generate_archive_list()
         

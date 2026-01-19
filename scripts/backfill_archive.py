@@ -108,7 +108,7 @@ def process_indices_at_date(fetcher: DataFetcher, calculator: Calculator,
         # 计算指标
         metrics = calculator.calculate_all_metrics(df_at_date, weekly_df=weekly_at_date, monthly_df=monthly_at_date)
         
-        result = {"code": code, "name": name, "closed": False, **metrics}
+        result = {"code": code, "name": name, **metrics}
         results.append(result)
     
     return calculator.sort_by_deviation(results)

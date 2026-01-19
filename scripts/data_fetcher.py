@@ -1,8 +1,8 @@
 import akshare as ak
+import logging
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Optional
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -690,10 +690,7 @@ class DataFetcher:
             start_date = (datetime.now() - timedelta(weeks=weeks * 2)).strftime("%Y%m%d")
             end_date = datetime.now().strftime("%Y%m%d")
             
-            # 特殊代码（881xxx、1B0xxx）需要用日线数据模拟周线
-            is_special_code = code.startswith("881") or code.startswith("1B")
-            
-            if source in ["cn_index", "ths", "eastmoney"] and not is_special_code:
+            if source in ["cn_index", "ths", "eastmoney"]:
                 df = ak.index_zh_a_hist(
                     symbol=code,
                     period="weekly",
@@ -742,11 +739,8 @@ class DataFetcher:
         try:
             start_date = (datetime.now() - timedelta(days=months * 35)).strftime("%Y%m%d")
             end_date = datetime.now().strftime("%Y%m%d")
-            
-            # 特殊代码（881xxx、1B0xxx）需要用日线数据模拟月线
-            is_special_code = code.startswith("881") or code.startswith("1B")
-            
-            if source in ["cn_index", "ths", "eastmoney"] and not is_special_code:
+
+            if source in ["cn_index", "ths", "eastmoney"]:
                 df = ak.index_zh_a_hist(
                     symbol=code,
                     period="monthly",
@@ -1052,8 +1046,8 @@ class DataFetcher:
         try:
             # 美股指数代码映射
             us_symbol_map = {
-                "SPY": ".INX",   # 标普500
-                "QQQ": ".NDX",   # 纳斯达克100
+                "SPX": ".INX",   # 标普500
+                "NDX": ".NDX",   # 纳斯达克100
             }
             
             symbol = us_symbol_map.get(code, code)
@@ -1100,8 +1094,8 @@ class DataFetcher:
         try:
             # 尝试使用东财外盘指数接口
             symbol_map = {
-                "SPY": "标普500",
-                "QQQ": "纳斯达克",
+                "SPX": "标普500",
+                "NDX": "纳斯达克",
             }
             
             name = symbol_map.get(code)

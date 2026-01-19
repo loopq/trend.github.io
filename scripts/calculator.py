@@ -59,6 +59,37 @@ class Calculator:
             return 0.0
         return ((current_price / ma20) - 1) * 100
     
+    def detect_status_change(self, df: pd.DataFrame, current_status: str) -> Optional[str]:
+        """
+        检测趋势拐点（新突破/新跌破）
+        
+        Args:
+            df: 历史数据 DataFrame
+            current_status: 当前状态 ('YES' 或 'NO')
+            
+        Returns:
+            'new_breakthrough' / 'new_breakdown' / None
+        """
+        if df is None or len(df) < 21:
+            return None
+        
+        df = df.sort_values("date").reset_index(drop=True)
+        closes = df["close"].tolist()
+        
+        if len(closes) < 21:
+            return None
+        
+        yesterday_ma20 = sum(closes[-21:-1]) / 20
+        yesterday_close = closes[-2]
+        yesterday_status = "YES" if yesterday_close >= yesterday_ma20 else "NO"
+        
+        if yesterday_status == "NO" and current_status == "YES":
+            return "new_breakthrough"
+        elif yesterday_status == "YES" and current_status == "NO":
+            return "new_breakdown"
+        
+        return None
+    
     def calculate_change(self, current_price: float, prev_close: float) -> float:
         """
         计算涨跌幅
@@ -195,6 +226,8 @@ class Calculator:
             "change_price": None,
             "interval_change": None,
             "big_cycle_status": "-",
+            "status_change": None,
+            "sparkline_prices": [],
             "error": None
         }
         
@@ -253,6 +286,12 @@ class Calculator:
         result["big_cycle_status"] = self.calculate_big_cycle_status(
             result["current_price"], weekly_df, monthly_df
         )
+        
+        # 趋势拐点检测
+        result["status_change"] = self.detect_status_change(df, result["status"])
+        
+        # Sparkline 数据（最近20日收盘价）
+        result["sparkline_prices"] = closes[-20:] if len(closes) >= 20 else closes
         
         return result
     

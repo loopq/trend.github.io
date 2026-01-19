@@ -3,17 +3,18 @@
 全球股票指数趋势追踪系统 - 主脚本
 
 Usage:
-    python scripts/main.py --mode mid_term   # 尾盘模式
-    python scripts/main.py --mode final_term # 盘后模式
-    python scripts/main.py --mode mid_term --debug  # 调试模式
-    python scripts/main.py --mode final_term --force  # 强制运行（周末测试用）
+    python scripts/main.py --mode evening  # 晚间更新（A股/港股）
+    python scripts/main.py --mode morning  # 早间更新（美股）
+    python scripts/main.py --mode evening --debug  # 调试模式
+    python scripts/main.py --mode evening --force  # 强制运行
+    python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run  # 逻辑测试
 """
 
 import os
 import sys
 import argparse
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 import yaml
@@ -43,9 +44,27 @@ def load_config(config_path: str) -> Dict:
         return yaml.safe_load(f)
 
 
+WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+
+
+def is_trading_day(d: date) -> bool:
+    return d.weekday() < 5
+
+
+def get_last_trading_day(today: date) -> date:
+    weekday = today.weekday()
+    if weekday == 0:  # 周一
+        return today - timedelta(days=3)
+    elif weekday == 5:  # 周六
+        return today - timedelta(days=1)
+    elif weekday == 6:  # 周日
+        return today - timedelta(days=2)
+    else:
+        return today - timedelta(days=1)
+
+
 def process_indices(fetcher: DataFetcher, calculator: Calculator, 
-                    indices: List[Dict], is_mid_term: bool = False,
-                    force: bool = False) -> List[Dict]:
+                    indices: List[Dict], force: bool = False) -> List[Dict]:
     """
     处理指数列表
     
@@ -53,7 +72,7 @@ def process_indices(fetcher: DataFetcher, calculator: Calculator,
         fetcher: 数据获取器
         calculator: 计算器
         indices: 指数配置列表
-        is_mid_term: 是否为尾盘模式
+        force: 是否强制运行
         
     Returns:
         计算后的指数数据列表
@@ -81,30 +100,17 @@ def process_indices(fetcher: DataFetcher, calculator: Calculator,
             })
             continue
         
-        # 检查是否休市（force 模式下跳过休市判断）
-        is_closed = False
-        if not force:
-            latest_date = fetcher.get_latest_date(df)
-            today = datetime.now().date()
-            
-            if latest_date and latest_date.date() < today:
-                # 数据不是今天的，可能休市
-                is_closed = True
-                logger.info(f"{name} appears to be closed (latest data: {latest_date.date()})")
-        
         # 获取周线和月线数据（用于大周期状态计算）
         weekly_df = fetcher.fetch_weekly_data(code, source)
         monthly_df = fetcher.fetch_monthly_data(code, source)
         
         # 计算指标
-        # 尾盘模式暂时使用最新收盘价（实时价格需要额外接口）
         metrics = calculator.calculate_all_metrics(df, weekly_df=weekly_df, monthly_df=monthly_df)
         
         result = {
             "code": code,
             "name": name,
             "source": source,
-            "closed": is_closed,
             **metrics
         }
         
@@ -123,9 +129,9 @@ def main():
     parser = argparse.ArgumentParser(description="全球股票指数趋势追踪系统")
     parser.add_argument(
         "--mode", 
-        choices=["mid_term", "final_term"], 
-        default="final_term",
-        help="运行模式：mid_term（尾盘）或 final_term（盘后）"
+        choices=["morning", "evening"], 
+        default="evening",
+        help="运行模式：morning（早间06:00）/ evening（晚间18:00）"
     )
     parser.add_argument(
         "--debug", 
@@ -140,7 +146,17 @@ def main():
     parser.add_argument(
         "--force",
         action="store_true",
-        help="强制运行（忽略周末检查，用于测试）"
+        help="强制运行（忽略所有检查）"
+    )
+    parser.add_argument(
+        "--mock-date",
+        type=str,
+        help="模拟指定日期运行（格式：YYYY-MM-DD）"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="只打印逻辑判断，不请求数据"
     )
     
     args = parser.parse_args()
@@ -149,17 +165,57 @@ def main():
     setup_logging(args.debug)
     logger = logging.getLogger(__name__)
     
+    # 确定检查日期
+    if args.mock_date:
+        check_date = datetime.strptime(args.mock_date, "%Y-%m-%d").date()
+    else:
+        check_date = datetime.now().date()
+    
+    weekday_name = WEEKDAY_NAMES[check_date.weekday()]
+    
     logger.info(f"=== 全球股票指数趋势追踪系统 ===")
     logger.info(f"运行模式: {args.mode}")
-    logger.info(f"当前时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"检查日期: {check_date} ({weekday_name})")
     
-    # 检查是否为周末
-    if datetime.now().weekday() >= 5 and not args.force:
-        logger.info("今天是周末，跳过更新（使用 --force 强制运行）")
+    # dry-run 模式：只打印逻辑判断
+    if args.dry_run:
+        print(f"[DRY-RUN] 模式: {args.mode}")
+        print(f"[DRY-RUN] 检查日期: {check_date} ({weekday_name})")
+        if args.mode == "morning":
+            yesterday = check_date - timedelta(days=1)
+            yesterday_weekday = WEEKDAY_NAMES[yesterday.weekday()]
+            print(f"[DRY-RUN] 昨天: {yesterday} ({yesterday_weekday})")
+            if not is_trading_day(yesterday):
+                print(f"[DRY-RUN] 结论: 跳过（昨天不是交易日）")
+            else:
+                last_td = get_last_trading_day(check_date)
+                last_td_weekday = WEEKDAY_NAMES[last_td.weekday()]
+                print(f"[DRY-RUN] 最近交易日: {last_td} ({last_td_weekday})")
+                print(f"[DRY-RUN] 判断条件: A股数据日期 >= {last_td}")
+                print(f"[DRY-RUN] 结论: 继续执行（需获取数据后判断）")
+        else:
+            if check_date.weekday() >= 5:
+                print(f"[DRY-RUN] 结论: 跳过（周末）")
+            else:
+                print(f"[DRY-RUN] 判断条件: A股数据日期 == {check_date}")
+                print(f"[DRY-RUN] 结论: 继续执行（需获取数据后判断）")
         return
     
     if args.force:
         logger.info("强制运行模式已启用")
+    
+    # morning 模式：只有昨天是交易日才运行
+    if args.mode == "morning" and not args.force:
+        yesterday = check_date - timedelta(days=1)
+        if not is_trading_day(yesterday):
+            logger.info(f"昨天 ({yesterday}) 不是交易日，morning 模式跳过")
+            return
+    
+    # evening 模式：检查周末
+    if args.mode == "evening" and not args.force:
+        if check_date.weekday() >= 5:
+            logger.info("今天是周末，evening 模式跳过更新")
+            return
     
     # 加载配置
     logger.info(f"加载配置文件: {args.config}")
@@ -173,23 +229,40 @@ def main():
         output_dir=os.path.join(PROJECT_ROOT, "docs")
     )
     
-    is_mid_term = args.mode == "mid_term"
-    
     # 处理主要指数
     logger.info("=== 处理主要指数 ===")
     major_results = process_indices(
         fetcher, calculator, 
         config.get("major_indices", []),
-        is_mid_term,
         args.force
     )
+    
+    # 检查A股数据日期（用沪深300判断）
+    if not args.force:
+        hs300 = next((r for r in major_results if r.get("code") == "000300"), None)
+        if hs300 and not hs300.get("error"):
+            df = fetcher.fetch_index("000300", "cn_index", days=5)
+            if df is not None and not df.empty:
+                latest_date = fetcher.get_latest_date(df)
+                if latest_date:
+                    data_date = latest_date.date()
+                    if args.mode == "morning":
+                        last_trading_day = get_last_trading_day(check_date)
+                        if data_date < last_trading_day:
+                            logger.info(f"数据过旧（A股数据: {data_date}，最近交易日: {last_trading_day}），跳过更新")
+                            return
+                        logger.info(f"A股数据日期: {data_date}，最近交易日: {last_trading_day}，继续执行")
+                    else:  # evening
+                        if data_date < check_date:
+                            logger.info(f"A股今日休市（数据: {data_date}，检查日期: {check_date}），跳过更新")
+                            return
+                        logger.info(f"A股数据日期: {data_date}，检查日期: {check_date}，继续执行")
     
     # 处理行业板块
     logger.info("=== 处理行业板块 ===")
     sector_results = process_indices(
         fetcher, calculator,
         config.get("sector_indices", []),
-        is_mid_term,
         args.force
     )
     

@@ -1,26 +1,23 @@
 name: Update Trend Data
 
 on:
-  schedule:
-    # 尾盘更新：北京时间 14:30 = UTC 06:30
-    - cron: '30 6 * * 1-5'
-    # 盘后更新：北京时间 16:30 = UTC 08:30
-    - cron: '30 8 * * 1-5'
   workflow_dispatch:
     inputs:
       mode:
         description: '运行模式'
         required: true
-        default: 'final_term'
+        default: 'evening'
         type: choice
         options:
-          - mid_term
-          - final_term
+          - evening
+          - morning
       force:
         description: '强制运行（周末测试用）'
         required: false
         default: false
         type: boolean
+  repository_dispatch:
+    types: [evening,morning]
 
 jobs:
   update:
@@ -49,10 +46,10 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
           # 根据 cron 表达式判断运行模式
-          elif [ "${{ github.event.schedule }}" = "30 6 * * 1-5" ]; then
-            echo "mode=mid_term" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "mode=${{ github.event.action }}" >> $GITHUB_OUTPUT
           else
-            echo "mode=final_term" >> $GITHUB_OUTPUT
+            echo "mode=evening" >> $GITHUB_OUTPUT
           fi
 
       - name: Run update script

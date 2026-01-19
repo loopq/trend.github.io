@@ -35,17 +35,20 @@ pip install -r requirements.txt
 # 激活虚拟环境
 source venv/bin/activate
 
-# 尾盘模式（仅更新首页）
-python scripts/main.py --mode mid_term
+# 晚间更新（A股/港股，生成归档）
+python scripts/main.py --mode evening
 
-# 盘后模式（更新首页 + 生成归档）
-python scripts/main.py --mode final_term
+# 早间更新（美股）
+python scripts/main.py --mode morning
 
 # 调试模式
-python scripts/main.py --mode final_term --debug
+python scripts/main.py --mode evening --debug
 
-# 强制运行（周末测试用）
-python scripts/main.py --mode final_term --force
+# 强制运行
+python scripts/main.py --mode evening --force
+
+# 逻辑测试（不请求数据）
+python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run
 ```
 
 ### 本地预览
@@ -94,66 +97,41 @@ git push -u origin main
 2. Source 选择：`gh-pages` 分支，`/ (root)` 目录
 3. 保存后等待部署完成
 
-### 3. 配置 GitHub Actions
+### 3. 配置定时触发
 
-创建 `.github/workflows/update.yml`：
+由于 GitHub Actions 的 `schedule` 触发器存在延迟问题（在高峰期可能延迟 10-30 分钟），本项目采用外部定时服务触发 GitHub Actions 的方案。
 
-```yaml
-name: Update Trend Data
+**技术方案：**
 
-on:
-  schedule:
-    - cron: '30 6 * * 1-5'   # 北京时间 14:30
-    - cron: '0 8 * * 1-5'    # 北京时间 16:00
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: '运行模式'
-        required: true
-        default: 'final_term'
-        type: choice
-        options:
-          - mid_term
-          - final_term
+| 组件 | 作用 |
+|------|------|
+| [cron-job.org](https://cron-job.org) | 免费的外部定时任务服务，精准触发 |
+| GitHub `repository_dispatch` | 接收外部 HTTP 请求触发 workflow |
+| GitHub Fine-grained PAT | 用于 API 认证，需要 `Contents: Read and write` 权限 |
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+**触发时间：**
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
+| 模式 | 北京时间 | 说明 |
+|------|----------|------|
+| `morning` | 06:00 | 早间更新（美股数据） |
+| `evening` | 18:00 | 晚间更新（A股/港股 + 归档） |
 
-      - run: pip install -r requirements.txt
+**API 调用方式：**
 
-      - name: Determine mode
-        id: mode
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "30 6 * * 1-5" ]; then
-            echo "mode=mid_term" >> $GITHUB_OUTPUT
-          else
-            echo "mode=final_term" >> $GITHUB_OUTPUT
-          fi
+```bash
+# 早间更新
+curl -X POST \
+  -H "Authorization: Bearer <PAT_TOKEN>" \
+  -H "Accept: application/vnd.github.v3+json" \
+  -d '{"event_type":"morning"}' \
+  https://api.github.com/repos/<owner>/<repo>/dispatches
 
-      - run: python scripts/main.py --mode ${{ steps.mode.outputs.mode }}
-        env:
-          TZ: Asia/Shanghai
-
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          commit_message: 'Update - ${{ steps.mode.outputs.mode }}'
+# 晚间更新
+curl -X POST \
+  -H "Authorization: Bearer <PAT_TOKEN>" \
+  -H "Accept: application/vnd.github.v3+json" \
+  -d '{"event_type":"evening"}' \
+  https://api.github.com/repos/<owner>/<repo>/dispatches
 ```
 
 ### 4. 启用 Actions 权限
@@ -191,10 +169,14 @@ pip install -r requirements.txt
 
 ### 周末如何测试
 
-使用 `--force` 参数跳过休市检查：
+使用 `--force` 参数跳过检查，或使用 `--dry-run` 只测试逻辑：
 
 ```bash
-python scripts/main.py --mode final_term --force --debug
+# 强制运行
+python scripts/main.py --mode evening --force --debug
+
+# 逻辑测试（不请求数据）
+python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run
 ```
 
 ### 指数显示"数据异常"
