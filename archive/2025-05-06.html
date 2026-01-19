@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鱼盆趋势模型v2.0 - 2025.05.06</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>鱼盆趋势模型v2.0　日期：2025.05.06</h1>
+            <div class="update-type">盘后归档</div>
+        </div>
+        
+        <p class="disclaimer">数据仅供市场风格趋势分析，不提供投资建议</p>
+        
+        <!-- 多空PK仪表盘 -->
+        <div class="bull-bear-dashboard">
+            <div class="bull-bear-bar">
+                <div class="bar-labels">
+                    <span class="bear-label">空头 0%</span>
+                    <span class="vs">VS</span>
+                    <span class="bull-label">100% 多头</span>
+                </div>
+                <div class="bar-container">
+                    <div class="bear-section" style="width: 0%"></div>
+                    <div class="bull-section" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 导航链接 -->
+        <div class="nav-links">
+            <a href="../index.html">🏠 返回首页</a>
+            <a href="index.html">📁 归档列表</a>
+        </div>
+        
+        <!-- 主要指数模块 -->
+        <h2 class="module-title">主要指数</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>走势</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>1</td>
+                        <td>899050</td>
+                        <td>北证50</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+3.21%</td>
+                        <td>1373.90</td>
+                        <td>1283.88</td>
+                        <td class="change-positive">7.01%</td>
+                        <td>25.04.14</td>
+                        <td class="change-positive">
+                            
+                            6.12%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,7.8 4.2,23.0 8.4,19.6 12.6,12.1 16.8,8.2 21.1,7.0 25.3,5.2 29.5,5.5 33.7,6.5 37.9,5.7 42.1,4.0 46.3,1.7 50.5,2.3 54.7,1.8 58.9,4.9 63.2,5.9 67.4,7.5 71.6,6.4 75.8,3.9 80.0,1.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>2</td>
+                        <td>N225</td>
+                        <td>日经225</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.04%</td>
+                        <td>36830.69</td>
+                        <td>34419.95</td>
+                        <td class="change-positive">7.00%</td>
+                        <td>25.04.23</td>
+                        <td class="change-positive">
+                            
+                            6.89%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,12.8 4.2,23.0 8.4,15.8 12.6,20.8 16.8,9.6 21.1,13.5 25.3,12.0 29.5,10.9 33.7,12.2 37.9,10.5 42.1,9.1 46.3,10.9 50.5,11.1 54.7,8.6 58.9,7.9 63.2,5.3 67.4,4.8 71.6,4.0 75.8,2.5 80.0,1.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>3</td>
+                        <td>932000</td>
+                        <td>中证2000</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+3.25%</td>
+                        <td>2522.31</td>
+                        <td>2376.33</td>
+                        <td class="change-positive">6.14%</td>
+                        <td>25.04.23</td>
+                        <td class="change-positive">
+                            
+                            4.55%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.3 4.2,22.3 8.4,23.0 12.6,18.8 16.8,14.2 21.1,12.8 25.3,9.4 29.5,9.5 33.7,12.2 37.9,11.3 42.1,11.6 46.3,8.1 50.5,8.1 54.7,6.3 58.9,7.9 63.2,7.5 67.4,9.7 71.6,8.2 75.8,6.2 80.0,1.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>4</td>
+                        <td>HSIII</td>
+                        <td>恒生互联</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+0.99%</td>
+                        <td>2654.87</td>
+                        <td>2511.20</td>
+                        <td class="change-positive">5.72%</td>
+                        <td>25.04.30</td>
+                        <td class="change-positive">
+                            
+                            5.26%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,3.5 8.4,23.0 12.6,19.1 16.8,17.7 21.1,15.6 25.3,15.1 29.5,12.5 33.7,12.3 37.9,16.9 42.1,14.7 46.3,15.6 50.5,12.3 54.7,14.4 58.9,13.7 63.2,13.5 67.4,12.7 71.6,10.9 75.8,8.0 80.0,6.9"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>5</td>
+                        <td>HSTECH</td>
+                        <td>恒生科技</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-negative">-0.09%</td>
+                        <td>5239.50</td>
+                        <td>4964.02</td>
+                        <td class="change-positive">5.55%</td>
+                        <td>25.04.29</td>
+                        <td class="change-positive">
+                            
+                            4.77%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,3.4 8.4,23.0 12.6,19.4 16.8,16.8 21.1,14.2 25.3,12.3 29.5,9.8 33.7,10.5 37.9,14.5 42.1,12.6 46.3,12.3 50.5,9.1 54.7,10.7 58.9,10.5 63.2,10.4 67.4,9.7 71.6,8.3 75.8,4.9 80.0,5.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>6</td>
+                        <td>HSI</td>
+                        <td>恒生指数</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+0.70%</td>
+                        <td>22662.71</td>
+                        <td>21599.87</td>
+                        <td class="change-positive">4.92%</td>
+                        <td>25.04.25</td>
+                        <td class="change-positive">
+                            
+                            3.59%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,3.3 8.4,23.0 12.6,21.0 16.8,20.2 21.1,17.4 25.3,15.9 29.5,12.6 33.7,12.3 37.9,15.0 42.1,12.8 46.3,11.7 50.5,8.4 54.7,9.4 58.9,9.0 63.2,9.0 67.4,8.8 71.6,8.1 75.8,5.5 80.0,4.5"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>7</td>
+                        <td>XAU</td>
+                        <td>黄金现价</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+2.90%</td>
+                        <td>3430.36</td>
+                        <td>3276.87</td>
+                        <td class="change-positive">4.68%</td>
+                        <td>25.04.09</td>
+                        <td class="change-positive">
+                            
+                            12.68%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,23.0 4.2,18.0 8.4,13.5 12.6,10.4 16.8,11.8 21.1,10.9 25.3,5.3 29.5,6.1 33.7,1.3 37.9,3.4 42.1,8.0 46.3,5.0 50.5,6.6 54.7,5.2 58.9,6.6 63.2,8.0 67.4,10.4 71.6,10.3 75.8,5.7 80.0,1.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>8</td>
+                        <td>NDX</td>
+                        <td>纳指100</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-negative">-0.88%</td>
+                        <td>19791.35</td>
+                        <td>18951.39</td>
+                        <td class="change-positive">4.43%</td>
+                        <td>25.04.23</td>
+                        <td class="change-positive">
+                            
+                            6.17%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,23.0 4.2,8.0 8.4,13.8 12.6,11.3 16.8,10.5 21.1,10.3 25.3,14.5 29.5,14.5 33.7,17.8 37.9,14.3 42.1,11.3 46.3,7.5 50.5,5.9 54.7,5.9 58.9,5.1 63.2,4.9 67.4,3.3 71.6,1.0 75.8,2.0 80.0,3.3"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>9</td>
+                        <td>000852</td>
+                        <td>中证1000</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+2.57%</td>
+                        <td>6102.92</td>
+                        <td>5873.40</td>
+                        <td class="change-positive">3.91%</td>
+                        <td>25.04.29</td>
+                        <td class="change-positive">
+                            
+                            3.48%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,22.0 12.6,18.1 16.8,14.0 21.1,11.6 25.3,9.2 29.5,10.0 33.7,12.5 37.9,12.3 42.1,12.6 46.3,8.8 50.5,8.9 54.7,7.8 58.9,9.8 63.2,9.2 67.4,11.2 71.6,10.3 75.8,8.9 80.0,4.1"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>10</td>
+                        <td>HSCEI</td>
+                        <td>国企指数</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+0.37%</td>
+                        <td>8261.61</td>
+                        <td>7959.86</td>
+                        <td class="change-positive">3.79%</td>
+                        <td>25.04.25</td>
+                        <td class="change-positive">
+                            
+                            2.33%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,2.9 8.4,23.0 12.6,20.1 16.8,18.3 21.1,16.0 25.3,13.7 29.5,10.8 33.7,10.5 37.9,14.0 42.1,12.0 46.3,11.1 50.5,8.2 54.7,9.2 58.9,8.8 63.2,8.8 67.4,9.0 71.6,8.9 75.8,6.2 80.0,5.7"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>11</td>
+                        <td>399673</td>
+                        <td>创业板50</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+2.01%</td>
+                        <td>1941.45</td>
+                        <td>1872.78</td>
+                        <td class="change-positive">3.67%</td>
+                        <td>25.04.30</td>
+                        <td class="change-positive">
+                            
+                            3.30%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,21.1 12.6,20.1 16.8,16.6 21.1,14.2 25.3,13.8 29.5,13.8 33.7,15.7 37.9,15.6 42.1,14.8 46.3,12.3 50.5,13.6 54.7,11.5 58.9,12.5 63.2,11.1 67.4,12.1 71.6,12.5 75.8,11.3 80.0,8.1"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>12</td>
+                        <td>SPX</td>
+                        <td>标普500</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-negative">-0.77%</td>
+                        <td>5606.91</td>
+                        <td>5423.53</td>
+                        <td class="change-positive">3.38%</td>
+                        <td>25.04.24</td>
+                        <td class="change-positive">
+                            
+                            4.35%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,23.0 4.2,8.2 8.4,14.1 12.6,11.1 16.8,9.8 21.1,10.1 25.3,13.8 29.5,13.6 33.7,17.5 37.9,13.5 42.1,10.7 46.3,7.3 50.5,6.0 54.7,5.9 58.9,4.9 63.2,4.7 67.4,3.6 71.6,1.0 75.8,2.1 80.0,3.5"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>13</td>
+                        <td>000905</td>
+                        <td>中证500</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.93%</td>
+                        <td>5740.33</td>
+                        <td>5581.94</td>
+                        <td class="change-positive">2.84%</td>
+                        <td>25.04.29</td>
+                        <td class="change-positive">
+                            
+                            2.45%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,21.4 12.6,17.0 16.8,12.9 21.1,11.4 25.3,9.6 29.5,10.6 33.7,12.4 37.9,12.4 42.1,12.2 46.3,9.0 50.5,9.7 54.7,9.3 58.9,10.4 63.2,9.6 67.4,10.7 71.6,10.5 75.8,9.4 80.0,5.1"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>14</td>
+                        <td>000688</td>
+                        <td>科创50</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.39%</td>
+                        <td>1026.52</td>
+                        <td>1001.41</td>
+                        <td class="change-positive">2.51%</td>
+                        <td>25.04.25</td>
+                        <td class="change-positive">
+                            
+                            2.23%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,2.8 4.2,23.0 8.4,19.6 12.6,10.9 16.8,8.6 21.1,4.2 25.3,3.6 29.5,5.3 33.7,3.6 37.9,3.1 42.1,4.9 46.3,2.5 50.5,3.2 54.7,4.0 58.9,6.0 63.2,5.7 67.4,6.1 71.6,5.9 75.8,4.0 80.0,1.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>15</td>
+                        <td>XAG</td>
+                        <td>白银现价</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+2.29%</td>
+                        <td>33.19</td>
+                        <td>32.40</td>
+                        <td class="change-positive">2.44%</td>
+                        <td>25.05.05</td>
+                        <td class="change-positive">
+                            
+                            2.94%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,23.0 4.2,15.9 8.4,14.8 12.6,8.5 16.8,8.2 21.1,8.3 25.3,5.8 29.5,7.1 33.7,6.3 37.9,7.2 42.1,1.0 46.3,1.0 50.5,3.9 54.7,3.4 58.9,4.8 63.2,6.6 67.4,7.8 71.6,10.1 75.8,7.4 80.0,3.1"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>16</td>
+                        <td>000300</td>
+                        <td>沪深300</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.01%</td>
+                        <td>3808.54</td>
+                        <td>3758.75</td>
+                        <td class="change-positive">1.32%</td>
+                        <td>25.04.25</td>
+                        <td class="change-positive">
+                            
+                            0.74%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,18.0 12.6,15.1 16.8,11.2 21.1,10.0 25.3,9.3 29.5,9.1 33.7,8.2 37.9,8.2 42.1,8.2 46.3,7.2 50.5,7.3 54.7,7.0 58.9,7.2 63.2,7.0 67.4,7.5 71.6,8.0 75.8,8.4 80.0,5.3"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>17</td>
+                        <td>000016</td>
+                        <td>上证50</td>
+                        
+                        <td class="status-yes pulse">
+                            YES
+                             🔼
+                            
+                        </td>
+                        <td class="change-positive">+0.55%</td>
+                        <td>2647.72</td>
+                        <td>2633.08</td>
+                        <td class="change-positive">0.56%</td>
+                        <td>25.05.06</td>
+                        <td class="change-positive">
+                            
+                            0.56%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,14.3 12.6,10.9 16.8,8.5 21.1,7.5 25.3,6.2 29.5,5.2 33.7,1.6 37.9,1.4 42.1,1.7 46.3,2.4 50.5,1.9 54.7,3.0 58.9,2.0 63.2,3.0 67.4,2.7 71.6,3.5 75.8,5.4 80.0,3.2"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 板块轮动模块 -->
+        <h2 class="module-title">板块轮动数据　日期：2025.05.06</h2>
+        <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>趋势强度</th>
+                        <th>代码</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>涨幅%</th>
+                        <th>现价</th>
+                        <th>临界值点</th>
+                        <th>偏离率</th>
+                        <th>状态转变时间</th>
+                        <th>区间涨幅%</th>
+                        <th>走势</th>
+                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span class="tooltip-text">周月周期下临界值状态</span></span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>1</td>
+                        <td>H30184</td>
+                        <td>半导体</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.70%</td>
+                        <td>6754.83</td>
+                        <td>6486.39</td>
+                        <td class="change-positive">4.14%</td>
+                        <td>25.04.16</td>
+                        <td class="change-positive">
+                            
+                            3.46%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,7.0 4.2,23.0 8.4,22.8 12.6,14.9 16.8,13.1 21.1,5.1 25.3,4.9 29.5,6.8 33.7,5.4 37.9,4.5 42.1,6.5 46.3,4.6 50.5,5.2 54.7,5.1 58.9,7.3 63.2,7.8 67.4,7.6 71.6,6.0 75.8,4.0 80.0,1.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>2</td>
+                        <td>931087</td>
+                        <td>科技龙头</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+2.09%</td>
+                        <td>3400.15</td>
+                        <td>3276.71</td>
+                        <td class="change-positive">3.77%</td>
+                        <td>25.04.30</td>
+                        <td class="change-positive">
+                            
+                            3.64%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,21.6 8.4,23.0 12.6,17.5 16.8,13.7 21.1,9.8 25.3,9.1 29.5,11.1 33.7,11.2 37.9,11.3 42.1,11.3 46.3,8.3 50.5,9.4 54.7,8.1 58.9,10.9 63.2,9.7 67.4,11.1 71.6,10.2 75.8,7.3 80.0,2.7"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>3</td>
+                        <td>000819</td>
+                        <td>有色金属</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+2.33%</td>
+                        <td>5150.88</td>
+                        <td>5013.61</td>
+                        <td class="change-positive">2.74%</td>
+                        <td>25.04.21</td>
+                        <td class="change-positive">
+                            
+                            0.99%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,3.5 4.2,22.3 8.4,23.0 12.6,20.4 16.8,12.9 21.1,10.9 25.3,5.9 29.5,7.4 33.7,7.4 37.9,8.7 42.1,9.3 46.3,1.0 50.5,1.9 54.7,5.3 58.9,6.6 63.2,6.2 67.4,7.0 71.6,7.5 75.8,8.0 80.0,2.8"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>4</td>
+                        <td>399989</td>
+                        <td>中证医疗</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.52%</td>
+                        <td>6463.37</td>
+                        <td>6308.24</td>
+                        <td class="change-positive">2.46%</td>
+                        <td>25.04.30</td>
+                        <td class="change-positive">
+                            
+                            2.14%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,21.8 12.6,20.7 16.8,16.8 21.1,17.0 25.3,16.6 29.5,17.7 33.7,19.9 37.9,19.8 42.1,20.4 46.3,18.2 50.5,18.3 54.7,18.3 58.9,18.9 63.2,17.9 67.4,19.0 71.6,16.3 75.8,15.3 80.0,11.8"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>5</td>
+                        <td>000941</td>
+                        <td>新能源</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.87%</td>
+                        <td>1657.64</td>
+                        <td>1618.55</td>
+                        <td class="change-positive">2.42%</td>
+                        <td>25.04.30</td>
+                        <td class="change-positive">
+                            
+                            2.04%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,20.9 12.6,20.6 16.8,17.0 21.1,15.8 25.3,14.6 29.5,14.6 33.7,16.3 37.9,16.8 42.1,16.3 46.3,13.6 50.5,14.5 54.7,12.9 58.9,13.1 63.2,11.6 67.4,11.5 71.6,13.2 75.8,13.6 80.0,10.3"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>6</td>
+                        <td>000813</td>
+                        <td>细分化工</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.64%</td>
+                        <td>2629.73</td>
+                        <td>2568.03</td>
+                        <td class="change-positive">2.40%</td>
+                        <td>25.04.29</td>
+                        <td class="change-positive">
+                            
+                            1.85%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,19.5 12.6,18.0 16.8,14.5 21.1,14.2 25.3,13.1 29.5,15.3 33.7,17.0 37.9,17.3 42.1,17.2 46.3,14.8 50.5,14.8 54.7,12.8 58.9,13.4 63.2,11.5 67.4,13.3 71.6,12.9 75.8,12.5 80.0,8.6"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>7</td>
+                        <td>399975</td>
+                        <td>证券</td>
+                        
+                        <td class="status-yes">
+                            YES
+                            
+                            
+                        </td>
+                        <td class="change-positive">+1.47%</td>
+                        <td>743.68</td>
+                        <td>731.07</td>
+                        <td class="change-positive">1.73%</td>
+                        <td>25.04.30</td>
+                        <td class="change-positive">
+                            
+                            1.52%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,19.8 12.6,15.9 16.8,13.0 21.1,12.5 25.3,12.4 29.5,13.1 33.7,13.5 37.9,13.6 42.1,12.3 46.3,11.1 50.5,11.5 54.7,11.2 58.9,12.3 63.2,10.5 67.4,12.1 71.6,12.6 75.8,12.1 80.0,9.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>8</td>
+                        <td>931151</td>
+                        <td>光伏设备</td>
+                        
+                        <td class="status-yes pulse">
+                            YES
+                             🔼
+                            
+                        </td>
+                        <td class="change-positive">+2.48%</td>
+                        <td>1964.47</td>
+                        <td>1931.68</td>
+                        <td class="change-positive">1.70%</td>
+                        <td>25.05.06</td>
+                        <td class="change-positive">
+                            
+                            1.70%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,22.1 12.6,20.7 16.8,16.3 21.1,16.3 25.3,15.2 29.5,16.0 33.7,17.0 37.9,17.8 42.1,18.5 46.3,17.7 50.5,18.6 54.7,17.6 58.9,19.7 63.2,18.1 67.4,18.1 71.6,19.0 75.8,18.6 80.0,14.4"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>9</td>
+                        <td>000922</td>
+                        <td>中证红利</td>
+                        
+                        <td class="status-yes pulse">
+                            YES
+                             🔼
+                            
+                        </td>
+                        <td class="change-positive">+0.25%</td>
+                        <td>5355.26</td>
+                        <td>5350.30</td>
+                        <td class="change-positive">0.09%</td>
+                        <td>25.05.06</td>
+                        <td class="change-positive">
+                            
+                            0.09%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#E53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,23.0 8.4,15.1 12.6,14.2 16.8,11.2 21.1,12.6 25.3,9.8 29.5,8.3 33.7,6.8 37.9,7.5 42.1,7.3 46.3,7.8 50.5,6.5 54.7,8.0 58.9,6.2 63.2,6.7 67.4,6.8 71.6,7.6 75.8,9.8 80.0,9.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>10</td>
+                        <td>399986</td>
+                        <td>银行</td>
+                        
+                        <td class="status-no">
+                            NO
+                            
+                            
+                        </td>
+                        <td class="change-negative">-0.13%</td>
+                        <td>7214.05</td>
+                        <td>7229.52</td>
+                        <td class="change-negative">-0.21%</td>
+                        <td>25.04.30</td>
+                        <td class="change-negative">
+                            
+                            -0.26%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#43A047" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,6.4 4.2,23.0 8.4,17.3 12.6,20.4 16.8,18.2 21.1,17.2 25.3,15.1 29.5,9.8 33.7,6.2 37.9,5.9 42.1,3.1 46.3,7.6 50.5,5.2 54.7,7.0 58.9,2.8 63.2,4.5 67.4,1.0 71.6,2.2 75.8,10.0 80.0,10.4"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                    <tr>
+                        <td>11</td>
+                        <td>000932</td>
+                        <td>中证消费</td>
+                        
+                        <td class="status-no">
+                            NO
+                            
+                            
+                        </td>
+                        <td class="change-positive">+0.11%</td>
+                        <td>16235.92</td>
+                        <td>16390.38</td>
+                        <td class="change-negative">-0.94%</td>
+                        <td>25.04.23</td>
+                        <td class="change-negative">
+                            
+                            -0.96%
+                            
+                        </td>
+                        <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
+<polyline fill="none" stroke="#43A047" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,9.6 4.2,23.0 8.4,7.9 12.6,1.4 16.8,1.0 21.1,6.4 25.3,7.9 29.5,6.9 33.7,5.0 37.9,3.0 42.1,7.1 46.3,9.3 50.5,8.5 54.7,11.2 58.9,10.9 63.2,12.9 67.4,13.2 71.6,14.4 75.8,13.4 80.0,13.0"/>
+</svg></td>
+                        <td>
+                            
+                            <span class=""></span>-<span class=""></span>
+                        </td>
+                        
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>Powered by AkShare | 归档时间：00:00:00</p>
+        </div>
+    </div>
+</body>
+</html>
