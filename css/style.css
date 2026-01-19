@@ -58,6 +58,77 @@ body {
     margin-bottom: 15px;
 }
 
+/* 多空PK仪表盘 */
+.bull-bear-dashboard {
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+}
+
+.bull-bear-bar .bar-container {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bull-bear-bar .bull-section {
+    background: #E53935;
+    transition: width 0.5s ease;
+}
+
+.bull-bear-bar .bear-section {
+    background: #43A047;
+    transition: width 0.5s ease;
+}
+
+.bull-bear-bar .bar-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.bull-bear-bar .bull-label {
+    color: #E53935;
+}
+
+.bull-bear-bar .bear-label {
+    color: #43A047;
+}
+
+.bull-bear-bar .vs {
+    color: #9E9E9E;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+/* Sparkline 单元格 */
+.sparkline-cell {
+    padding: 4px 6px !important;
+    vertical-align: middle;
+}
+
+.sparkline-cell svg {
+    display: block;
+    margin: 0 auto;
+}
+
+/* 呼吸灯动画 */
+@keyframes pulse {
+    0%, 100% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: rgba(255, 193, 7, 0.3);
+    }
+}
+
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
 /* 导航链接 */
 .nav-links {
     text-align: center;
@@ -97,7 +168,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    min-width: 800px;
+    min-width: 900px;
 }
 
 th, td {
