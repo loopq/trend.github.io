@@ -222,21 +222,21 @@ lookback_days: 250
 major_indices:
   - code: "000905"
     name: "中证500"
-    source: "cn_index"
+    source: "cs_index"
 
 # 行业板块
 sector_indices:
   - code: "931152"
     name: "半导体"
-    source: "cn_index"
+    source: "cs_index"
 ```
 
 ### source 类型说明
 
-| source | 用途 | 接口 |
-|--------|------|------|
-| `cn_index` | A股官方指数 | `index_zh_a_hist` |
-| `hk` | 港股指数 | `stock_hk_index_daily_em` |
-| `us` | 美股指数 | `index_us_stock_sina` |
-| `spot_price` | 贵金属 | `futures_foreign_hist` |
+| source             | 用途 | 接口 |
+|--------------------|------|------|
+| `cs_index`         | A股官方指数 | `index_zh_a_hist` |
+| `hk`               | 港股指数 | `stock_hk_index_daily_em` |
+| `us`               | 美股指数 | `index_us_stock_sina` |
+| `spot_price`       | 贵金属 | `futures_foreign_hist` |
 | `eastmoney_sector` | 行业板块 | `stock_board_industry_hist_em` |

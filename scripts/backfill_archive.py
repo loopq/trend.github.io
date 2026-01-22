@@ -78,8 +78,8 @@ def process_indices_at_date(fetcher: DataFetcher, calculator: Calculator,
         # 使用缓存避免重复获取数据
         if cache_key not in data_cache:
             df = fetcher.fetch_index(code, source, days=400)
-            weekly_df = fetcher.fetch_weekly_data(code, source)
-            monthly_df = fetcher.fetch_monthly_data(code, source)
+            weekly_df = fetcher.process_weekly_data(df)
+            monthly_df = fetcher.process_monthly_data(df)
             data_cache[cache_key] = {
                 "daily": df,
                 "weekly": weekly_df,
@@ -108,7 +108,7 @@ def process_indices_at_date(fetcher: DataFetcher, calculator: Calculator,
         # 计算指标
         metrics = calculator.calculate_all_metrics(df_at_date, weekly_df=weekly_at_date, monthly_df=monthly_at_date)
         
-        result = {"code": code, "name": name, **metrics}
+        result = {"code": code, "name": name, "rank_change": None, **metrics}
         results.append(result)
     
     return calculator.sort_by_deviation(results)
@@ -149,7 +149,7 @@ def main():
     
     # 获取交易日列表（使用沪深300作为参考）
     logger.info("获取交易日列表...")
-    sample_df = fetcher.fetch_index("000300", "cn_index", days=400)
+    sample_df = fetcher.fetch_index("000300", "cs_index", days=400)
     trading_days = get_trading_days(start_date, end_date, sample_df)
     
     logger.info(f"找到 {len(trading_days)} 个交易日")
@@ -168,13 +168,17 @@ def main():
         
         logger.info(f"  加载 {idx_config['name']} ({code})")
         df = fetcher.fetch_index(code, source, days=400)
-        weekly_df = fetcher.fetch_weekly_data(code, source)
-        monthly_df = fetcher.fetch_monthly_data(code, source)
+        weekly_df = fetcher.process_weekly_data(df)
+        monthly_df = fetcher.process_monthly_data(df)
         data_cache[cache_key] = {
             "daily": df,
             "weekly": weekly_df,
             "monthly": monthly_df
         }
+    
+    # 用于追踪排名变化的字典
+    prev_major_ranks = {}
+    prev_sector_ranks = {}
     
     # 逐日生成归档
     for i, target_date in enumerate(trading_days):
@@ -193,6 +197,27 @@ def main():
             target_date,
             data_cache
         )
+        
+        # 计算排名变化
+        for result in major_results:
+            if not result.get("error"):
+                yesterday_rank = prev_major_ranks.get(result["code"])
+                if yesterday_rank is not None:
+                    result["rank_change"] = yesterday_rank - result["rank"]
+                else:
+                    result["rank_change"] = None
+        
+        for result in sector_results:
+            if not result.get("error"):
+                yesterday_rank = prev_sector_ranks.get(result["code"])
+                if yesterday_rank is not None:
+                    result["rank_change"] = yesterday_rank - result["rank"]
+                else:
+                    result["rank_change"] = None
+        
+        # 保存当天排名用于下一天对比
+        prev_major_ranks = {r["code"]: r["rank"] for r in major_results if not r.get("error")}
+        prev_sector_ranks = {r["code"]: r["rank"] for r in sector_results if not r.get("error")}
         
         # 生成归档
         generator.generate_archive_detail(major_results, sector_results, date=target_date)

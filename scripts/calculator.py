@@ -200,6 +200,55 @@ class Calculator:
         
         return f"{weekly_status}-{monthly_status}"
     
+    def detect_extreme_trend(self, df: pd.DataFrame, n_days: int = 3) -> Optional[str]:
+        if df is None or len(df) < 20 + n_days - 1:
+            return None
+        if "high" not in df.columns or "low" not in df.columns:
+            return None
+        df = df.sort_values("date").reset_index(drop=True)
+        closes = df["close"].tolist()
+        highs = df["high"].tolist()
+        lows = df["low"].tolist()
+        n = len(closes)
+        strong_ok = True
+        weak_ok = True
+        for j in range(n_days):
+            i = n - 1 - j
+            if i < 19:
+                return None
+            ma20_i = sum(closes[i - 19 : i + 1]) / 20
+            if not (closes[i] >= ma20_i and lows[i] > ma20_i):
+                strong_ok = False
+            if not (closes[i] < ma20_i and highs[i] < ma20_i):
+                weak_ok = False
+        if strong_ok:
+            return "极强"
+        if weak_ok:
+            return "极弱"
+        return None
+
+    def calculate_volume_ratio(self, volumes: List[float]) -> Optional[float]:
+        """
+        计算量比：当日成交量 / 过去5个交易日平均成交量
+        
+        Args:
+            volumes: 成交量列表，最后一个是当前成交量
+            
+        Returns:
+            量比
+        """
+        if not volumes or len(volumes) < 6:
+            return None
+        
+        current_volume = volumes[-1]
+        prev_5_volumes = volumes[-6:-1]
+        
+        avg_vol = sum(prev_5_volumes) / 5
+        if avg_vol == 0:
+            return None
+            
+        return current_volume / avg_vol
+
     def calculate_all_metrics(self, df: pd.DataFrame, current_price: Optional[float] = None,
                               weekly_df: pd.DataFrame = None,
                               monthly_df: pd.DataFrame = None) -> Dict[str, Any]:
@@ -225,8 +274,10 @@ class Calculator:
             "change_date": None,
             "change_price": None,
             "interval_change": None,
+            "volume_ratio": None,
             "big_cycle_status": "-",
             "status_change": None,
+            "extreme_trend": None,
             "sparkline_prices": [],
             "error": None
         }
@@ -242,12 +293,23 @@ class Calculator:
             return result
         
         closes = df["close"].tolist()
+        # 处理可能的缺失成交量
+        if "volume" in df.columns:
+            volumes = df["volume"].fillna(0).tolist()
+        else:
+            volumes = [0] * len(closes)
         
         # 当前价格
         if current_price is not None:
             result["current_price"] = current_price
             # 尾盘模式：用当前价格 + 前19天收盘价计算 MA20
             ma20_prices = closes[-19:] + [current_price]
+            # 注意：如果传入 current_price，说明可能还没收盘，df 里的最后一条可能是昨天的数据
+            # 但这里简化处理，假设 current_price 对应的是最后一天（或者新的一天）
+            # 由于没有传入 current_volume，这里量比计算可能不准确，或者沿用 df 里的 volume
+            # 为保持一致性，如果传入 current_price，我们假设 df[-1] 已经被替换或追加
+            # 但 standard usage in process_indices doesn't pass current_price.
+            pass 
         else:
             result["current_price"] = closes[-1]
             ma20_prices = closes[-20:]
@@ -282,6 +344,9 @@ class Calculator:
         # 区间涨幅（以转变日 MA20 为基准）
         result["interval_change"] = self.calculate_interval_change(result["current_price"], change_ma20)
         
+        # 量比
+        result["volume_ratio"] = self.calculate_volume_ratio(volumes)
+        
         # 大周期状态
         result["big_cycle_status"] = self.calculate_big_cycle_status(
             result["current_price"], weekly_df, monthly_df
@@ -289,6 +354,8 @@ class Calculator:
         
         # 趋势拐点检测
         result["status_change"] = self.detect_status_change(df, result["status"])
+        
+        result["extreme_trend"] = self.detect_extreme_trend(df, n_days=3)
         
         # Sparkline 数据（最近20日收盘价）
         result["sparkline_prices"] = closes[-20:] if len(closes) >= 20 else closes

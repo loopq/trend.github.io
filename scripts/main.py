@@ -26,6 +26,7 @@ sys.path.insert(0, PROJECT_ROOT)
 from scripts.data_fetcher import DataFetcher
 from scripts.calculator import Calculator
 from scripts.generator import Generator
+from scripts.ranking_store import RankingStore
 
 
 def setup_logging(debug: bool = False):
@@ -88,7 +89,8 @@ def process_indices(fetcher: DataFetcher, calculator: Calculator,
         logger.info(f"Processing {name} ({code}) from {source}")
         
         # 获取数据（传递 name 用于 fallback）
-        df = fetcher.fetch_index(code, source, name=name)
+        # 一次性获取足够长的数据（800天约2.2年），用于计算日/周/月线指标
+        df = fetcher.fetch_index(code, source, name=name, days=800)
         
         if df is None or df.empty:
             logger.warning(f"Failed to fetch data for {name}")
@@ -101,8 +103,9 @@ def process_indices(fetcher: DataFetcher, calculator: Calculator,
             continue
         
         # 获取周线和月线数据（用于大周期状态计算）
-        weekly_df = fetcher.fetch_weekly_data(code, source)
-        monthly_df = fetcher.fetch_monthly_data(code, source)
+        # 直接使用本地数据重采样，避免重复网络请求
+        weekly_df = fetcher.process_weekly_data(df)
+        monthly_df = fetcher.process_monthly_data(df)
         
         # 计算指标
         metrics = calculator.calculate_all_metrics(df, weekly_df=weekly_df, monthly_df=monthly_df)
@@ -228,6 +231,7 @@ def main():
         template_dir=os.path.join(PROJECT_ROOT, "templates"),
         output_dir=os.path.join(PROJECT_ROOT, "docs")
     )
+    ranking_store = RankingStore()
     
     # 处理主要指数
     logger.info("=== 处理主要指数 ===")
@@ -241,7 +245,7 @@ def main():
     if not args.force:
         hs300 = next((r for r in major_results if r.get("code") == "000300"), None)
         if hs300 and not hs300.get("error"):
-            df = fetcher.fetch_index("000300", "cn_index", days=5)
+            df = fetcher.fetch_index("000300", "cs_index", days=5)
             if df is not None and not df.empty:
                 latest_date = fetcher.get_latest_date(df)
                 if latest_date:
@@ -266,13 +270,54 @@ def main():
         args.force
     )
     
-    # 检查是否所有数据都失败
-    all_major_failed = all(r.get("error") for r in major_results)
-    all_sector_failed = all(r.get("error") for r in sector_results)
+    # 检查失败率
+    total_indices = len(major_results) + len(sector_results)
+    failed_count = sum(1 for r in major_results if r.get("error")) + \
+                   sum(1 for r in sector_results if r.get("error"))
     
-    if all_major_failed and all_sector_failed:
+    if total_indices > 0:
+        failure_rate = failed_count / total_indices
+        logger.info(f"Failed indices: {failed_count}/{total_indices} ({failure_rate:.2%})")
+        
+        if failure_rate > (1/3):
+            logger.error(f"Too many failures ({failure_rate:.2%} > 33.33%), aborting update.")
+            sys.exit(1)
+    
+    if failed_count == total_indices:
         logger.error("所有数据获取失败，跳过更新")
-        return
+        sys.exit(1)
+    
+    # 确定记录日期（morning 模式用前一天）
+    if args.mode == "morning":
+        record_date = check_date - timedelta(days=1)
+    else:
+        record_date = check_date
+    
+    # 计算排名变化
+    for result in major_results:
+        if not result.get("error"):
+            yesterday_rank = ranking_store.get_yesterday_rank(result["code"], "major_indices")
+            if yesterday_rank is not None:
+                result["rank_change"] = yesterday_rank - result["rank"]
+            else:
+                result["rank_change"] = None
+        else:
+            result["rank_change"] = None
+    
+    for result in sector_results:
+        if not result.get("error"):
+            yesterday_rank = ranking_store.get_yesterday_rank(result["code"], "sector_indices")
+            if yesterday_rank is not None:
+                result["rank_change"] = yesterday_rank - result["rank"]
+            else:
+                result["rank_change"] = None
+        else:
+            result["rank_change"] = None
+    
+    # 更新排名存储
+    major_ranks = {r["code"]: r["rank"] for r in major_results if not r.get("error")}
+    sector_ranks = {r["code"]: r["rank"] for r in sector_results if not r.get("error")}
+    ranking_store.update_today(record_date, major_ranks, sector_ranks)
     
     # 生成页面
     logger.info("=== 生成页面 ===")

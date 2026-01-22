@@ -64,6 +64,7 @@ jobs:
           TZ: Asia/Shanghai
 
       - name: Deploy to GitHub Pages
+        if: success()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,6 +74,7 @@ jobs:
           commit_message: 'Update trend data - ${{ steps.mode.outputs.mode }}'
 
       - name: Send email notification
+        if: success()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com

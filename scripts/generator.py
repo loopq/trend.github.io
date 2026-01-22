@@ -138,6 +138,11 @@ class Generator:
             else:
                 formatted["change_date_str"] = None
             
+            if formatted.get("volume_ratio"):
+                formatted["volume_ratio_str"] = "%.2f" % formatted["volume_ratio"]
+            else:
+                formatted["volume_ratio_str"] = "-"
+            
             sparkline_prices = formatted.get("sparkline_prices", [])
             status = formatted.get("status", "NO")
             formatted["sparkline_svg"] = self.generate_sparkline_svg(sparkline_prices, status)
@@ -146,13 +151,14 @@ class Generator:
         
         return result
     
-    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict]) -> str:
+    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict], mode: str = "evening") -> str:
         """
         生成首页 HTML
         
         Args:
             major_indices: 主要指数数据
             sector_indices: 行业板块数据
+            mode: 运行模式 (morning/evening)
             
         Returns:
             生成的 HTML 文件路径
@@ -161,11 +167,22 @@ class Generator:
         
         now = datetime.now()
         
+        if mode == "morning":
+            # morning模式（美股收盘）：显示前一天的日期
+            from datetime import timedelta
+            display_date = now - timedelta(days=1)
+            # 更新时间显示年月日
+            update_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            # eventing模式（A股收盘）：显示当天日期
+            display_date = now
+            update_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        
         bull_bear = self.calculate_bull_bear_ratio(major_indices)
         
         html_content = template.render(
-            date=self.format_display_date(now),
-            update_time=now.strftime("%H:%M:%S"),
+            date=self.format_display_date(display_date),
+            update_time=update_time_str,
             major_indices=self.prepare_index_data(major_indices),
             sector_indices=self.prepare_index_data(sector_indices),
             bull_ratio=bull_bear["bull_ratio"],
@@ -301,7 +318,7 @@ class Generator:
         """
         result = {}
         
-        result["index"] = self.generate_index(major_indices, sector_indices)
+        result["index"] = self.generate_index(major_indices, sector_indices, mode)
         
         if mode == "evening":
             result["archive_detail"] = self.generate_archive_detail(major_indices, sector_indices)

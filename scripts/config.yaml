@@ -7,7 +7,7 @@ lookback_days: 250       # 状态转变时间最大回溯天数
 
 # ===== 主要指数 =====
 # 使用官方中证指数代码 (https://www.csindex.com.cn)
-# 禁止使用 881xxx 和 1B0xxx，最好使用 cn_index 官方中证指数
+# cs_index: 中证指数官网接口 | sina_index: 新浪接口（用于非中证指数）
 major_indices:
   # ---- 贵金属 ----
   - code: "XAU"
@@ -16,31 +16,35 @@ major_indices:
   - code: "XAG"
     name: "白银现价"
     source: "spot_price"
+  # ---- 加密货币 ----
+  - code: "BTC"
+    name: "比特币"
+    source: "crypto"
   # ---- A股指数 ----
   - code: "000688"
     name: "科创50"
-    source: "cn_index"
+    source: "cs_index"
   - code: "000905"
     name: "中证500"
-    source: "cn_index"
+    source: "cs_index"
   - code: "000852"
     name: "中证1000"
-    source: "cn_index"
+    source: "cs_index"
   - code: "932000"
     name: "中证2000"
-    source: "cn_index"
+    source: "cs_index"
   - code: "899050"
     name: "北证50"
-    source: "cn_index"
+    source: "cs_index"
   - code: "399673"
     name: "创业板50"
-    source: "cn_index"
+    source: "sina_index"
   - code: "000300"
     name: "沪深300"
-    source: "cn_index"
+    source: "cs_index"
   - code: "000016"
     name: "上证50"
-    source: "cn_index"
+    source: "cs_index"
   # ---- 港股指数 ----
   - code: "HSI"
     name: "恒生指数"
@@ -51,9 +55,6 @@ major_indices:
   - code: "HSTECH"
     name: "恒生科技"
     source: "hk"
-  - code: "HSIII"
-    name: "恒生互联"
-    source: "hk"
   # ---- 美股指数 ----
   - code: "SPX"
     name: "标普500"
@@ -61,10 +62,6 @@ major_indices:
   - code: "NDX"
     name: "纳指100"
     source: "us"
-  # ---- 日本指数 ----
-  - code: "N225"
-    name: "日经225"
-    source: "jp"
 
 # ===== 行业板块 =====
 # 使用官方中证指数代码
@@ -72,37 +69,37 @@ sector_indices:
   # ---- 科技赛道 ----
   - code: "H30184"
     name: "半导体"
-    source: "cn_index"
+    source: "cs_index"
   - code: "931087"
     name: "科技龙头"
-    source: "cn_index"
+    source: "cs_index"
   # ---- 强周期板块 ----
   - code: "000819"
     name: "有色金属"
-    source: "cn_index"
+    source: "cs_index"
   - code: "931151"
-    name: "光伏设备"
-    source: "cn_index"
+    name: "光伏产业"
+    source: "cs_index"
   - code: "000941"
     name: "新能源"
-    source: "cn_index"
+    source: "cs_index"
   - code: "000813"
     name: "细分化工"
-    source: "cn_index"
+    source: "cs_index"
   # ---- 大消费板块 ----
   - code: "000932"
     name: "中证消费"
-    source: "cn_index"
+    source: "cs_index"
   - code: "399989"
     name: "中证医疗"
-    source: "cn_index"
+    source: "cs_index"
   # ---- 高股息红利 ----
   - code: "399986"
     name: "银行"
-    source: "cn_index"
+    source: "cs_index"
   - code: "399975"
     name: "证券"
-    source: "cn_index"
+    source: "cs_index"
   - code: "000922"
     name: "中证红利"
-    source: "cn_index"
+    source: "cs_index"

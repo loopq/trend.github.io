@@ -68,7 +68,7 @@ open docs/index.html
 python -c "
 from scripts.data_fetcher import DataFetcher
 fetcher = DataFetcher()
-data = fetcher.fetch_index('000300', 'cn_index')
+data = fetcher.fetch_index('000300', 'cs_index')
 print(data.tail(5))
 "
 ```
