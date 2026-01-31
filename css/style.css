@@ -216,6 +216,14 @@ tr:hover {
     color: #43A047;
 }
 
+.extreme-strong {
+    color: #E53935;
+}
+
+.extreme-weak {
+    color: #43A047;
+}
+
 /* 休市状态 */
 .status-closed {
     color: #9E9E9E;
@@ -255,13 +263,13 @@ tr:hover {
     visibility: hidden;
     background-color: #333;
     color: #fff;
-    text-align: center;
+    text-align: left;
     border-radius: 4px;
     padding: 6px 10px;
     position: absolute;
     z-index: 1000;
     top: 130%;
-    right: 0;
+    left: 0;
     font-size: 12px;
     font-weight: normal;
     white-space: nowrap;
@@ -274,7 +282,7 @@ tr:hover {
     content: "";
     position: absolute;
     bottom: 100%;
-    right: 10px;
+    left: 10px;
     border-width: 5px;
     border-style: solid;
     border-color: transparent transparent #333 transparent;
