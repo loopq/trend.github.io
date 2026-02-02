@@ -6,10 +6,9 @@ on:
       mode:
         description: '运行模式'
         required: true
-        default: 'evening'
+        default: 'morning'
         type: choice
         options:
-          - evening
           - morning
       force:
         description: '强制运行（周末测试用）'
@@ -17,7 +16,7 @@ on:
         default: false
         type: boolean
   repository_dispatch:
-    types: [evening,morning]
+    types: [morning]
 
 jobs:
   update:
@@ -45,11 +44,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
-          # 根据 cron 表达式判断运行模式
           elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             echo "mode=${{ github.event.action }}" >> $GITHUB_OUTPUT
           else
-            echo "mode=evening" >> $GITHUB_OUTPUT
+            echo "mode=morning" >> $GITHUB_OUTPUT
           fi
 
       - name: Run update script

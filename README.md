@@ -35,17 +35,14 @@ pip install -r requirements.txt
 # 激活虚拟环境
 source venv/bin/activate
 
-# 晚间更新（A股/港股，生成归档）
-python scripts/main.py --mode evening
-
-# 早间更新（美股）
+# 早间更新（更新前一天行情 + 归档）
 python scripts/main.py --mode morning
 
 # 调试模式
-python scripts/main.py --mode evening --debug
+python scripts/main.py --mode morning --debug
 
 # 强制运行
-python scripts/main.py --mode evening --force
+python scripts/main.py --mode morning --force
 
 # 逻辑测试（不请求数据）
 python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run
@@ -113,8 +110,7 @@ git push -u origin main
 
 | 模式 | 北京时间 | 说明 |
 |------|----------|------|
-| `morning` | 06:00 | 早间更新（美股数据） |
-| `evening` | 18:00 | 晚间更新（A股/港股 + 归档） |
+| `morning` | 08:30 | 早间更新（前一天行情 + 归档） |
 
 **API 调用方式：**
 
@@ -124,13 +120,6 @@ curl -X POST \
   -H "Authorization: Bearer <PAT_TOKEN>" \
   -H "Accept: application/vnd.github.v3+json" \
   -d '{"event_type":"morning"}' \
-  https://api.github.com/repos/<owner>/<repo>/dispatches
-
-# 晚间更新
-curl -X POST \
-  -H "Authorization: Bearer <PAT_TOKEN>" \
-  -H "Accept: application/vnd.github.v3+json" \
-  -d '{"event_type":"evening"}' \
   https://api.github.com/repos/<owner>/<repo>/dispatches
 ```
 
@@ -173,7 +162,7 @@ pip install -r requirements.txt
 
 ```bash
 # 强制运行
-python scripts/main.py --mode evening --force --debug
+python scripts/main.py --mode morning --force --debug
 
 # 逻辑测试（不请求数据）
 python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run

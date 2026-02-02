@@ -14,17 +14,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 激活虚拟环境
 source venv/bin/activate
 
-# 晚间更新（A股/港股，生成归档）
-python scripts/main.py --mode evening
-
-# 早间更新（美股）
+# 早间更新（前一天行情 + 归档）
 python scripts/main.py --mode morning
 
 # 调试模式
-python scripts/main.py --mode evening --debug
+python scripts/main.py --mode morning --debug
 
 # 强制运行（跳过休市检查）
-python scripts/main.py --mode evening --force
+python scripts/main.py --mode morning --force
 
 # 逻辑测试（不请求数据）
 python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run
@@ -98,8 +95,7 @@ Generator (scripts/generator.py)
 
 ## 运行模式
 
-- **evening**（18:00）：更新 A股/港股，生成当日归档快照
-- **morning**（06:00）：更新美股，仅生成首页
+- **morning**（08:30）：更新前一天行情，生成归档快照
 
 ## 配置修改
 

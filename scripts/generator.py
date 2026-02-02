@@ -151,32 +151,25 @@ class Generator:
         
         return result
     
-    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict], mode: str = "evening") -> str:
+    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict]) -> str:
         """
         生成首页 HTML
-        
+
         Args:
             major_indices: 主要指数数据
             sector_indices: 行业板块数据
-            mode: 运行模式 (morning/evening)
-            
+
         Returns:
             生成的 HTML 文件路径
         """
         template = self.env.get_template("index.html")
-        
+
         now = datetime.now()
-        
-        if mode == "morning":
-            # morning模式（美股收盘）：显示前一天的日期
-            from datetime import timedelta
-            display_date = now - timedelta(days=1)
-            # 更新时间显示年月日
-            update_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            # eventing模式（A股收盘）：显示当天日期
-            display_date = now
-            update_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        # 显示前一天的日期（更新前一天行情）
+        from datetime import timedelta
+        display_date = now - timedelta(days=1)
+        update_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
         
         bull_bear = self.calculate_bull_bear_ratio(major_indices)
         
@@ -303,25 +296,25 @@ class Generator:
         logger.info(f"Generated archive list at {output_path}")
         return output_path
     
-    def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict],
-                     mode: str = "evening") -> Dict[str, str]:
+    def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict]) -> Dict[str, str]:
         """
         生成所有页面
-        
+
         Args:
             major_indices: 主要指数数据
             sector_indices: 行业板块数据
-            mode: 运行模式 (morning/evening)
-            
+
         Returns:
             生成的文件路径字典
         """
         result = {}
-        
-        result["index"] = self.generate_index(major_indices, sector_indices, mode)
-        
-        if mode == "evening":
-            result["archive_detail"] = self.generate_archive_detail(major_indices, sector_indices)
-            result["archive_list"] = self.generate_archive_list()
-        
+
+        result["index"] = self.generate_index(major_indices, sector_indices)
+
+        # 生成归档
+        from datetime import timedelta
+        archive_date = datetime.now() - timedelta(days=1)
+        result["archive_detail"] = self.generate_archive_detail(major_indices, sector_indices, archive_date)
+        result["archive_list"] = self.generate_archive_list()
+
         return result
