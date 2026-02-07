@@ -52,13 +52,12 @@
         </div>
 
         <!-- 主要指数模块 -->
-        <h2 class="module-title">主要指数</h2>
+        <h2 class="module-title">主要指数 <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>趋势强度 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">偏离度排名，极强极弱=连续三个k线没有触碰MA20</span></span></th>
+                        <th>趋势强度</th>
                         <th>代码</th>
                         <th>名称</th>
                         <th>状态</th>
@@ -70,8 +69,7 @@
                         <th>区间涨幅%</th>
                         <th>强度变化</th>
                         <th>走势</th>
-                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">周月周期下临界值状态</span></span></th>
+                        <th>周月状态</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -129,14 +127,13 @@
         </div>
 
         <!-- 板块轮动模块 -->
-        <h2 class="module-title">板块轮动数据　日期：{{ date }}</h2>
+        <h2 class="module-title">板块轮动数据　日期：{{ date }} <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>趋势强度 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">偏离度排名，极强极弱=连续三个k线没有触碰MA20</span></span></th>
+                        <th>趋势强度</th>
                         <th>代码</th>
                         <th>名称</th>
                         <th>状态</th>
@@ -148,8 +145,7 @@
                         <th>区间涨幅%</th>
                         <th>强度变化</th>
                         <th>走势</th>
-                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">周月周期下临界值状态</span></span></th>
+                        <th>周月状态</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -211,6 +207,51 @@
             <p>Powered by AkShare | 归档时间：{{ update_time }}</p>
         </div>
     </div>
+
+    <!-- 列说明弹窗 -->
+    <div id="columnHelpModal" class="modal" onclick="closeColumnHelp(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>列说明</h3>
+                <button class="modal-close" onclick="closeColumnHelp()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="help-table">
+                    <tr><th>趋势强度</th><td>按偏离率排序的排名，数字越小趋势越强。极强/极弱 = 连续3日未触碰MA20</td></tr>
+                    <tr><th>代码</th><td>指数代码</td></tr>
+                    <tr><th>名称</th><td>指数名称</td></tr>
+                    <tr><th>状态</th><td>收盘价与MA20的位置：YES（上方）、NO（下方）。🔼突破 🔽跌破</td></tr>
+                    <tr><th>涨幅%</th><td>当日涨跌幅</td></tr>
+                    <tr><th>现价</th><td>最新收盘价</td></tr>
+                    <tr><th>临界值点</th><td>MA20均线值</td></tr>
+                    <tr><th>偏离率</th><td>(现价 - MA20) / MA20，衡量偏离程度</td></tr>
+                    <tr><th>状态转变时间</th><td>最近一次状态转变的日期</td></tr>
+                    <tr><th>区间涨幅%</th><td>自状态转变以来的累计涨跌幅</td></tr>
+                    <tr><th>强度变化</th><td>趋势强度排名的变化</td></tr>
+                    <tr><th>走势</th><td>近20日价格走势图</td></tr>
+                    <tr><th>周月状态</th><td>周线-月线与MA20的位置状态</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openColumnHelp() {
+        document.getElementById('columnHelpModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeColumnHelp(event) {
+        if (!event || event.target.id === 'columnHelpModal' || event.target.classList.contains('modal-close')) {
+            document.getElementById('columnHelpModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeColumnHelp();
+    });
+    </script>
 </body>
 
 </html>

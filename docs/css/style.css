@@ -1,3 +1,35 @@
+/* CSS 变量定义 */
+:root {
+    /* 字体栈 */
+    --font-serif: Georgia, "Times New Roman", "STSong", "SimSun", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+
+    /* 主色调 - 温暖米褐基调 */
+    --color-background: #FAFAF8;
+    --color-text-primary: #3E3E3E;
+    --color-text-secondary: #6B6B6B;
+    --color-border: #E5E3DF;
+
+    /* 多头色系（红色）- 柔和暖砖红 */
+    --color-bull-primary: #C2604D;
+    --color-bull-light: #D97968;
+    --color-bull-bg: #F5E8E6;
+
+    /* 空头色系（绿色）- 柔和墨绿 */
+    --color-bear-primary: #548C73;
+    --color-bear-light: #6FA888;
+    --color-bear-bg: #E8F0ED;
+
+    /* 强调色 - 琥珀色/暖金色 */
+    --color-accent: #D4A574;
+    --color-accent-hover: #B88A5E;
+
+    /* 功能色 */
+    --color-error: #D97A3C;
+    --color-neutral: #9E9E9E;
+}
+
 /* 全局样式 */
 * {
     margin: 0;
@@ -6,11 +38,11 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-serif);
     font-size: 14px;
-    line-height: 1.5;
-    color: #333;
-    background-color: #fff;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+    background-color: var(--color-background);
     padding: 10px;
 }
 
@@ -28,32 +60,34 @@ body {
 }
 
 .header h1 {
+    font-family: var(--font-serif);
     font-size: 18px;
     font-weight: 600;
-    color: #333;
+    color: var(--color-text-primary);
     margin-bottom: 5px;
+    letter-spacing: 0.02em;
 }
 
 .header .date {
     font-size: 16px;
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 .header .update-type {
     font-size: 12px;
-    color: #999;
+    color: var(--color-text-secondary);
     margin-top: 3px;
 }
 
 .header .schedule-info {
     font-size: 11px;
-    color: #1976D2;
+    color: var(--color-accent);
     margin-top: 5px;
 }
 
 .disclaimer {
     font-size: 12px;
-    color: #999;
+    color: var(--color-text-secondary);
     text-align: center;
     margin-bottom: 15px;
 }
@@ -72,12 +106,12 @@ body {
 }
 
 .bull-bear-bar .bull-section {
-    background: #E53935;
+    background: var(--color-bull-primary);
     transition: width 0.5s ease;
 }
 
 .bull-bear-bar .bear-section {
-    background: #43A047;
+    background: var(--color-bear-primary);
     transition: width 0.5s ease;
 }
 
@@ -91,11 +125,11 @@ body {
 }
 
 .bull-bear-bar .bull-label {
-    color: #E53935;
+    color: var(--color-bull-primary);
 }
 
 .bull-bear-bar .bear-label {
-    color: #43A047;
+    color: var(--color-bear-primary);
 }
 
 .bull-bear-bar .vs {
@@ -139,7 +173,7 @@ body {
 }
 
 .nav-links a {
-    color: #1976D2;
+    color: var(--color-accent);
     text-decoration: none;
     margin: 0 10px;
     font-size: 14px;
@@ -151,12 +185,14 @@ body {
 
 /* 模块标题 */
 .module-title {
+    font-family: var(--font-serif);
     font-size: 16px;
     font-weight: 600;
-    color: #333;
+    color: var(--color-text-primary);
     text-align: center;
     margin: 25px 0 10px 0;
     padding-bottom: 5px;
+    letter-spacing: 0.02em;
 }
 
 /* 表格容器 - 支持横向滚动 */
@@ -170,6 +206,8 @@ body {
 table {
     width: 100%;
     border-collapse: collapse;
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 13px;
     min-width: 900px;
 }
@@ -178,50 +216,50 @@ th,
 td {
     padding: 8px 10px;
     text-align: center;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--color-border);
     white-space: nowrap;
 }
 
 th {
-    background-color: #f5f5f5;
+    background-color: var(--color-background);
     font-weight: 600;
-    color: #333;
+    color: var(--color-text-primary);
 }
 
 tr:nth-child(even) {
-    background-color: #fafafa;
+    background-color: var(--color-background);
 }
 
 tr:hover {
-    background-color: #f0f0f0;
+    background-color: #F0EBE5;
 }
 
 /* 状态颜色 */
 .status-yes {
-    color: #E53935;
+    color: var(--color-bull-primary);
     font-weight: 600;
 }
 
 .status-no {
-    color: #43A047;
+    color: var(--color-bear-primary);
     font-weight: 600;
 }
 
 /* 涨跌颜色 */
 .change-positive {
-    color: #E53935;
+    color: var(--color-bull-primary);
 }
 
 .change-negative {
-    color: #43A047;
+    color: var(--color-bear-primary);
 }
 
 .extreme-strong {
-    color: #E53935;
+    color: var(--color-bull-primary);
 }
 
 .extreme-weak {
-    color: #43A047;
+    color: var(--color-bear-primary);
 }
 
 /* 休市状态 */
@@ -231,7 +269,7 @@ tr:hover {
 
 /* 数据异常 */
 .status-error {
-    color: #FF9800;
+    color: var(--color-error);
 }
 
 /* 问号提示图标 */
@@ -256,13 +294,13 @@ tr:hover {
 }
 
 .tooltip-icon:hover {
-    background-color: #1976D2;
+    background-color: var(--color-accent);
 }
 
 .tooltip-wrapper .tooltip-text {
     visibility: hidden;
-    background-color: #333;
-    color: #fff;
+    background-color: var(--color-text-primary);
+    color: var(--color-background);
     text-align: left;
     border-radius: 4px;
     padding: 6px 10px;
@@ -285,7 +323,7 @@ tr:hover {
     left: 10px;
     border-width: 5px;
     border-style: solid;
-    border-color: transparent transparent #333 transparent;
+    border-color: transparent transparent var(--color-text-primary) transparent;
 }
 
 .tooltip-wrapper:hover .tooltip-text {
@@ -304,11 +342,13 @@ tr:hover {
 }
 
 .archive-month h3 {
+    font-family: var(--font-serif);
     font-size: 16px;
-    color: #333;
-    border-bottom: 2px solid #1976D2;
+    color: var(--color-text-primary);
+    border-bottom: 2px solid var(--color-accent);
     padding-bottom: 5px;
     margin-bottom: 10px;
+    letter-spacing: 0.02em;
 }
 
 .archive-month ul {
@@ -325,16 +365,17 @@ tr:hover {
 .archive-month a {
     display: block;
     padding: 8px 12px;
-    background-color: #f5f5f5;
+    background-color: var(--color-background);
     border-radius: 4px;
     text-decoration: none;
-    color: #333;
+    color: var(--color-text-primary);
     text-align: center;
     font-size: 13px;
+    border: 1px solid var(--color-border);
 }
 
 .archive-month a:hover {
-    background-color: #e0e0e0;
+    background-color: #F0EBE5;
 }
 
 /* 页脚 */
@@ -343,8 +384,8 @@ tr:hover {
     margin-top: 30px;
     padding: 15px 0;
     font-size: 12px;
-    color: #999;
-    border-top: 1px solid #e0e0e0;
+    color: var(--color-text-secondary);
+    border-top: 1px solid var(--color-border);
 }
 
 /* 响应式设计 - 手机端 */
@@ -379,5 +420,208 @@ tr:hover {
 @media (max-width: 480px) {
     .archive-month li {
         width: calc(50% - 10px);
+    }
+}
+
+/* 帮助按钮 */
+.help-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background-color: var(--color-background);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 10px;
+    vertical-align: middle;
+    transition: all 0.2s;
+}
+
+.help-btn:hover {
+    background-color: var(--color-accent);
+    color: var(--color-background);
+    border-color: var(--color-accent);
+}
+
+.help-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    background-color: var(--color-neutral);
+    color: var(--color-background);
+    border-radius: 50%;
+    font-size: 10px;
+}
+
+.help-btn:hover .help-btn-icon {
+    background-color: var(--color-background);
+    color: var(--color-accent);
+}
+
+/* 模态框优化 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    background-color: var(--color-background);
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background-color: #fff;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h3 {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.modal-close {
+    background: rgba(0,0,0,0.05);
+    border: none;
+    font-size: 20px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background-color: var(--color-error);
+    color: white;
+}
+
+.modal-body {
+    padding: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.help-list {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0;
+}
+
+.help-item {
+    display: contents;
+}
+
+.help-item dt {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    background-color: #FAFAF8;
+    padding: 14px 8px 14px 20px;
+    white-space: nowrap;
+    margin: 0;
+    font-size: 14px;
+    align-self: start;
+}
+
+.help-item dd {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+    padding: 14px 20px 14px 8px;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    font-size: 14px;
+}
+
+.help-item:not(:first-child) dt {
+    border-top: 1px solid var(--color-border);
+}
+
+.help-item:not(:first-child) dd {
+    border-top: 1px solid var(--color-border);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .modal {
+        padding: 15px;
+    }
+
+    .modal-content {
+        max-width: 100%;
+        border-radius: 12px;
+        max-height: 80vh;
+    }
+
+    .help-item dt {
+        padding: 12px 8px 12px 16px;
+        font-size: 13px;
+    }
+
+    .help-item dd {
+        padding: 12px 16px 12px 8px;
+        font-size: 13px;
+    }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 420px) {
+    .help-list {
+        grid-template-columns: 1fr;
+    }
+
+    .help-item dt {
+        background: transparent;
+        padding: 8px 16px 4px 16px;
+        color: var(--color-accent);
+        font-size: 12px;
+    }
+
+    .help-item dd {
+        padding: 0 16px 8px 16px;
+        color: var(--color-text-primary);
+        font-size: 13px;
+    }
+
+    .help-item:not(:first-child) dt {
+        padding-top: 12px;
     }
 }

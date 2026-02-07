@@ -52,13 +52,12 @@
         </div>
 
         <!-- 主要指数模块 -->
-        <h2 class="module-title">主要指数</h2>
+        <h2 class="module-title">主要指数 <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>趋势强度 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">偏离度排名，极强极弱=连续三个k线没有触碰MA20</span></span></th>
+                        <th>趋势强度</th>
                         <th>代码</th>
                         <th>名称</th>
                         <th>状态</th>
@@ -71,8 +70,7 @@
                         <th>区间涨幅%</th>
                         <th>强度变化</th>
                         <th>走势</th>
-                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">周月周期下临界值状态</span></span></th>
+                        <th>周月状态</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -131,14 +129,13 @@
         </div>
 
         <!-- 板块轮动模块 -->
-        <h2 class="module-title">板块轮动数据　日期：{{ date }}</h2>
+        <h2 class="module-title">板块轮动数据　日期：{{ date }} <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>趋势强度 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">偏离度排名，极强极弱=连续三个k线没有触碰MA20</span></span></th>
+                        <th>趋势强度</th>
                         <th>代码</th>
                         <th>名称</th>
                         <th>状态</th>
@@ -151,8 +148,7 @@
                         <th>区间涨幅%</th>
                         <th>强度变化</th>
                         <th>走势</th>
-                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">周月周期下临界值状态</span></span></th>
+                        <th>周月状态</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -215,6 +211,94 @@
             <p>Powered by AkShare | 数据更新时间：{{ update_time }}</p>
         </div>
     </div>
+
+    <!-- 列说明弹窗 -->
+    <div id="columnHelpModal" class="modal" onclick="closeColumnHelp(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>列说明</h3>
+                <button class="modal-close" onclick="closeColumnHelp()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <dl class="help-list">
+                    <div class="help-item">
+                        <dt>趋势强度</dt>
+                        <dd>按偏离率排序的排名，数字越小趋势越强。极强/极弱 = 连续3日未触碰MA20</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>代码</dt>
+                        <dd>指数代码</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>名称</dt>
+                        <dd>指数名称</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>状态</dt>
+                        <dd>收盘价与MA20的位置：YES（上方）、NO（下方）。🔼突破 🔽跌破</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>涨幅%</dt>
+                        <dd>当日涨跌幅</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>现价</dt>
+                        <dd>最新收盘价</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>临界值点</dt>
+                        <dd>MA20均线值</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>偏离率</dt>
+                        <dd>(现价 - MA20) / MA20，衡量偏离程度</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>量比</dt>
+                        <dd>当日成交量 / 近5日平均成交量</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>状态转变时间</dt>
+                        <dd>最近一次状态转变的日期</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>区间涨幅%</dt>
+                        <dd>自状态转变以来的累计涨跌幅</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>强度变化</dt>
+                        <dd>趋势强度排名的变化</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>走势</dt>
+                        <dd>近20日价格走势图</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>周月状态</dt>
+                        <dd>周线-月线与MA20的位置状态</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openColumnHelp() {
+        document.getElementById('columnHelpModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeColumnHelp(event) {
+        if (!event || event.target.id === 'columnHelpModal' || event.target.classList.contains('modal-close')) {
+            document.getElementById('columnHelpModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeColumnHelp();
+    });
+    </script>
 </body>
 
 </html>
