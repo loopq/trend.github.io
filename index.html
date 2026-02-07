@@ -25,7 +25,7 @@
         <!-- 头部 -->
         <div class="header">
             <h1>鱼盆趋势模型v2.0　日期：2026.02.06</h1>
-            <div class="update-type">更新时间：2026-02-07 15:09:25</div>
+            <div class="update-type">更新时间：2026-02-07 17:23:30</div>
             <div class="schedule-info">定时更新：早间 08:00 更新前一天行情</div>
         </div>
 
@@ -52,13 +52,12 @@
         </div>
 
         <!-- 主要指数模块 -->
-        <h2 class="module-title">主要指数</h2>
+        <h2 class="module-title">主要指数 <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>趋势强度 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">偏离度排名，极强极弱=连续三个k线没有触碰MA20</span></span></th>
+                        <th>趋势强度</th>
                         <th>代码</th>
                         <th>名称</th>
                         <th>状态</th>
@@ -71,8 +70,7 @@
                         <th>区间涨幅%</th>
                         <th>强度变化</th>
                         <th>走势</th>
-                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">周月周期下临界值状态</span></span></th>
+                        <th>周月状态</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -662,16 +660,16 @@
                             
                             
                         </td>
-                        <td class="change-negative">-2.75%</td>
-                        <td>68615.97</td>
-                        <td>82247.32</td>
-                        <td class="change-negative">-16.57%</td>
-                        <td>0.98</td>
+                        <td class="change-negative">-2.80%</td>
+                        <td>68577.64</td>
+                        <td>82245.40</td>
+                        <td class="change-negative">-16.62%</td>
+                        <td>0.99</td>
                         <td>26.01.20</td>
                         <td
                             class="change-negative">
                             
-                            -25.68%
+                            -25.72%
                             
                         </td>
                         <td
@@ -681,7 +679,7 @@
                             
                         </td>
                         <td class="sparkline-cell"><svg width="80" height="24" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg">
-<polyline fill="none" stroke="#43A047" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,4.1 8.4,3.3 12.6,3.3 16.8,3.2 21.1,3.5 25.3,5.4 29.5,4.2 33.7,3.5 37.9,3.5 42.1,6.9 46.3,7.2 50.5,11.3 54.7,12.5 58.9,11.2 63.2,13.5 67.4,15.4 71.6,23.0 75.8,17.2 80.0,18.6"/>
+<polyline fill="none" stroke="#43A047" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0.0,1.0 4.2,4.1 8.4,3.3 12.6,3.3 16.8,3.2 21.1,3.5 25.3,5.4 29.5,4.2 33.7,3.5 37.9,3.5 42.1,6.9 46.3,7.2 50.5,11.3 54.7,12.5 58.9,11.2 63.2,13.5 67.4,15.4 71.6,23.0 75.8,17.2 80.0,18.7"/>
 </svg></td>
                         <td>
                             
@@ -738,14 +736,13 @@
         </div>
 
         <!-- 板块轮动模块 -->
-        <h2 class="module-title">板块轮动数据　日期：2026.02.06</h2>
+        <h2 class="module-title">板块轮动数据　日期：2026.02.06 <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>趋势强度 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">偏离度排名，极强极弱=连续三个k线没有触碰MA20</span></span></th>
+                        <th>趋势强度</th>
                         <th>代码</th>
                         <th>名称</th>
                         <th>状态</th>
@@ -758,8 +755,7 @@
                         <th>区间涨幅%</th>
                         <th>强度变化</th>
                         <th>走势</th>
-                        <th>大周期状态 <span class="tooltip-wrapper"><span class="tooltip-icon">?</span><span
-                                    class="tooltip-text">周月周期下临界值状态</span></span></th>
+                        <th>周月状态</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1221,9 +1217,97 @@
 
         <!-- 页脚 -->
         <div class="footer">
-            <p>Powered by AkShare | 数据更新时间：2026-02-07 15:09:25</p>
+            <p>Powered by AkShare | 数据更新时间：2026-02-07 17:23:30</p>
         </div>
     </div>
+
+    <!-- 列说明弹窗 -->
+    <div id="columnHelpModal" class="modal" onclick="closeColumnHelp(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>列说明</h3>
+                <button class="modal-close" onclick="closeColumnHelp()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <dl class="help-list">
+                    <div class="help-item">
+                        <dt>趋势强度</dt>
+                        <dd>按偏离率排序的排名，数字越小趋势越强。极强/极弱 = 连续3日未触碰MA20</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>代码</dt>
+                        <dd>指数代码</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>名称</dt>
+                        <dd>指数名称</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>状态</dt>
+                        <dd>收盘价与MA20的位置：YES（上方）、NO（下方）。🔼突破 🔽跌破</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>涨幅%</dt>
+                        <dd>当日涨跌幅</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>现价</dt>
+                        <dd>最新收盘价</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>临界值点</dt>
+                        <dd>MA20均线值</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>偏离率</dt>
+                        <dd>(现价 - MA20) / MA20，衡量偏离程度</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>量比</dt>
+                        <dd>当日成交量 / 近5日平均成交量</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>状态转变时间</dt>
+                        <dd>最近一次状态转变的日期</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>区间涨幅%</dt>
+                        <dd>自状态转变以来的累计涨跌幅</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>强度变化</dt>
+                        <dd>趋势强度排名的变化</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>走势</dt>
+                        <dd>近20日价格走势图</dd>
+                    </div>
+                    <div class="help-item">
+                        <dt>周月状态</dt>
+                        <dd>周线-月线与MA20的位置状态</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openColumnHelp() {
+        document.getElementById('columnHelpModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeColumnHelp(event) {
+        if (!event || event.target.id === 'columnHelpModal' || event.target.classList.contains('modal-close')) {
+            document.getElementById('columnHelpModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeColumnHelp();
+    });
+    </script>
 </body>
 
 </html>
