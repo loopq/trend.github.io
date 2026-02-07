@@ -137,6 +137,41 @@ curl -X POST \
 
 ---
 
+## Google Analytics 配置（可选）
+
+### 生产环境配置
+
+1. 进入仓库 `Settings` → `Secrets and variables` → `Actions`
+2. 点击 `New repository secret`
+3. 名称：`GA_MEASUREMENT_ID`
+4. 值：你的 GA4 测量 ID（格式：`G-XXXXXXXXXX`）
+5. 保存后，下次 GitHub Actions 运行时会自动启用统计
+
+### 本地测试 Analytics
+
+```bash
+# 启用 Analytics（使用假 ID 测试）
+python scripts/main.py --mode morning --enable-analytics --force
+
+# 生成的 HTML 中会包含 GA 脚本，但 ID 为 G-XXXXXXXXXX（不会污染真实数据）
+```
+
+### 验证配置是否生效
+
+1. 触发一次 GitHub Actions 运行（手动或定时）
+2. 访问你的网站，查看页面源码（右键 → 查看网页源代码）
+3. 搜索 `gtag('config'`，应该看到你的真实 GA4 ID
+4. 打开 [Google Analytics](https://analytics.google.com) 后台 → Reports → Realtime 视图
+5. 访问网站，应该能在 1-2 分钟内看到实时访问记录
+
+### 隐私与安全说明
+
+- GA4 Measurement ID 通过 GitHub Secrets 存储，不会暴露在公开代码中
+- 本地开发时默认不启用统计，避免污染生产数据
+- 建议在 GA4 后台配置数据流设置，添加 `trend.loopq.cn` 域名白名单（防止 ID 泄露后被恶意使用）
+
+---
+
 ## 常见问题
 
 ### 依赖安装失败

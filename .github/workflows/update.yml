@@ -60,6 +60,7 @@ jobs:
           python scripts/main.py --mode ${{ steps.mode.outputs.mode }} $FORCE_FLAG
         env:
           TZ: Asia/Shanghai
+          GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
 
       - name: Deploy to GitHub Pages
         if: success()

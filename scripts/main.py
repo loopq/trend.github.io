@@ -160,6 +160,11 @@ def main():
         action="store_true",
         help="只打印逻辑判断，不请求数据"
     )
+    parser.add_argument(
+        "--enable-analytics",
+        action="store_true",
+        help="启用 Google Analytics（本地测试用，使用假 ID）"
+    )
     
     args = parser.parse_args()
     
@@ -210,12 +215,32 @@ def main():
     logger.info(f"加载配置文件: {args.config}")
     config = load_config(args.config)
     
+    # GA4 配置逻辑
+    analytics_enabled = False
+    ga_measurement_id = None
+
+    # 优先级：命令行参数 > 环境变量
+    if args.enable_analytics:
+        # 本地测试模式：使用假 ID
+        analytics_enabled = True
+        ga_measurement_id = os.getenv('GA_MEASUREMENT_ID', 'G-XXXXXXXXXX').strip()
+        logger.info(f"Analytics enabled (local testing): {ga_measurement_id}")
+    elif os.getenv('GA_MEASUREMENT_ID'):
+        # 生产环境：从 GitHub Secrets 读取真实 ID
+        analytics_enabled = True
+        ga_measurement_id = os.getenv('GA_MEASUREMENT_ID').strip()
+        logger.info("Analytics enabled (production)")
+    else:
+        logger.info("Analytics disabled")
+
     # 初始化模块
     fetcher = DataFetcher()
     calculator = Calculator(lookback_days=config.get("lookback_days", 250))
     generator = Generator(
         template_dir=os.path.join(PROJECT_ROOT, "templates"),
-        output_dir=os.path.join(PROJECT_ROOT, "docs")
+        output_dir=os.path.join(PROJECT_ROOT, "docs"),
+        analytics_enabled=analytics_enabled,
+        ga_measurement_id=ga_measurement_id
     )
     ranking_store = RankingStore()
     

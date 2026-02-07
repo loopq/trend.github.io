@@ -68,19 +68,36 @@ Generator (scripts/generator.py)
   - 输出到 docs/ 目录
 ```
 
+## 核心设计决策
+
+### 数据源回退机制
+- 中证指数 (`cs_index`) 失败时自动切换到新浪接口 (`sina_index`)
+- 回退发生在 `DataFetcher.fetch_index()` 中（scripts/data_fetcher.py:113）
+- 所有数据源统一返回标准 DataFrame 格式（date, close, open, high, low, volume）
+
+### 无持久化设计
+- 每次运行重新从 API 获取全部数据（250 天历史）
+- 单次运行内使用 `_cache` 字典避免重复请求（不跨运行持久化）
+- 唯一持久化文件：`ranking_history.json`（仅保留今日和昨日排名）
+
+### 周月线重采样
+- 周/月线通过日线数据重采样生成（`resample('W-FRI')` / `resample('M')`）
+- 非直接 API 调用，确保时间对齐一致性
+- 实现位置：`DataFetcher.fetch_index()` 返回三个 DataFrame
+
 ## 关键文件
 
-| 文件 | 说明 |
-|------|------|
-| `scripts/main.py` | 主入口，流程控制 |
-| `scripts/data_fetcher.py` | 多源数据获取 |
-| `scripts/calculator.py` | 技术指标计算 |
-| `scripts/generator.py` | HTML 页面生成 |
-| `scripts/config.yaml` | 指数配置列表 |
-| `scripts/ranking_history.json` | 排名历史记录 |
-| `templates/` | Jinja2 模板 |
-| `docs/` | GitHub Pages 输出目录 |
-| `.github/workflows/update.yml` | CI/CD 自动更新 |
+| 文件 | 说明 | 关键细节 |
+|------|------|----------|
+| `scripts/main.py` | 主入口，流程控制 | 包含失败率保护机制（>33% 中止运行） |
+| `scripts/data_fetcher.py` | 多源数据获取 | 包含数据源回退逻辑和单次运行缓存 |
+| `scripts/calculator.py` | 技术指标计算 | 状态转变时间需要回溯逐日重算（最多250天） |
+| `scripts/generator.py` | HTML 页面生成 | 生成首页、归档详情页、归档列表页 |
+| `scripts/config.yaml` | 指数配置列表 | 修改此文件添加/删除指数 |
+| `scripts/ranking_history.json` | 排名历史记录 | 仅保留今日和昨日，用于计算排名变化 |
+| `templates/` | Jinja2 模板 | index.html, archive_detail.html, archive_list.html |
+| `docs/` | GitHub Pages 输出目录 | 生成的静态页面和归档 |
+| `.github/workflows/update.yml` | CI/CD 自动更新 | 支持手动和外部定时触发 |
 
 ## 数据源映射
 
@@ -112,3 +129,47 @@ sector_indices:
     name: "半导体"
     source: "cs_index"
 ```
+
+## 关键算法说明
+
+### 状态转变时间追溯
+- 当前状态为 YES 时，向前回溯找到最近的 NO→YES 转变日
+- 需要逐日重算 MA20 和状态判断，最多回溯 250 天
+- 计算密集型操作，可能影响运行时间
+- 实现位置：`Calculator.find_status_change_date()` (scripts/calculator.py:191)
+
+### 失败率保护机制
+- 统计所有指数的数据获取成功率
+- 失败率 > 33% 时中止运行，避免生成错误页面
+- 保护机制防止在数据源大规模故障时更新网站
+- 实现位置：`main.py` 的 `process_indices()` (scripts/main.py:55)
+
+## GitHub Actions 配置
+
+### 必需的 Secrets
+在仓库 Settings → Secrets and variables → Actions 中配置：
+- `GMAIL_USER`：发送通知的 Gmail 邮箱
+- `GMAIL_APP_PASSWORD`：Gmail 应用专用密码（非账户密码）
+  - 获取方式：Google 账户 → 安全性 → 两步验证 → 应用专用密码
+
+### 触发方式
+1. **手动触发**：Actions → Update Trend Data → Run workflow
+   - 可选择运行模式（morning）
+   - 可选择是否强制运行（跳过休市检查）
+
+2. **外部定时触发**：通过 `repository_dispatch` 事件
+   ```bash
+   curl -X POST \
+     -H "Authorization: Bearer <PAT_TOKEN>" \
+     -H "Accept: application/vnd.github.v3+json" \
+     -d '{"event_type":"morning"}' \
+     https://api.github.com/repos/<owner>/<repo>/dispatches
+   ```
+   - 推荐使用 [cron-job.org](https://cron-job.org) 进行精准定时触发
+   - 避免 GitHub Actions `schedule` 触发器的延迟问题
+
+### 工作流逻辑
+1. 运行 `python scripts/main.py --mode morning`
+2. 成功后使用 `peaceiris/actions-gh-pages` 部署到 `gh-pages` 分支
+3. 使用 `dawidd6/action-send-mail` 发送邮件通知
+4. 时区设置为 `Asia/Shanghai`

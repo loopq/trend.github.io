@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>鱼盆趋势模型v2.0 - {{ date }}</title>
     <link rel="stylesheet" href="../css/style.css">
+
+    {% if analytics_enabled and ga_measurement_id %}
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{{ ga_measurement_id }}');
+    </script>
+    <!-- End Google Analytics -->
+    {% endif %}
 </head>
 
 <body>

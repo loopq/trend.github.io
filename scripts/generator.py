@@ -17,16 +17,22 @@ class Generator:
     BULL_COLOR = "#E53935"
     BEAR_COLOR = "#43A047"
     
-    def __init__(self, template_dir: str, output_dir: str):
+    def __init__(self, template_dir: str, output_dir: str,
+                 analytics_enabled: bool = False,
+                 ga_measurement_id: str = None):
         """
         初始化生成器
-        
+
         Args:
             template_dir: 模板目录路径
             output_dir: 输出目录路径（docs/）
+            analytics_enabled: 是否启用 Google Analytics
+            ga_measurement_id: GA4 测量 ID (G-XXXXXXXXXX)
         """
         self.template_dir = template_dir
         self.output_dir = output_dir
+        self.analytics_enabled = analytics_enabled
+        self.ga_measurement_id = ga_measurement_id
         self.archive_dir = os.path.join(output_dir, "archive")
         
         # 确保目录存在
@@ -181,7 +187,9 @@ class Generator:
             bull_ratio=bull_bear["bull_ratio"],
             bear_ratio=bull_bear["bear_ratio"],
             bull_count=bull_bear["bull_count"],
-            bear_count=bull_bear["bear_count"]
+            bear_count=bull_bear["bear_count"],
+            analytics_enabled=self.analytics_enabled,
+            ga_measurement_id=self.ga_measurement_id
         )
         
         output_path = os.path.join(self.output_dir, "index.html")
@@ -219,7 +227,9 @@ class Generator:
             bull_ratio=bull_bear["bull_ratio"],
             bear_ratio=bull_bear["bear_ratio"],
             bull_count=bull_bear["bull_count"],
-            bear_count=bull_bear["bear_count"]
+            bear_count=bull_bear["bear_count"],
+            analytics_enabled=self.analytics_enabled,
+            ga_measurement_id=self.ga_measurement_id
         )
         
         filename = f"{date.strftime('%Y-%m-%d')}.html"
