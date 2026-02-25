@@ -47,6 +47,14 @@ def load_config(config_path: str) -> Dict:
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 
+def _set_github_output(key: str, value: str):
+    """写入 GitHub Actions 输出变量"""
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a") as f:
+            f.write(f"{key}={value}\n")
+
+
 def is_trading_day(d: date) -> bool:
     return d.weekday() < 5
 
@@ -209,6 +217,7 @@ def main():
         yesterday = check_date - timedelta(days=1)
         if not is_trading_day(yesterday):
             logger.info(f"昨天 ({yesterday}) 不是交易日，跳过更新")
+            _set_github_output("should_deploy", "false")
             return
     
     # 加载配置
@@ -264,6 +273,7 @@ def main():
                     last_trading_day = get_last_trading_day(check_date)
                     if data_date < last_trading_day:
                         logger.info(f"数据过旧（A股数据: {data_date}，最近交易日: {last_trading_day}），跳过更新")
+                        _set_github_output("should_deploy", "false")
                         return
                     logger.info(f"A股数据日期: {data_date}，最近交易日: {last_trading_day}，继续执行")
     
@@ -327,7 +337,8 @@ def main():
     
     for page_type, path in generated.items():
         logger.info(f"Generated: {page_type} -> {path}")
-    
+
+    _set_github_output("should_deploy", "true")
     logger.info("=== 完成 ===")
 
 

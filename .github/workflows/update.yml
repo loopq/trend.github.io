@@ -51,6 +51,7 @@ jobs:
           fi
 
       - name: Run update script
+        id: run_script
         run: |
           FORCE_FLAG=""
           # 手动触发时检查 force 参数
@@ -63,7 +64,7 @@ jobs:
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
 
       - name: Deploy to GitHub Pages
-        if: success()
+        if: steps.run_script.outputs.should_deploy == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,7 +74,7 @@ jobs:
           commit_message: 'Update trend data - ${{ steps.mode.outputs.mode }}'
 
       - name: Send email notification
-        if: success()
+        if: steps.run_script.outputs.should_deploy == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
