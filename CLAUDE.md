@@ -20,14 +20,21 @@ python scripts/main.py --mode morning
 # 调试模式
 python scripts/main.py --mode morning --debug
 
-# 强制运行（跳过休市检查）
+# 强制运行（跳过休市检查 + 数据新鲜度检查）
 python scripts/main.py --mode morning --force
 
-# 逻辑测试（不请求数据）
+# 逻辑测试（不请求数据，只打印日期判断）
 python scripts/main.py --mode morning --mock-date 2026-01-17 --dry-run
 
 # 本地预览
 cd docs && python -m http.server 8000
+
+# 本地测试 Analytics（使用假 ID）
+python scripts/main.py --mode morning --enable-analytics --force
+
+# 批量回填历史归档（从 API 获取历史数据重新生成归档页面）
+python scripts/backfill_archive.py --days 30
+python scripts/backfill_archive.py --start 2025-12-17 --end 2026-01-17
 
 # 测试数据获取
 python -c "
@@ -38,6 +45,8 @@ print(data.tail(5))
 "
 ```
 
+**注意**：`scripts/test_*.py` 是手动数据源测试脚本（直接 `python scripts/test_csindex.py` 运行），不是自动化测试套件，项目无 pytest/unittest。
+
 ## 架构
 
 ```
@@ -46,73 +55,102 @@ AkShare/yfinance API
         ▼
 DataFetcher (scripts/data_fetcher.py)
   - 多数据源获取：cs_index, sina_index, hk, us, spot_price, crypto
-  - 周/月线重采样
+  - fetch_index() 返回日线 DataFrame（标准列：date, close, open, high, low, volume）
+  - process_weekly_data() / process_monthly_data() 从日线重采样
   - 自动回退机制（中证失败→新浪）
+  - 请求 800 天历史数据用于周/月线 MA20 计算
         │
         ▼
 Calculator (scripts/calculator.py)
-  - MA20 计算与状态判定 (YES/NO)
-  - 偏离率计算与排名
-  - 状态转变时间检测（回溯250天）
-  - 大周期状态（周-月线）
-  - 极强/极弱信号检测
+  - calculate_all_metrics() 是核心方法，返回指标字典（见下方数据契约）
+  - MA20 状态判定：收盘价 >= MA20 → "YES"，否则 → "NO"
+  - 偏离率 = (current_price / ma20 - 1) * 100，用于排名排序
+  - 大周期状态：周线 MA20 + 月线 MA20 → "YES-YES" / "YES-NO" 等
+  - 趋势拐点：昨日状态 ≠ 今日状态 → new_breakthrough / new_breakdown
+  - 极强/极弱信号：连续 3 天最低价 > MA20（极强）或最高价 < MA20（极弱）
         │
         ▼
 RankingStore (scripts/ranking_store.py)
-  - 持久化排名历史到 ranking_history.json
-  - 计算排名变化
+  - 持久化排名历史到 scripts/ranking_history.json
+  - 滑动窗口：仅保留 today + yesterday，每次运行 today → yesterday 轮转
         │
         ▼
 Generator (scripts/generator.py)
-  - Jinja2 模板渲染
-  - 输出到 docs/ 目录
+  - Jinja2 模板渲染 + SVG sparkline 生成（最近20日趋势图）
+  - 多空比例统计（仅 major_indices 参与计算）
+  - 模板 → 输出映射：
+    templates/index.html          → docs/index.html（首页）
+    templates/archive_detail.html → docs/archive/YYYY-MM-DD.html（归档详情）
+    templates/archive_list.html   → docs/archive/index.html（归档列表，扫描已有归档文件生成）
 ```
+
+### calculate_all_metrics() 输出契约
+
+这是贯穿整个系统的核心数据结构，从 Calculator 输出到 Generator 消费：
+
+```python
+{
+    "current_price", "prev_close", "ma20",    # 价格数据
+    "status",          # "YES" / "NO"（日线 MA20 上下）
+    "change",          # 涨跌幅 %
+    "deviation",       # 偏离率 %（排序依据）
+    "change_date",     # 状态转变日期（回溯最多 250 天）
+    "change_price",    # 转变日 MA20（区间涨幅基准）
+    "interval_change", # 区间涨幅 %（从转变日 MA20 算起）
+    "volume_ratio",    # 量比（当日量 / 前5日均量）
+    "big_cycle_status",# "YES-YES" 等（周-月线 MA20）
+    "status_change",   # "new_breakthrough" / "new_breakdown" / None
+    "extreme_trend",   # "极强" / "极弱" / None
+    "sparkline_prices",# 最近 20 日收盘价列表
+    "error",           # 错误信息或 None
+}
+```
+
+`main.py` 的 `process_indices()` 额外附加 `rank`（偏离率排序序号）和 `rank_change`（较昨日排名变化）。
 
 ## 核心设计决策
 
+### 部署门控（should_deploy）
+
+`main.py` 通过 `_set_github_output("should_deploy", ...)` 控制 CI 是否触发 `peaceiris/actions-gh-pages` 部署。以下 3 个条件会阻止部署（`--force` 可跳过前两个）：
+
+1. **昨天非交易日**：周六/周日运行时直接跳过（`is_trading_day(yesterday)`）
+2. **A股数据过旧**：以沪深300（000300）作为哨兵，检查数据最新日期 < 上一个交易日则跳过
+3. **失败率过高**：指数数据获取失败率 > 33% 时 `sys.exit(1)` 中止
+
 ### 数据源回退机制
-- 中证指数 (`cs_index`) 失败时自动切换到新浪接口 (`sina_index`)
-- 回退发生在 `DataFetcher.fetch_index()` 中（scripts/data_fetcher.py:113）
+- 中证指数 (`cs_index`) 失败时自动切换到新浪接口 (`sina_index`)，回退在 `DataFetcher._fetch_cs_index()` 中
+- 美股指数有备用接口 `_fetch_us_index_alt()`（新浪全球指数）
 - 所有数据源统一返回标准 DataFrame 格式（date, close, open, high, low, volume）
+- 网络错误自动重试 2 次（`@retry_on_network_error` 装饰器，线性退避）
 
 ### 无持久化设计
-- 每次运行重新从 API 获取全部数据（250 天历史）
+- 每次运行重新从 API 获取全部数据（800天历史用于周/月线计算）
 - 单次运行内使用 `_cache` 字典避免重复请求（不跨运行持久化）
-- 唯一持久化文件：`ranking_history.json`（仅保留今日和昨日排名）
+- 唯一持久化文件：`scripts/ranking_history.json`（仅保留今日和昨日排名）
 
 ### 周月线重采样
-- 周/月线通过日线数据重采样生成（`resample('W-FRI')` / `resample('M')`）
-- 非直接 API 调用，确保时间对齐一致性
-- 实现位置：`DataFetcher.fetch_index()` 返回三个 DataFrame
+- 周线通过日线数据重采样生成（`resample('W-SUN')`）
+- 月线通过日线数据重采样生成（`resample('ME')`）
+- `fetch_index()` 返回单个日线 DataFrame，周/月线通过 `process_weekly_data()` 和 `process_monthly_data()` 分别计算
 
-## 关键文件
-
-| 文件 | 说明 | 关键细节 |
-|------|------|----------|
-| `scripts/main.py` | 主入口，流程控制 | 包含失败率保护机制（>33% 中止运行） |
-| `scripts/data_fetcher.py` | 多源数据获取 | 包含数据源回退逻辑和单次运行缓存 |
-| `scripts/calculator.py` | 技术指标计算 | 状态转变时间需要回溯逐日重算（最多250天） |
-| `scripts/generator.py` | HTML 页面生成 | 生成首页、归档详情页、归档列表页 |
-| `scripts/config.yaml` | 指数配置列表 | 修改此文件添加/删除指数 |
-| `scripts/ranking_history.json` | 排名历史记录 | 仅保留今日和昨日，用于计算排名变化 |
-| `templates/` | Jinja2 模板 | index.html, archive_detail.html, archive_list.html |
-| `docs/` | GitHub Pages 输出目录 | 生成的静态页面和归档 |
-| `.github/workflows/update.yml` | CI/CD 自动更新 | 支持手动和外部定时触发 |
+### 请求伪装
+- DataFetcher 在初始化时 monkey-patch `requests.Session.request`，为所有 HTTP 请求注入随机 User-Agent
+- 线程安全（双重检查锁），整个进程只 patch 一次
 
 ## 数据源映射
 
 | source | 用途 | AkShare 接口 |
 |--------|------|--------------|
-| `cs_index` | A股指数 | `stock_zh_index_hist_csindex` |
-| `sina_index` | 新浪指数（回退） | `index_zh_a_hist` |
-| `hk` | 港股指数 | `stock_hk_index_daily_em` |
-| `us` | 美股指数 | `index_us_stock_sina` |
+| `cs_index` | A股指数（主） | `stock_zh_index_hist_csindex` |
+| `sina_index` | A股指数（回退/非中证） | `stock_zh_index_daily` |
+| `hk` | 港股指数 | `stock_hk_index_daily_sina` |
+| `us` | 美股指数 | `index_us_stock_sina`（备用 `index_global_from_sina`） |
 | `spot_price` | 贵金属 | `futures_foreign_hist` |
 | `crypto` | 加密货币 | yfinance |
 
-## 运行模式
-
-- **morning**（08:30）：更新前一天行情，生成归档快照
+### 新浪指数代码转换
+`sina_index` 需要交易所前缀（sh/sz/bj），转换规则在 `SINA_EXCHANGE_CODES` 常量和 `_convert_to_sina_symbol()` 中。新增指数若使用 `sina_index` 源需确认前缀映射。
 
 ## 配置修改
 
@@ -130,46 +168,18 @@ sector_indices:
     source: "cs_index"
 ```
 
-## 关键算法说明
+两个分组：`major_indices`（参与多空比例统计）和 `sector_indices`（仅展示）。
 
-### 状态转变时间追溯
-- 当前状态为 YES 时，向前回溯找到最近的 NO→YES 转变日
-- 需要逐日重算 MA20 和状态判断，最多回溯 250 天
-- 计算密集型操作，可能影响运行时间
-- 实现位置：`Calculator.find_status_change_date()` (scripts/calculator.py:191)
-
-### 失败率保护机制
-- 统计所有指数的数据获取成功率
-- 失败率 > 33% 时中止运行，避免生成错误页面
-- 保护机制防止在数据源大规模故障时更新网站
-- 实现位置：`main.py` 的 `process_indices()` (scripts/main.py:55)
-
-## GitHub Actions 配置
-
-### 必需的 Secrets
-在仓库 Settings → Secrets and variables → Actions 中配置：
-- `GMAIL_USER`：发送通知的 Gmail 邮箱
-- `GMAIL_APP_PASSWORD`：Gmail 应用专用密码（非账户密码）
-  - 获取方式：Google 账户 → 安全性 → 两步验证 → 应用专用密码
+## GitHub Actions
 
 ### 触发方式
-1. **手动触发**：Actions → Update Trend Data → Run workflow
-   - 可选择运行模式（morning）
-   - 可选择是否强制运行（跳过休市检查）
+1. **手动触发**：Actions → Update Trend Data → Run workflow（可选 force）
+2. **外部定时触发**：通过 `repository_dispatch` 事件（推荐 cron-job.org，避免 GitHub schedule 延迟问题）
 
-2. **外部定时触发**：通过 `repository_dispatch` 事件
-   ```bash
-   curl -X POST \
-     -H "Authorization: Bearer <PAT_TOKEN>" \
-     -H "Accept: application/vnd.github.v3+json" \
-     -d '{"event_type":"morning"}' \
-     https://api.github.com/repos/<owner>/<repo>/dispatches
-   ```
-   - 推荐使用 [cron-job.org](https://cron-job.org) 进行精准定时触发
-   - 避免 GitHub Actions `schedule` 触发器的延迟问题
+### Workflows
+- `update.yml`：核心工作流，获取数据 → 生成页面 → 部署到 gh-pages → 邮件通知
+- `keepalive.yml`：每 45 天触发一次空提交，防止 GitHub 因 60 天无活动自动禁用 Actions
 
-### 工作流逻辑
-1. 运行 `python scripts/main.py --mode morning`
-2. 成功后使用 `peaceiris/actions-gh-pages` 部署到 `gh-pages` 分支
-3. 使用 `dawidd6/action-send-mail` 发送邮件通知
-4. 时区设置为 `Asia/Shanghai`
+### 必需的 Secrets
+- `GMAIL_USER` / `GMAIL_APP_PASSWORD`：邮件通知
+- `GA_MEASUREMENT_ID`（可选）：Google Analytics
