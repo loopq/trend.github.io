@@ -14,14 +14,13 @@ import sys
 import argparse
 import logging
 from datetime import datetime, date, timedelta
-from typing import Dict, List, Any
-
-import yaml
+from typing import Dict, List
 
 # 添加项目根目录到路径
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
+from scripts import load_config, apply_rank_changes
 from scripts.data_fetcher import DataFetcher
 from scripts.calculator import Calculator
 from scripts.generator import Generator
@@ -36,12 +35,6 @@ def setup_logging(debug: bool = False):
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-
-
-def load_config(config_path: str) -> Dict:
-    """加载配置文件"""
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
 
 
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
@@ -306,25 +299,8 @@ def main():
     record_date = check_date - timedelta(days=1)
     
     # 计算排名变化
-    for result in major_results:
-        if not result.get("error"):
-            yesterday_rank = ranking_store.get_yesterday_rank(result["code"], "major_indices")
-            if yesterday_rank is not None:
-                result["rank_change"] = yesterday_rank - result["rank"]
-            else:
-                result["rank_change"] = None
-        else:
-            result["rank_change"] = None
-    
-    for result in sector_results:
-        if not result.get("error"):
-            yesterday_rank = ranking_store.get_yesterday_rank(result["code"], "sector_indices")
-            if yesterday_rank is not None:
-                result["rank_change"] = yesterday_rank - result["rank"]
-            else:
-                result["rank_change"] = None
-        else:
-            result["rank_change"] = None
+    apply_rank_changes(major_results, lambda code: ranking_store.get_yesterday_rank(code, "major_indices"))
+    apply_rank_changes(sector_results, lambda code: ranking_store.get_yesterday_rank(code, "sector_indices"))
     
     # 更新排名存储
     major_ranks = {r["code"]: r["rank"] for r in major_results if not r.get("error")}

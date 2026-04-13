@@ -14,23 +14,18 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List
 
-import yaml
 import pandas as pd
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
+from scripts import load_config, apply_rank_changes
 from scripts.data_fetcher import DataFetcher
 from scripts.calculator import Calculator
 from scripts.generator import Generator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-
-def load_config(config_path: str) -> Dict:
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
 
 
 def get_trading_days(start_date: datetime, end_date: datetime, sample_df: pd.DataFrame) -> List[datetime]:
@@ -199,21 +194,8 @@ def main():
         )
         
         # 计算排名变化
-        for result in major_results:
-            if not result.get("error"):
-                yesterday_rank = prev_major_ranks.get(result["code"])
-                if yesterday_rank is not None:
-                    result["rank_change"] = yesterday_rank - result["rank"]
-                else:
-                    result["rank_change"] = None
-        
-        for result in sector_results:
-            if not result.get("error"):
-                yesterday_rank = prev_sector_ranks.get(result["code"])
-                if yesterday_rank is not None:
-                    result["rank_change"] = yesterday_rank - result["rank"]
-                else:
-                    result["rank_change"] = None
+        apply_rank_changes(major_results, prev_major_ranks.get)
+        apply_rank_changes(sector_results, prev_sector_ranks.get)
         
         # 保存当天排名用于下一天对比
         prev_major_ranks = {r["code"]: r["rank"] for r in major_results if not r.get("error")}

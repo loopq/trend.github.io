@@ -9,7 +9,6 @@ import requests.exceptions
 from datetime import datetime, timedelta
 from typing import Optional
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ===== 常量配置区 =====
@@ -111,41 +110,17 @@ class DataFetcher:
             if cls._requests_patched:  # 双重检查
                 return
 
-            import requests
             from requests.sessions import Session
-
-            def _get_random_ua():
-                return random.choice(USER_AGENTS)
-
             original_request = Session.request
 
             def patched_request(self, method, url, **kwargs):
-                headers = kwargs.get("headers", {})
-                if headers is None:
-                    headers = {}
+                headers = kwargs.get("headers") or {}
                 if "User-Agent" not in headers:
-                    headers["User-Agent"] = _get_random_ua()
+                    headers["User-Agent"] = random.choice(USER_AGENTS)
                 kwargs["headers"] = headers
                 return original_request(self, method, url, **kwargs)
 
             Session.request = patched_request
-
-            original_api_request = requests.api.request
-
-            def patched_api_request(method, url, **kwargs):
-                headers = kwargs.get("headers", {})
-                if headers is None:
-                    headers = {}
-                if "User-Agent" not in headers:
-                    headers["User-Agent"] = _get_random_ua()
-                kwargs["headers"] = headers
-                return original_api_request(method, url, **kwargs)
-
-            requests.api.request = patched_api_request
-            requests.request = patched_api_request
-            requests.get = functools.partial(patched_api_request, "get")
-            requests.post = functools.partial(patched_api_request, "post")
-
             cls._requests_patched = True
 
     @staticmethod
@@ -302,9 +277,8 @@ class DataFetcher:
 
         return self._standardize_dataframe(df, days)
 
-    @retry_on_network_error(max_retries=2)
     def _fetch_cs_index(self, code: str, days: int) -> Optional[pd.DataFrame]:
-        """获取中证指数数据 - 中证指数官网接口 (失败时回退到新浪)"""
+        """获取中证指数数据，失败时回退到新浪"""
         try:
             end_date = datetime.now().strftime("%Y%m%d")
             start_date = (datetime.now() - timedelta(days=days + EXTRA_DAYS_BUFFER)).strftime("%Y%m%d")
@@ -316,26 +290,29 @@ class DataFetcher:
                 end_date=end_date
             )
 
-            if df is None or df.empty:
-                logger.warning(f"No data from stock_zh_index_hist_csindex for {code}")
-                raise ValueError("Empty data")
-
-            df = df.rename(columns={"日期": "date", "收盘": "close", "开盘": "open", "最高": "high", "最低": "low", "成交量": "volume"})
-            return self._standardize_dataframe(df, days)
-
+            if df is not None and not df.empty:
+                df = df.rename(columns={"日期": "date", "收盘": "close", "开盘": "open",
+                                        "最高": "high", "最低": "low", "成交量": "volume"})
+                result = self._standardize_dataframe(df, days)
+                if result is not None:
+                    return result
         except NETWORK_ERRORS as e:
-            logger.warning(f"Error fetching CS index {code}: {e}. Trying Sina fallback...")
-            sina_symbol = self._convert_to_sina_symbol(code)
-            if sina_symbol:
-                return self._fetch_sina_index(sina_symbol, days)
-            return None
+            logger.warning(f"CS index {code} failed: {e}")
+
+        # Fallback to Sina
+        logger.info(f"Falling back to Sina for {code}")
+        sina_symbol = self._convert_to_sina_symbol(code)
+        if sina_symbol:
+            return self._fetch_sina_index(sina_symbol, days)
+        return None
     
     @retry_on_network_error(max_retries=2)
     def _fetch_sina_index(self, code: str, days: int) -> Optional[pd.DataFrame]:
         """获取A股指数数据 - 新浪接口（用于非中证指数如创业板50）"""
         sina_symbol = self._convert_to_sina_symbol(code)
         if not sina_symbol:
-            sina_symbol = f"sz{code}" if str(code).startswith("3") else f"sh{code}"
+            logger.warning(f"Cannot convert {code} to Sina symbol")
+            return None
 
         logger.info(f"Fetching index {code} via Sina ({sina_symbol})")
         df = ak.stock_zh_index_daily(symbol=sina_symbol)
@@ -389,81 +366,27 @@ class DataFetcher:
             logger.warning(f"Alt US fetch failed for {code}: {e}")
             return None
     
+    def _resample_data(self, df: pd.DataFrame, rule: str, periods: int) -> Optional[pd.DataFrame]:
+        """重采样日线数据为指定周期"""
+        if df is None or df.empty:
+            return None
+        try:
+            data = df.sort_values("date").set_index("date")
+            resampled = data.resample(rule).agg({
+                "open": "first", "high": "max", "low": "min", "close": "last"
+            }).dropna().reset_index()
+            return resampled.tail(periods) if not resampled.empty else None
+        except Exception as e:
+            logger.error(f"Error resampling data ({rule}): {e}")
+            return None
+
     def process_weekly_data(self, df: pd.DataFrame, weeks: int = 20) -> Optional[pd.DataFrame]:
-        """
-        处理周线数据 - 使用日线重采样
-        
-        Args:
-            df: 日线数据 DataFrame
-            weeks: 返回的周数
-            
-        Returns:
-            周线数据 DataFrame
-        """
-        try:
-            if df is None or df.empty:
-                return None
-            
-            # 确保按日期排序
-            df = df.sort_values("date")
-            
-            # 设置日期索引
-            data = df.set_index("date")
-            
-            # 重采样为周线 (W-SUN: 每周日结束)
-            weekly_df = data.resample("W-SUN").agg({
-                "open": "first",
-                "high": "max",
-                "low": "min",
-                "close": "last"
-            }).dropna().reset_index()
-            
-            if weekly_df.empty:
-                return None
-            
-            return weekly_df.tail(weeks)
-            
-        except Exception as e:
-            logger.error(f"Error processing weekly data: {e}")
-            return None
-    
+        """处理周线数据 - 使用日线重采样"""
+        return self._resample_data(df, "W-SUN", weeks)
+
     def process_monthly_data(self, df: pd.DataFrame, months: int = 20) -> Optional[pd.DataFrame]:
-        """
-        处理月线数据 - 使用日线重采样
-        
-        Args:
-            df: 日线数据 DataFrame
-            months: 返回的月数
-            
-        Returns:
-            月线数据 DataFrame
-        """
-        try:
-            if df is None or df.empty:
-                return None
-            
-            # 确保按日期排序
-            df = df.sort_values("date")
-            
-            # 设置日期索引
-            data = df.set_index("date")
-            
-            # 重采样为月线 (ME: 月末)
-            monthly_df = data.resample("ME").agg({
-                "open": "first",
-                "high": "max",
-                "low": "min",
-                "close": "last"
-            }).dropna().reset_index()
-            
-            if monthly_df.empty:
-                return None
-            
-            return monthly_df.tail(months)
-            
-        except Exception as e:
-            logger.error(f"Error processing monthly data: {e}")
-            return None
+        """处理月线数据 - 使用日线重采样"""
+        return self._resample_data(df, "ME", months)
     
     def get_latest_date(self, df: pd.DataFrame) -> Optional[datetime]:
         """获取数据的最新日期"""
