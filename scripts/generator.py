@@ -1,11 +1,10 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Any
 from collections import OrderedDict
 from jinja2 import Environment, FileSystemLoader
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +37,6 @@ class Generator:
         # 确保目录存在
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.archive_dir, exist_ok=True)
-        os.makedirs(os.path.join(self.output_dir, "css"), exist_ok=True)
         
         # 初始化 Jinja2 环境
         self.env = Environment(
@@ -157,31 +155,15 @@ class Generator:
         
         return result
     
-    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict]) -> str:
-        """
-        生成首页 HTML
-
-        Args:
-            major_indices: 主要指数数据
-            sector_indices: 行业板块数据
-
-        Returns:
-            生成的 HTML 文件路径
-        """
-        template = self.env.get_template("index.html")
-
-        now = datetime.now()
-
-        # 显示前一天的日期（更新前一天行情）
-        from datetime import timedelta
-        display_date = now - timedelta(days=1)
-        update_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        
+    def _render_page(self, template_name: str, output_path: str,
+                     major_indices: List[Dict], sector_indices: List[Dict],
+                     display_date: str, update_time: str) -> str:
+        """渲染并写出页面，返回输出路径"""
+        template = self.env.get_template(template_name)
         bull_bear = self.calculate_bull_bear_ratio(major_indices)
-        
         html_content = template.render(
-            date=self.format_display_date(display_date),
-            update_time=update_time_str,
+            date=display_date,
+            update_time=update_time,
             major_indices=self.prepare_index_data(major_indices),
             sector_indices=self.prepare_index_data(sector_indices),
             bull_ratio=bull_bear["bull_ratio"],
@@ -191,55 +173,30 @@ class Generator:
             analytics_enabled=self.analytics_enabled,
             ga_measurement_id=self.ga_measurement_id
         )
-        
-        output_path = os.path.join(self.output_dir, "index.html")
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html_content)
-        
-        logger.info(f"Generated index.html at {output_path}")
+        logger.info(f"Generated {output_path}")
         return output_path
-    
+
+    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict]) -> str:
+        """生成首页 HTML"""
+        now = datetime.now()
+        display_date = self.format_display_date(now - timedelta(days=1))
+        update_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        output_path = os.path.join(self.output_dir, "index.html")
+        return self._render_page("index.html", output_path, major_indices, sector_indices,
+                                 display_date, update_time)
+
     def generate_archive_detail(self, major_indices: List[Dict], sector_indices: List[Dict],
-                                 date: datetime = None) -> str:
-        """
-        生成归档详情页
-        
-        Args:
-            major_indices: 主要指数数据
-            sector_indices: 行业板块数据
-            date: 归档日期
-            
-        Returns:
-            生成的 HTML 文件路径
-        """
-        template = self.env.get_template("archive_detail.html")
-        
+                                date: datetime = None) -> str:
+        """生成归档详情页"""
         if date is None:
             date = datetime.now()
-        
-        bull_bear = self.calculate_bull_bear_ratio(major_indices)
-        
-        html_content = template.render(
-            date=self.format_display_date(date),
-            update_time=date.strftime("%H:%M:%S"),
-            major_indices=self.prepare_index_data(major_indices),
-            sector_indices=self.prepare_index_data(sector_indices),
-            bull_ratio=bull_bear["bull_ratio"],
-            bear_ratio=bull_bear["bear_ratio"],
-            bull_count=bull_bear["bull_count"],
-            bear_count=bull_bear["bear_count"],
-            analytics_enabled=self.analytics_enabled,
-            ga_measurement_id=self.ga_measurement_id
-        )
-        
-        filename = f"{date.strftime('%Y-%m-%d')}.html"
-        output_path = os.path.join(self.archive_dir, filename)
-        
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
-        
-        logger.info(f"Generated archive detail at {output_path}")
-        return output_path
+        display_date = self.format_display_date(date)
+        update_time = date.strftime("%H:%M:%S")
+        output_path = os.path.join(self.archive_dir, f"{date.strftime('%Y-%m-%d')}.html")
+        return self._render_page("archive_detail.html", output_path, major_indices, sector_indices,
+                                 display_date, update_time)
     
     def scan_archive_files(self) -> Dict[str, List[Dict[str, str]]]:
         """
@@ -322,7 +279,6 @@ class Generator:
         result["index"] = self.generate_index(major_indices, sector_indices)
 
         # 生成归档
-        from datetime import timedelta
         archive_date = datetime.now() - timedelta(days=1)
         result["archive_detail"] = self.generate_archive_detail(major_indices, sector_indices, archive_date)
         result["archive_list"] = self.generate_archive_list()

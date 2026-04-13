@@ -1,10 +1,8 @@
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -59,35 +57,25 @@ class Calculator:
             return 0.0
         return ((current_price / ma20) - 1) * 100
     
-    def detect_status_change(self, df: pd.DataFrame, current_status: str) -> Optional[str]:
-        """
-        检测趋势拐点（新突破/新跌破）
-        
-        Args:
-            df: 历史数据 DataFrame
-            current_status: 当前状态 ('YES' 或 'NO')
-            
-        Returns:
-            'new_breakthrough' / 'new_breakdown' / None
-        """
+    def _detect_status_change(self, df: pd.DataFrame, current_status: str) -> Optional[str]:
+        """检测趋势拐点。内部方法，要求 df 已按 date 升序排列。"""
         if df is None or len(df) < 21:
             return None
-        
-        df = df.sort_values("date").reset_index(drop=True)
+
         closes = df["close"].tolist()
-        
+
         if len(closes) < 21:
             return None
-        
+
         yesterday_ma20 = sum(closes[-21:-1]) / 20
         yesterday_close = closes[-2]
         yesterday_status = "YES" if yesterday_close >= yesterday_ma20 else "NO"
-        
+
         if yesterday_status == "NO" and current_status == "YES":
             return "new_breakthrough"
         elif yesterday_status == "YES" and current_status == "NO":
             return "new_breakdown"
-        
+
         return None
     
     def calculate_change(self, current_price: float, prev_close: float) -> float:
@@ -105,21 +93,11 @@ class Calculator:
             return 0.0
         return ((current_price / prev_close) - 1) * 100
     
-    def find_status_change_date(self, df: pd.DataFrame, current_status: str) -> Tuple[Optional[datetime], Optional[float]]:
-        """
-        查找状态转变时间
-        
-        Args:
-            df: 包含历史数据的 DataFrame，需有 date, close 列
-            current_status: 当前状态 ('YES' 或 'NO')
-            
-        Returns:
-            (状态转变日期, 转变日MA20) - 用 MA20 作为区间涨幅的基准
-        """
+    def _find_status_change_date(self, df: pd.DataFrame, current_status: str) -> Tuple[Optional[datetime], Optional[float]]:
+        """查找状态转变时间。内部方法，要求 df 已按 date 升序排列。"""
         if df is None or len(df) < 21:
             return None, None
-        
-        df = df.sort_values("date").reset_index(drop=True)
+
         closes = df["close"].tolist()
         dates = df["date"].tolist()
         
@@ -163,49 +141,31 @@ class Calculator:
             return None
         return ((current_price / change_ma20) - 1) * 100
     
-    def calculate_big_cycle_status(self, current_price: float, 
-                                      weekly_df: pd.DataFrame, 
-                                      monthly_df: pd.DataFrame) -> str:
-        """
-        计算大周期状态
-        
-        Args:
-            current_price: 当前价格
-            weekly_df: 周线数据
-            monthly_df: 月线数据
-            
-        Returns:
-            大周期状态字符串，如 "YES-YES"、"YES-NO"
-        """
-        weekly_status = "-"
-        monthly_status = "-"
-        
-        # 计算周线 MA20 状态
-        if weekly_df is not None and len(weekly_df) >= 20:
-            closes = weekly_df["close"].tolist()
-            # 用当前价格 + 前19周收盘价计算 MA20
-            ma20_prices = closes[-19:] + [current_price] if len(closes) >= 19 else closes + [current_price]
-            if len(ma20_prices) >= 20:
-                weekly_ma20 = sum(ma20_prices[-20:]) / 20
-                weekly_status = "YES" if current_price >= weekly_ma20 else "NO"
-        
-        # 计算月线 MA20 状态
-        if monthly_df is not None and len(monthly_df) >= 20:
-            closes = monthly_df["close"].tolist()
-            # 用当前价格 + 前19月收盘价计算 MA20
-            ma20_prices = closes[-19:] + [current_price] if len(closes) >= 19 else closes + [current_price]
-            if len(ma20_prices) >= 20:
-                monthly_ma20 = sum(ma20_prices[-20:]) / 20
-                monthly_status = "YES" if current_price >= monthly_ma20 else "NO"
-        
-        return f"{weekly_status}-{monthly_status}"
+    def _period_ma20_status(self, period_df: pd.DataFrame, current_price: float) -> str:
+        """判断周期数据相对 MA20 的状态"""
+        if period_df is None or len(period_df) < 20:
+            return "-"
+        closes = period_df["close"].tolist()
+        ma20_prices = closes[-19:] + [current_price] if len(closes) >= 19 else closes + [current_price]
+        if len(ma20_prices) < 20:
+            return "-"
+        ma20 = sum(ma20_prices[-20:]) / 20
+        return "YES" if current_price >= ma20 else "NO"
+
+    def calculate_big_cycle_status(self, current_price: float,
+                                   weekly_df: pd.DataFrame,
+                                   monthly_df: pd.DataFrame) -> str:
+        """计算大周期状态，如 "YES-YES"、"YES-NO"（周线-月线）"""
+        weekly = self._period_ma20_status(weekly_df, current_price)
+        monthly = self._period_ma20_status(monthly_df, current_price)
+        return f"{weekly}-{monthly}"
     
-    def detect_extreme_trend(self, df: pd.DataFrame, n_days: int = 3) -> Optional[str]:
+    def _detect_extreme_trend(self, df: pd.DataFrame, n_days: int = 3) -> Optional[str]:
+        """检测极强/极弱信号。内部方法，要求 df 已按 date 升序排列。"""
         if df is None or len(df) < 20 + n_days - 1:
             return None
         if "high" not in df.columns or "low" not in df.columns:
             return None
-        df = df.sort_values("date").reset_index(drop=True)
         closes = df["close"].tolist()
         highs = df["high"].tolist()
         lows = df["low"].tolist()
@@ -299,17 +259,10 @@ class Calculator:
         else:
             volumes = [0] * len(closes)
         
-        # 当前价格
+        # 当前价格（尾盘模式：用当前价格 + 前19天收盘价；否则用最近20天）
         if current_price is not None:
             result["current_price"] = current_price
-            # 尾盘模式：用当前价格 + 前19天收盘价计算 MA20
             ma20_prices = closes[-19:] + [current_price]
-            # 注意：如果传入 current_price，说明可能还没收盘，df 里的最后一条可能是昨天的数据
-            # 但这里简化处理，假设 current_price 对应的是最后一天（或者新的一天）
-            # 由于没有传入 current_volume，这里量比计算可能不准确，或者沿用 df 里的 volume
-            # 为保持一致性，如果传入 current_price，我们假设 df[-1] 已经被替换或追加
-            # 但 standard usage in process_indices doesn't pass current_price.
-            pass 
         else:
             result["current_price"] = closes[-1]
             ma20_prices = closes[-20:]
@@ -337,7 +290,7 @@ class Calculator:
         result["deviation"] = self.calculate_deviation(result["current_price"], result["ma20"])
         
         # 状态转变时间
-        change_date, change_ma20 = self.find_status_change_date(df, result["status"])
+        change_date, change_ma20 = self._find_status_change_date(df, result["status"])
         result["change_date"] = change_date
         result["change_price"] = change_ma20  # 现在存储的是转变日的 MA20
         
@@ -353,9 +306,9 @@ class Calculator:
         )
         
         # 趋势拐点检测
-        result["status_change"] = self.detect_status_change(df, result["status"])
-        
-        result["extreme_trend"] = self.detect_extreme_trend(df, n_days=3)
+        result["status_change"] = self._detect_status_change(df, result["status"])
+
+        result["extreme_trend"] = self._detect_extreme_trend(df, n_days=3)
         
         # Sparkline 数据（最近20日收盘价）
         result["sparkline_prices"] = closes[-20:] if len(closes) >= 20 else closes
