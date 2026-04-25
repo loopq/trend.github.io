@@ -183,3 +183,16 @@ sector_indices:
 ### 必需的 Secrets
 - `GMAIL_USER` / `GMAIL_APP_PASSWORD`：邮件通知
 - `GA_MEASUREMENT_ID`（可选）：Google Analytics
+
+## 回测模块（独立离线系统）
+
+`scripts/backtest/` 是完全独立的策略回测子系统，**与生产链路解耦**：
+
+- 生产链路（`main.py`）：每日推送实时趋势（敏感的 close vs MA20）
+- 回测模块（`scripts/backtest/`）：离线验证"干净 K 线方向"策略的历史收益（过滤震荡）
+- 回测**不修改**生产代码，新数据源（THS 行业、日经 等）通过 `data_loader.py` 内本地分支处理
+- 所有回测产出在 `docs/agents/backtest/`
+
+迭代到 V6.1（V6 + 磨损扣减）：20 个 THS 一级行业精选组合，万一免五账户净 CAGR **18-19%**，最大回撤 -12% ~ -21%。
+
+详细文档见 [`scripts/backtest/CLAUDE.md`](scripts/backtest/CLAUDE.md)。
