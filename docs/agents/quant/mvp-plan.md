@@ -1,8 +1,8 @@
 # 量化信号系统 MVP — 产品需求与实施计划
 
-> 版本：v1.4
+> 版本：v1.5
 > 起草日期：2026-04-25
-> 最后修订：2026-04-25（Round 3 review 后修订，状态 MOSTLY_GOOD）
+> 最后修订：2026-04-25（用户调整范围：本期 MVP 只做"本地走通"，外部依赖全 mock）
 > 范围：基于 V9.2 回测结果，落地一套半自动量化信号系统
 > 形式：PRD（产品需求）+ TDD 实施计划
 
@@ -59,6 +59,22 @@
 ### 3.5 与生产链路解耦
 - 量化信号系统在 `scripts/quant/` 子模块，**不修改** `scripts/main.py`、`scripts/data_fetcher.py` 等生产链路代码
 - 共享只读资源（如交易日历、AkShare 数据接口），不共享可写状态
+
+### 3.5.1 本地走通目标（MVP 实施期默认）
+本期实施目标是在**本地把整个流程跑通**：所有 Python 代码 + 前端代码 + 测试 + workflow 文件齐全，TDD 全部通过，dry-run 端到端能跑通。**外部依赖全部 mock**，不依赖任何上线侧配置。
+
+| 外部依赖 | 上线版 | 本地走通版（MVP 实施期）|
+|---|---|---|
+| 定时触发 | cron-job.org → repository_dispatch | 命令行 `python scripts/quant/run_signal.py --mock-now=2026-04-25T14:48:00+08:00` |
+| 飞书推送 | 真发到 webhook URL | mock：写入 `data/quant/notify-outbox/{ts}.json` 模拟"已发送" |
+| GitHub Git Data API 写文件 | 真调 API 写远端 | 本地分支直接写文件 + git commit（writer.py 抽象支持 `dry_run` / `local` 模式）|
+| AkShare 实时行情 | 真调 API | mock fixture：`scripts/quant/tests/fixtures/realtime/{date}.json` |
+| AkShare 历史日线 | 真调 API（首次拉 800 天）| 真调一次落地缓存，之后用本地 `data/quant/cache/*.csv` |
+| 飞书 webhook URL | GitHub Secret `FEISHU_WEBHOOK_URL` | 环境变量 / `.env.local`（本地）+ `mock://feishu`（测试）|
+| GitHub PAT | 网页运行时用户输入存 localStorage | 不需要本地配置（前端测试用 mock localStorage）|
+| Paper trading 真实流程 | 10 个连续工作日观察 | **fixture 重放**：用历史日线模拟 10 个交易日，`run_signal.py --replay-window=2026-04-11..2026-04-25` |
+
+**结论**：本期实施完成后，**整套流程在本地全部能 mock 跑通**；上线前只需要补：① 真实飞书 webhook URL ② cron-job.org 任务 ③ 用户在网页输 PAT，**不修改任何代码**。
 
 ### 3.6 入口密码 gate（弱保护）
 - `docs/quant/` 所有页面访问前，前端 JS 先检查 localStorage `quant_auth` 标记
@@ -899,23 +915,33 @@ T+1:15  【单 commit】写 signals/{today}.json + positions.json (policy_state 
 
 | 任务 | 验收 |
 |---|---|
+**Phase 0 范围调整（MVP 实施期）**：仅做"本地走通"必需的代码骨架与配置；上线前才需要的人工动作（真实飞书机器人、PAT 申请、cron-job.org 配置、外链联调）全部移到 §10 Phase 7（切实盘前的上线清单）。
+
+| 任务 | 验收 |
+|---|---|
 | 创建 `scripts/quant/` 子模块 + `__init__.py` | 目录存在 |
-| 创建 `scripts/quant/tests/` + `pytest.ini` + `conftest.py` | `pytest scripts/quant/tests/` 能跑空套件 |
-| 测试基建：写 `requirements-dev.txt`（pytest + pytest-cov + pyyaml + akshare 已有）| `pip install -r requirements-dev.txt` 成功 |
+| 创建 `scripts/quant/tests/` + `pytest.ini` + `conftest.py` + `fixtures/` | `pytest scripts/quant/tests/` 能跑空套件 |
+| 测试基建：写 `requirements-dev.txt`（pytest + pytest-cov + selenium + chromedriver-autoinstaller）| `pip install -r requirements-dev.txt` 成功 |
 | 测试基建：固定 Python 版本 ≥ 3.10（venv 已用）+ 在 README 标注 | venv 启动无错 |
-| 测试基建：新增 `.github/workflows/quant-test.yml` PR 触发跑 pytest + coverage report | PR 上能看到测试结果，覆盖率不达 90% / 70% 阈值则 fail |
-| **前端测试方案决策**：vanilla JS + mini test runner（`docs/quant/tests/run.html`），手动开浏览器；CI 在 GitHub Actions 上用 **pytest + selenium-webdriver + headless Chrome（apt 装的系统包）** 驱动浏览器跑 run.html 并断言结果 — **整条链路不引入 npm/Node**，仅用 Python + 系统 Chrome | Linus 实用主义；CI 可执行；详细命令在 `.github/workflows/quant-test.yml` |
-| 写 `config.yaml`（13 指数 ETF 映射 + Calmar 权重）| YAML 解析无错 |
-| **【阻塞门】** 用户补齐 3 个待确认 ETF 代码（中证医疗 / 中证新能 / 创业板 50），并选择具体 ETF 标的（候选：中证医疗 159875 招商中证医疗 / 512170 易方达医疗 ETF；中证新能 516160 国泰中证新能源；创业板50 159949 华安创业板50）— **未补齐不得进入 Phase 1** | config.yaml 无 `待补` 字段；附录 A 表格 ETF 列全部填实；记录基线快照 commit SHA |
-| GitHub Secret：`FEISHU_WEBHOOK_URL` | secret 已配置 |
-| 新建 `data/quant/` 空目录 + `.gitkeep` | 目录存在 |
+| 测试基建：`.github/workflows/quant-test.yml` PR 触发，`.coveragerc` + `check_per_module_coverage.py` 后置脚本（核心 90% / IO 70% / 端到端 80%）| 文件存在；后置脚本可独立跑 |
+| **前端测试方案**：vanilla JS + mini test runner（`docs/quant/tests/run.html`），CI 用 pytest + selenium 驱动 headless chromium，**不引入 npm/Node** | 文件存在；本地 `python scripts/quant/tests/run_browser_tests.py` 可独立跑 |
+| 写 `config.yaml`（13 指数 ETF 映射 + Calmar 权重，按附录 A 已封版表）| YAML 解析无错；13 个 ETF 全部填实 |
+| 新建 `data/quant/` 空目录 + `.gitkeep`（cache/ + signals/ + notify-outbox/ 子目录）| 目录存在 |
 | 新建 `docs/quant/` 目录 + 引入 [js-md5](https://github.com/emn178/js-md5) 单文件库（约 5KB）放 `docs/quant/lib/md5.min.js` | 文件存在，浏览器 import 后 `md5("weiaini")` 返回 `eaf4f812fc1a6abc3e9b8182171ffc21` |
-| 飞书机器人创建 + webhook 拿到 | webhook URL 在手 |
-| **飞书卡片联调**：发一条带 action button 跳转 `https://loopq.github.io/trend.github.io/quant/` 的测试卡片，确认按钮可点跳转成功 | 截图存档；按钮点击成功跳转至 GitHub Pages |
-| 用户生成 fine-grained PAT，**权限清单**：仅 `loopq/trend.github.io` 仓库的 Contents Read/Write；**禁止**：Workflows、Actions、Administration、Pages、Pull requests、Issues、Metadata 写权限；过期 90 天 | PAT 在手，仅可写 Contents |
-| 补 `CLAUDE.md` 引用 `scripts/quant/` 子模块 | README/CLAUDE 有指引 |
-| **基线快照锁定**：在 plan 附录 A 列出 13 指数 + 各自 Calmar 权重，附 v9-summary.md commit SHA 作为基线版本号 | 锁定后变更需走变更管理 |
+| writer 抽象 `scripts/quant/writer.py`：本地走通模式（写文件 + 本地 `git add/commit` 模拟原子提交）+ 上线模式（GitHub Git Data API）切换 | 单元测试覆盖两种模式 |
+| `notifier.py`：dry-run 模式（写 `data/quant/notify-outbox/{ts}.json`）+ 真发模式（POST webhook）切换 | 单元测试覆盖两种模式 |
+| 补 `CLAUDE.md` 引用 `scripts/quant/` 子模块 | CLAUDE.md 有指引 |
+| **基线快照锁定**：附录 A 已封版（13 指数 + 13 ETF 全部填实，无候选）| 实施期变更需走变更管理 |
 | 修订 `docs/agents/backtest/v9-summary.md` 第 62 行 "V9.2（14 指数）" 笔误为 "（13 指数）"（独立小 PR，不阻塞 quant 开发）| 文档一致 |
+
+**移到 Phase 7（上线前清单）的人工动作**（不阻塞本地走通）：
+
+| 任务 | 时机 |
+|---|---|
+| 用户创建飞书自建机器人 + 拿 webhook URL → GitHub Secret `FEISHU_WEBHOOK_URL` | Phase 7 上线前 |
+| 飞书卡片跳转联调（发测试卡片，确认按钮可跳 `https://loopq.github.io/trend.github.io/quant/`）| Phase 7 上线前 |
+| cron-job.org 三个 cron 任务（14:48 / 09:00 / 15:30）| Phase 7 上线前 |
+| 用户在网页运行时输入 fine-grained PAT（**这本来就是网页内交互，不需要 Phase 0 commit 任何 secret**）| 用户首次访问 quant 页面时 |
 
 ### Phase 1：纯逻辑层（TDD，预估 2-3 天）
 
@@ -1293,29 +1319,25 @@ T+1:15  【单 commit】写 signals/{today}.json + positions.json (policy_state 
 
 ---
 
-## 附录 A：13 指数与 ETF 映射 — Pre-Phase0 Snapshot（待 Phase 0 阻塞门补齐后封版）
-
-> **状态**：本表 3 行（中证医疗 / 中证新能 / 创业板 50）的 ETF 列暂为候选项，必须在 **Phase 0 阻塞门**完成时由用户做出明确选型，并把候选项删除替换为最终确定的 ETF 代码 + 名称。**确认后此表才能视为基线快照封版**，并记录 commit SHA 用于实施期变更追踪。
+## 附录 A：13 指数与 ETF 映射（基线快照已封版，来源 `docs/agents/backtest/v9-summary.md` 排名表）
 
 | 序号 | 指数代码 | 指数名 | 数据源 | ETF 代码 | ETF 名 | D 权重 | W 权重 | M 权重 |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 931151 | 光伏产业 | cs_index | 515790 | 光伏 ETF | 61.5% | 25.2% | 13.3% |
 | 2 | 000819 | 有色金属 | cs_index | 512400 | 有色金属 ETF | 53.1% | 9.7% | 37.2% |
-| 3 | 399997 | 中证白酒 | cs_index | 161725 | 招商中证白酒 | 72.7% | 6.1% | 21.2% |
-| 4 | 399989 | 中证医疗 | cs_index | _候选：159875 / 512170_ | _Phase 0 待选_ | 75.6% | ❌ | 24.4% |
+| 3 | 399997 | 中证白酒 | cs_index | 161725 | 招商中证白酒 ETF | 72.7% | 6.1% | 21.2% |
+| 4 | 399989 | 中证医疗 | cs_index | 512170 | 易方达中证医疗 ETF | 75.6% | ❌ | 24.4% |
 | 5 | 931079 | 5G 通信 | cs_index | 515050 | 5G 通信 ETF | 61.1% | 11.7% | 27.2% |
-| 6 | 399808 | 中证新能 | cs_index | _候选：516160 / 515090_ | _Phase 0 待选_ | 31.8% | 46.2% | 22.0% |
+| 6 | 399808 | 中证新能 | cs_index | 516160 | 国泰中证新能源 ETF | 31.8% | 46.2% | 22.0% |
 | 7 | 931071 | 人工智能 | cs_index | 515980 | AI ETF | 63.4% | 20.3% | 16.3% |
 | 8 | 930721 | CS 智汽车 | cs_index | 516520 | 智能汽车 ETF | 80.0% | ❌ | 20.0% |
 | 9 | 399967 | 中证军工 | cs_index | 512660 | 军工 ETF | 64.8% | ❌ | 35.2% |
-| 10 | 399673 | 创业板 50 | sina_index | _候选：159949_ | _Phase 0 待选_ | 21.6% | 23.7% | 54.7% |
+| 10 | 399673 | 创业板 50 | sina_index | 159949 | 华安创业板 50 ETF | 21.6% | 23.7% | 54.7% |
 | 11 | 000688 | 科创 50 | cs_index | 588000 | 科创 50 ETF | 62.8% | 16.9% | 20.3% |
 | 12 | 000813 | 细分化工 | cs_index | 159870 | 化工 ETF | 74.0% | 9.5% | 16.4% |
 | 13 | 399976 | CS 新能车 | cs_index | 515030 | 新能源车 ETF | 34.4% | 36.6% | 29.1% |
 
-**有效 bucket 数**：13×3 - 3 = **36**（中证医疗 W、CS 智汽车 W、中证军工 W 不创建）
-
-**封版后此节标题改为**："附录 A：13 指数与 ETF 映射（基线快照 commit `<SHA>`）"
+**有效 bucket 数**：13×3 - 3 = **36**（中证医疗 W、CS 智汽车 W、中证军工 W 不创建，按 V4.1 Calmar 算法 CAGR ≤ 0 剔除）
 
 **待用户确认**：3 个 ETF 代码（中证医疗 / 中证新能 / 创业板 50）的具体选型 — Phase 0 完成。
 
@@ -1353,6 +1375,21 @@ T+1:15  【单 commit】写 signals/{today}.json + positions.json (policy_state 
 ### v1.0（2026-04-25 初稿）
 - PRD + TDD 实施计划首版
 - 涵盖：13 指数 V9.2 信号、半自动模式、飞书推送、网页归档、PAT 鉴权、买卖严格配对、paper trading 2 周
+
+### v1.5（2026-04-25 六修，用户调整范围：本期 MVP 只做"本地走通"，外部依赖全 mock）
+
+**核心范围调整**：
+- 新增 §3.5.1「本地走通目标」：明确所有外部依赖（飞书 webhook / GitHub Git Data API / AkShare / cron 触发 / PAT / paper trading）的 mock 边界与本地等价方案
+- §10 Phase 0 重写：删除 5 个上线前才需要的人工动作（飞书机器人 / 飞书联调 / cron-job / Secret 配置 / PAT 申请），全部移到 §10 Phase 7「上线前清单」
+- 附录 A 封版：13 指数 + 13 ETF 全部填实（来源 `v9-summary.md` 排名表用户已补齐）；标题去掉 Pre-Phase0 标注
+- 修正：PAT 是网页运行时输入，不需要 Phase 0 commit 任何 secret（之前误把它列成 Phase 0 阻塞门）
+
+**新增 mock 模式设计**：
+- `writer.py`：本地走通模式（写文件 + git commit）vs 上线模式（GitHub Git Data API），通过 `--local-mode` / 环境变量切换
+- `notifier.py`：dry-run 模式（写 `data/quant/notify-outbox/{ts}.json`）vs 真发模式
+- `run_signal.py`：`--mock-now=<iso8601>` 模拟 cron 触发；`--replay-window=<start>..<end>` 重放历史交易日
+
+**TDD 重新聚焦**：每个模块测试 + 端到端 mock dry-run 跑通整个流程（trigger → fetch → engine → writer → notifier → reconcile → close-confirm），逻辑链路 + 流程贯通。**不需要等真实交易日**。
 
 ### v1.4（2026-04-25 五修，回应 Codex Round 3 评审 6 条文档一致性小问题，状态从 NEEDS_REVISION 升 MOSTLY_GOOD）
 

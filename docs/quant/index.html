@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量化信号控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="lib/md5.min.js"></script>
+    <script src="lib/config.js"></script>
+    <script src="lib/auth.js"></script>
+    <script src="lib/data-loader.js"></script>
+    <script src="lib/writer.js"></script>
+</head>
+<body>
+    <div class="quant-container">
+        <div class="quant-header">
+            <h1>量化信号控制台</h1>
+            <div>
+                <a href="history.html">历史</a>
+                ·
+                <a href="settings.html">设置</a>
+                ·
+                <a href="../index.html">返回主站</a>
+            </div>
+        </div>
+
+        <div id="paper-banner"></div>
+        <div id="summary"></div>
+        <div id="pending-signals"></div>
+        <div id="bucket-grid"></div>
+        <div id="recent-actions"></div>
+    </div>
+
+    <div id="confirm-modal" style="display:none"></div>
+
+    <script>
+        QuantAuth.gate({
+            onAuthorized: function () { boot(); }
+        });
+
+        function boot() {
+            Promise.all([
+                QuantData.loadPositions(),
+                QuantData.loadTransactions(),
+                QuantData.loadSignalsIndex(),
+            ]).then(function (results) {
+                var positions = results[0];
+                var transactions = results[1];
+                var signalsIndex = results[2];
+                QuantData.checkSizeWarning(transactions);
+
+                renderPaperBanner(positions);
+
+                // 加载今日 + 最近 7 日的信号文件，组装 pending + recent
+                var recentDates = signalsIndex.entries.slice(-7).map(function (e) { return e.date; });
+                QuantData.loadSignalsForDates(recentDates).then(function (signalFiles) {
+                    var allSignals = [];
+                    signalFiles.forEach(function (sf) { (sf.signals || []).forEach(function (s) { s._file_date = sf.date; allSignals.push(s); }); });
+                    var etfRealtimePrices = (signalFiles[signalFiles.length - 1] || {}).etf_realtime_prices || {};
+
+                    renderSummary(positions, etfRealtimePrices);
+                    renderPending(allSignals.filter(function (s) { return s.status === 'pending'; }));
+                    renderBucketGrid(positions, etfRealtimePrices);
+                    renderRecentActions(allSignals);
+                });
+            }).catch(function (err) {
+                document.getElementById('summary').innerHTML =
+                    '<div class="section"><div class="empty-state">加载数据失败：' + err.message + '</div></div>';
+            });
+        }
+
+        function renderPaperBanner(positions) {
+            var el = document.getElementById('paper-banner');
+            if (positions.paper_trading) {
+                el.innerHTML = '<div class="paper-trading-banner">⚠️ Paper Trading 模式：所有操作不影响真实账户。在 settings.html 关闭。</div>';
+            } else {
+                el.innerHTML = '';
+            }
+        }
+
+        function renderSummary(positions, etfPrices) {
+            var totalCost = 0, totalMV = 0, totalCash = 0;
+            Object.values(positions.buckets || {}).forEach(function (b) {
+                totalCost += b.initial_capital || 0;
+                totalCash += b.cash || 0;
+                if (b.shares > 0 && etfPrices[b.etf_code]) {
+                    totalMV += b.shares * etfPrices[b.etf_code];
+                }
+            });
+            var totalAsset = totalCash + totalMV;
+            var pnl = totalAsset - totalCost;
+            var pnlPct = totalCost > 0 ? (pnl / totalCost * 100) : 0;
+            var sign = pnl >= 0 ? 'positive' : 'negative';
+            document.getElementById('summary').innerHTML =
+                '<div class="section"><h2>📊 总览</h2>' +
+                '<div class="summary-row">' +
+                  card('总资产', '¥' + totalAsset.toFixed(2)) +
+                  card('总成本', '¥' + totalCost.toFixed(2)) +
+                  card('累计盈亏', (pnl >= 0 ? '+' : '') + '¥' + pnl.toFixed(2) + ' (' + (pnl >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)', sign) +
+                  card('现金', '¥' + totalCash.toFixed(2)) +
+                  card('持仓市值', '¥' + totalMV.toFixed(2)) +
+                '</div></div>';
+        }
+
+        function card(label, value, klass) {
+            return '<div class="summary-card"><div class="label">' + label + '</div>' +
+                   '<div class="value' + (klass ? ' ' + klass : '') + '">' + value + '</div></div>';
+        }
+
+        function renderPending(signals) {
+            var el = document.getElementById('pending-signals');
+            if (!signals.length) {
+                el.innerHTML = '<div class="section"><h2>🔔 需确认 (0)</h2><div class="empty-state">今日无待确认信号</div></div>';
+                return;
+            }
+            var html = '<div class="section"><h2>🔔 需确认 (' + signals.length + ')</h2>';
+            signals.forEach(function (s) {
+                var idxCode = s.bucket_id.split('-')[0];
+                var freq = s.bucket_id.split('-')[1];
+                var info = QuantConfig.infoOf(idxCode);
+                html += '<div class="signal-card action-' + s.action + '">' +
+                    '<div class="meta">' + s._file_date + ' · ' + s.id + '</div>' +
+                    '<div class="title">[' + freq + '-' + s.action + '] ' +
+                       info.name + '(' + idxCode + ') → ' + info.etfName + '(' + info.etfCode + ')' +
+                       (s.suggested_shares ? ' 建议 ' + s.suggested_shares + ' 股 @¥' + s.etf_realtime_price : '') + '</div>' +
+                    '<div class="trigger">' + s.trigger_condition + '</div>' +
+                    (s.warning ? '<div class="warning">⚠️ ' + s.warning + '</div>' : '') +
+                    '<div class="signal-actions">' +
+                       '<button class="btn btn-primary" onclick="openConfirmModal(\'' + s.id + '\', \'' + s._file_date + '\')">✅ 已成交</button>' +
+                       '<button class="btn btn-secondary" onclick="skipSignal(\'' + s.id + '\', \'' + s._file_date + '\')">❌ 跳过</button>' +
+                    '</div>' +
+                    '</div>';
+            });
+            html += '</div>';
+            el.innerHTML = html;
+        }
+
+        function renderBucketGrid(positions, etfPrices) {
+            // 按指数分组
+            var byIndex = {};
+            Object.values(positions.buckets || {}).forEach(function (b) {
+                if (!byIndex[b.index_code]) {
+                    byIndex[b.index_code] = { name: b.index_name, etf: b.etf_code, freq: { D: 'NA', W: 'NA', M: 'NA' } };
+                }
+                // bucket_id 在 buckets dict 里没有，但通过 frequency 可推；此处简化：从 calmar_weight 推断
+                // 注：positions.buckets 的 key 是 "INDEX-FREQ"
+            });
+            // 用 key 解析 freq
+            Object.entries(positions.buckets || {}).forEach(function (entry) {
+                var key = entry[0];
+                var b = entry[1];
+                var parts = key.split('-');
+                var freq = parts[parts.length - 1];
+                if (!byIndex[b.index_code]) {
+                    byIndex[b.index_code] = { name: b.index_name, etf: b.etf_code, freq: { D: 'NA', W: 'NA', M: 'NA' } };
+                }
+                byIndex[b.index_code].freq[freq] = b;
+            });
+
+            var html = '<div class="section"><h2>📈 13 指数当前状态</h2><div class="bucket-grid">';
+            Object.entries(byIndex).forEach(function (entry) {
+                var code = entry[0];
+                var info = entry[1];
+                html += '<div class="bucket-card" onclick="window.location.href=\'index/' + code + '.html\'">' +
+                    '<div class="index-name">' + info.name + ' (' + code + ')</div>';
+                ['D', 'W', 'M'].forEach(function (f) {
+                    var b = info.freq[f];
+                    if (b === 'NA') {
+                        html += '<div class="freq-row"><span>' + f + '</span><span class="state-NA">N/A</span></div>';
+                    } else {
+                        var state = b.actual_state;
+                        var detail = state === 'HOLD' ? (b.shares + ' 股 @¥' + b.avg_cost.toFixed(3)) : ('¥' + b.cash.toFixed(2));
+                        html += '<div class="freq-row"><span>' + f + '</span><span class="state-' + state + '">' + state + ' · ' + detail + '</span></div>';
+                    }
+                });
+                html += '</div>';
+            });
+            html += '</div></div>';
+            document.getElementById('bucket-grid').innerHTML = html;
+        }
+
+        function renderRecentActions(allSignals) {
+            var actions = allSignals
+                .filter(function (s) { return s.status === 'confirmed' || s.status === 'skipped'; })
+                .sort(function (a, b) { return (b._file_date || '').localeCompare(a._file_date || ''); })
+                .slice(0, 10);
+            var html = '<div class="section"><h2>🕐 最近操作</h2>';
+            if (!actions.length) {
+                html += '<div class="empty-state">暂无操作记录</div>';
+            } else {
+                html += '<table class="txs"><thead><tr><th>日期</th><th>指数</th><th>操作</th><th>实际成交</th><th>状态</th></tr></thead><tbody>';
+                actions.forEach(function (s) {
+                    var deal = s.status === 'confirmed' ? (s.actual_shares + ' @¥' + s.actual_price) : '—';
+                    var ic = s.bucket_id.split('-')[0];
+                    var freq = s.bucket_id.split('-')[1];
+                    html += '<tr><td>' + s._file_date + '</td><td>' + QuantConfig.nameOf(ic) + '<span class="muted"> ' + ic + '</span></td>' +
+                            '<td>' + freq + '-' + s.action + '</td>' +
+                            '<td>' + deal + '</td>' +
+                            '<td>' + s.status + (s.skip_reason ? ' (' + s.skip_reason + ')' : '') + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+            html += '</div>';
+            document.getElementById('recent-actions').innerHTML = html;
+        }
+
+        // 跳过信号 / 确认成交（简化版本：写到 GitHub）
+        window.skipSignal = function (signalId, fileDate) {
+            if (!confirm('确认跳过该信号？')) return;
+            updateSignalStatus(signalId, fileDate, { status: 'skipped', skip_reason: 'manual' })
+                .then(function () { window.location.reload(); })
+                .catch(function (err) { alert('提交失败：' + err.message); });
+        };
+
+        window.openConfirmModal = function (signalId, fileDate) {
+            var modal = document.getElementById('confirm-modal');
+            modal.style.display = 'block';
+            modal.innerHTML =
+                '<div class="modal-backdrop">' +
+                  '<div class="modal">' +
+                    '<h3>确认成交：' + signalId + '</h3>' +
+                    '<label>实际成交价 (元)</label><input id="cm-price" type="number" step="0.001" min="0">' +
+                    '<label>实际成交数 (股)</label><input id="cm-shares" type="number" step="100" min="0">' +
+                    '<label><input type="checkbox" id="cm-external"> 外部补充资金（突破 bucket 隔离）</label>' +
+                    '<label>备注（可选）</label><textarea id="cm-note" rows="2"></textarea>' +
+                    '<div class="modal-actions">' +
+                       '<button class="btn btn-secondary" onclick="closeConfirmModal()">取消</button>' +
+                       '<button class="btn btn-primary" onclick="submitConfirm(\'' + signalId + '\', \'' + fileDate + '\')">确认提交</button>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+            setTimeout(function () { document.getElementById('cm-price').focus(); }, 50);
+        };
+
+        window.closeConfirmModal = function () {
+            document.getElementById('confirm-modal').style.display = 'none';
+            document.getElementById('confirm-modal').innerHTML = '';
+        };
+
+        window.submitConfirm = function (signalId, fileDate) {
+            var price = parseFloat(document.getElementById('cm-price').value);
+            var shares = parseInt(document.getElementById('cm-shares').value);
+            var external = document.getElementById('cm-external').checked;
+            var note = document.getElementById('cm-note').value;
+            if (!(price > 0)) { alert('请输入有效成交价'); return; }
+            if (!(shares > 0 && shares % 100 === 0)) { alert('成交数必须 > 0 且为 100 倍数'); return; }
+
+            updateSignalStatus(signalId, fileDate, {
+                status: 'confirmed',
+                actual_price: price,
+                actual_shares: shares,
+                external_funded: external,
+                note: note,
+                confirmed_at: new Date().toISOString(),
+            }).then(function () {
+                closeConfirmModal();
+                window.location.reload();
+            }).catch(function (err) {
+                if (err.code === 'NO_PAT') {
+                    alert('请先在 settings.html 输入 GitHub PAT');
+                } else if (err.code === 'UNAUTHORIZED') {
+                    alert('PAT 失效，请到 settings.html 重新输入');
+                } else {
+                    alert('提交失败：' + err.message);
+                }
+            });
+        };
+
+        // 写入封装：fetch 当前 signals/{date}.json → merge 单条 → commit_atomic
+        function updateSignalStatus(signalId, fileDate, patch) {
+            return QuantData.loadSignalsForDate(fileDate).then(function (payload) {
+                var found = false;
+                payload.signals.forEach(function (s) {
+                    if (s.id === signalId) {
+                        Object.assign(s, patch);
+                        found = true;
+                    }
+                });
+                if (!found) throw new Error('信号 ' + signalId + ' 未找到');
+
+                return QuantWriter.commitAtomic({
+                    files: [
+                        { path: 'data/quant/signals/' + fileDate + '.json',
+                          content: JSON.stringify(payload, null, 2) },
+                    ],
+                    message: '[quant] update signal ' + signalId + ' → ' + patch.status,
+                });
+            });
+        }
+    </script>
+</body>
+</html>

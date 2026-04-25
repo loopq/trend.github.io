@@ -1,0 +1,17 @@
+[run]
+source = scripts/quant
+branch = True
+omit =
+    scripts/quant/tests/*
+    scripts/quant/__init__.py
+    scripts/quant/run_signal.py
+
+[report]
+fail_under = 80
+precision = 1
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError

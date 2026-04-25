@@ -1,0 +1,60 @@
+name: Quant Tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/quant/**'
+      - 'docs/quant/**'
+      - 'requirements-dev.txt'
+      - '.github/workflows/quant-test.yml'
+  workflow_dispatch: {}
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Pytest with coverage
+        run: |
+          pytest scripts/quant/tests/ \
+            -m 'not integration' \
+            --cov=scripts/quant \
+            --cov-config=scripts/quant/.coveragerc \
+            --cov-report=json:coverage.json \
+            --cov-report=term-missing
+
+      - name: Pytest integration
+        run: |
+          pytest scripts/quant/tests/ -m integration
+
+      - name: Per-module coverage gate
+        run: python scripts/quant/tests/check_per_module_coverage.py coverage.json
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Chromium + selenium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+          pip install -r requirements-dev.txt
+
+      - name: Run browser tests
+        run: python scripts/quant/tests/run_browser_tests.py

@@ -21,3 +21,12 @@ __pycache__/
 # 临时文件
 *.tmp
 scripts/backtest/.cache/
+.coverage
+coverage.json
+
+# Quant 运行时本地 mock 产物
+docs/data/quant/notify-outbox/*.json
+docs/data/quant/cache/*.csv
+# 本地 mock demo 用的当日信号文件（线上由 workflow 在仓库生成 + commit）
+docs/data/quant/signals/2*.json
+!docs/data/quant/signals/index.json

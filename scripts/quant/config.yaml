@@ -1,0 +1,154 @@
+# 量化信号系统配置（V9.2 基线，13 指数 / 36 有效 bucket）
+# 详细设计见 docs/agents/quant/mvp-plan.md
+# 基线快照来源：docs/agents/backtest/v9-summary.md 排名表
+
+total_capital: 130000        # 总本金 13 万
+per_index_capital: 10000     # 每指数 1 万
+
+repo:
+  owner: loopq
+  name: trend.github.io
+  branch: main
+
+paths:
+  # 数据放在 docs/data/quant，使其同时被 GitHub Pages 部署 + 前端可 fetch
+  # 前端在 docs/quant/ 通过 ../data/quant/ 相对路径访问
+  data_root: docs/data/quant
+  positions: docs/data/quant/positions.json
+  transactions: docs/data/quant/transactions.json
+  signals_dir: docs/data/quant/signals
+  signals_index: docs/data/quant/signals/index.json
+  cache_dir: docs/data/quant/cache
+  notify_outbox: docs/data/quant/notify-outbox
+
+trigger:
+  signal_time: "14:48"
+  cache_update_time: "09:00"
+  close_confirm_time: "15:30"
+  timezone: "Asia/Shanghai"
+
+paper_trading:
+  enabled_until: "2026-05-09"
+  mode: "auto_skip"   # auto_skip | manual_mock_confirm | off
+
+slo:
+  signals_written_p95_seconds: 120
+  feishu_first_arrival_p95_seconds: 180
+  feishu_all_arrival_p95_seconds: 240
+
+notification:
+  channel: feishu
+  webhook_secret: FEISHU_WEBHOOK_URL
+  retry:
+    count: 3
+    backoff_seconds: [5, 15, 45]
+  fail_workflow_on_unrecoverable_failure: true
+
+writer:
+  default_mode: local      # local | github_api（local = 写文件 + git commit；github_api = Git Data API）
+
+# 13 指数 × Calmar 权重（V4.1 算法，已封版）
+indices:
+  - index_code: "931151"
+    index_name: 光伏产业
+    data_source: cs_index
+    etf_code: "515790"
+    etf_name: 光伏 ETF
+    category: 主题
+    calmar_weights: { D: 0.615, W: 0.252, M: 0.133 }
+
+  - index_code: "000819"
+    index_name: 有色金属
+    data_source: cs_index
+    etf_code: "512400"
+    etf_name: 有色金属 ETF
+    category: 行业
+    calmar_weights: { D: 0.531, W: 0.097, M: 0.372 }
+
+  - index_code: "399997"
+    index_name: 中证白酒
+    data_source: cs_index
+    etf_code: "161725"
+    etf_name: 招商中证白酒 ETF
+    category: 主题
+    calmar_weights: { D: 0.727, W: 0.061, M: 0.212 }
+
+  - index_code: "399989"
+    index_name: 中证医疗
+    data_source: cs_index
+    etf_code: "512170"
+    etf_name: 易方达中证医疗 ETF
+    category: 主题
+    calmar_weights: { D: 0.756, W: null, M: 0.244 }   # null = ❌ 不参与
+
+  - index_code: "931079"
+    index_name: 5G 通信
+    data_source: cs_index
+    etf_code: "515050"
+    etf_name: 5G 通信 ETF
+    category: 主题
+    calmar_weights: { D: 0.611, W: 0.117, M: 0.272 }
+
+  - index_code: "399808"
+    index_name: 中证新能
+    data_source: cs_index
+    etf_code: "516160"
+    etf_name: 国泰中证新能源 ETF
+    category: 主题
+    calmar_weights: { D: 0.318, W: 0.462, M: 0.220 }
+
+  - index_code: "931071"
+    index_name: 人工智能
+    data_source: cs_index
+    etf_code: "515980"
+    etf_name: AI ETF
+    category: 主题
+    calmar_weights: { D: 0.634, W: 0.203, M: 0.163 }
+
+  - index_code: "930721"
+    index_name: CS 智汽车
+    data_source: cs_index
+    etf_code: "516520"
+    etf_name: 智能汽车 ETF
+    category: 主题
+    calmar_weights: { D: 0.800, W: null, M: 0.200 }
+
+  - index_code: "399967"
+    index_name: 中证军工
+    data_source: cs_index
+    etf_code: "512660"
+    etf_name: 军工 ETF
+    category: 主题
+    calmar_weights: { D: 0.648, W: null, M: 0.352 }
+
+  - index_code: "399673"
+    index_name: 创业板 50
+    data_source: sina_index
+    etf_code: "159949"
+    etf_name: 华安创业板 50 ETF
+    category: 宽基
+    calmar_weights: { D: 0.216, W: 0.237, M: 0.547 }
+
+  - index_code: "000688"
+    index_name: 科创 50
+    data_source: cs_index
+    etf_code: "588000"
+    etf_name: 科创 50 ETF
+    category: 宽基
+    calmar_weights: { D: 0.628, W: 0.169, M: 0.203 }
+
+  - index_code: "000813"
+    index_name: 细分化工
+    data_source: cs_index
+    etf_code: "159870"
+    etf_name: 化工 ETF
+    category: 行业
+    calmar_weights: { D: 0.740, W: 0.095, M: 0.164 }
+
+  - index_code: "399976"
+    index_name: CS 新能车
+    data_source: sina_index
+    etf_code: "515030"
+    etf_name: 新能源车 ETF
+    category: 主题
+    calmar_weights: { D: 0.344, W: 0.366, M: 0.291 }

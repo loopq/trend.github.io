@@ -45,7 +45,10 @@ print(data.tail(5))
 "
 ```
 
-**注意**：`scripts/test_*.py` 是手动数据源测试脚本（直接 `python scripts/test_csindex.py` 运行），不是自动化测试套件，项目无 pytest/unittest。
+**注意**：测试覆盖按子系统区分：
+- 主链路 `scripts/test_*.py`：手动数据源测试脚本（直接 `python scripts/test_csindex.py` 运行），不是自动化测试套件
+- `scripts/quant/tests/`：完整 pytest 套件（86 用例 + 6 集成测试，整体覆盖率 90%+），CI 通过 `.github/workflows/quant-test.yml` 在 PR 上自动跑
+- `scripts/backtest/`：暂以手动验证为主
 
 ## 架构
 
@@ -196,3 +199,16 @@ sector_indices:
 迭代到 V6.1（V6 + 磨损扣减）：20 个 THS 一级行业精选组合，万一免五账户净 CAGR **18-19%**，最大回撤 -12% ~ -21%。
 
 详细文档见 [`scripts/backtest/CLAUDE.md`](scripts/backtest/CLAUDE.md)。
+
+## 量化信号系统（Quant，独立离线 + 网页前端）
+
+`scripts/quant/` + `docs/quant/` + `data/quant/` 是基于 V9.2 13 指数回测落地的半自动量化信号系统：
+
+- 14:48 飞书推送 + 网页归档 + 用户人工确认下单
+- 13 指数 × 36 有效 bucket（D/W/M Calmar 权重切分），总本金 13 万
+- 严格状态机（actual_state ↔ policy_state）+ 买卖配对 + close-confirm policy_state 回正
+- 单 commit 多文件原子提交（writer 抽象）+ 同日幂等合并防重跑覆盖
+- 入口密码 gate（`weiaini` MD5）+ Fine-grained PAT（仅 Contents Read/Write）
+- 本期 MVP **本地走通**：所有外部依赖 mock（飞书 webhook / GitHub API / AkShare / cron / paper trading）
+
+详细 plan 见 [`docs/agents/quant/mvp-plan.md`](docs/agents/quant/mvp-plan.md)（v1.5）。

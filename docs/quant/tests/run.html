@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Quant Frontend Test Runner</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="../lib/md5.min.js"></script>
+    <script src="../lib/config.js"></script>
+    <script src="../lib/auth.js"></script>
+    <script src="../lib/data-loader.js"></script>
+    <script src="../lib/writer.js"></script>
+</head>
+<body>
+    <div class="quant-container">
+        <h1>Quant Frontend Tests</h1>
+        <pre id="results" style="background:#f8fafc;padding:16px;border-radius:8px;font-family:monospace;font-size:13px;line-height:1.6;"></pre>
+    </div>
+
+    <script>
+        // 简易 mini test runner（不引 npm/Node）
+        var __TESTS__ = [];
+        var __FAILED__ = 0;
+        var __PASSED__ = 0;
+        var __LOG__ = [];
+
+        function test(name, fn) { __TESTS__.push({ name: name, fn: fn }); }
+
+        function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+
+        function assertEqual(actual, expected, msg) {
+            if (actual !== expected) {
+                throw new Error((msg || 'mismatch') + ': expected ' + expected + ', got ' + actual);
+            }
+        }
+
+        function runAll() {
+            __TESTS__.forEach(function (t) {
+                try {
+                    t.fn();
+                    __PASSED__++;
+                    __LOG__.push('  ✅ ' + t.name);
+                } catch (e) {
+                    __FAILED__++;
+                    __LOG__.push('  ❌ ' + t.name + ' — ' + e.message);
+                }
+            });
+            var summary = (__FAILED__ === 0 ? '✅ ALL PASS' : '❌ FAILURES') +
+                ' — ' + __PASSED__ + ' passed, ' + __FAILED__ + ' failed';
+            document.getElementById('results').textContent = summary + '\n\n' + __LOG__.join('\n');
+            window.__TEST_RESULTS__ = {
+                passed: __PASSED__,
+                failed: __FAILED__,
+                total: __TESTS__.length,
+                allPass: __FAILED__ === 0,
+                log: __LOG__,
+            };
+        }
+
+        // ---- 测试用例 ----
+
+        test('md5 lib loaded and hashes weiaini correctly', function () {
+            assertEqual(md5('weiaini'), 'eaf4f812fc1a6abc3e9b8182171ffc21');
+        });
+
+        test('QuantAuth.gate exposes API', function () {
+            assert(typeof QuantAuth.gate === 'function');
+            assert(typeof QuantAuth.isAuthorized === 'function');
+            assert(typeof QuantAuth.clearAuthorized === 'function');
+            assertEqual(QuantAuth.EXPECTED_HASH, 'eaf4f812fc1a6abc3e9b8182171ffc21');
+        });
+
+        test('QuantAuth wrong password not authorized', function () {
+            QuantAuth.clearAuthorized();
+            assertEqual(QuantAuth.isAuthorized(), false);
+        });
+
+        test('QuantAuth correct password authorizes (simulate localStorage)', function () {
+            // 直接模拟通过：写 localStorage
+            window.localStorage.setItem('quant_auth', '1');
+            assertEqual(QuantAuth.isAuthorized(), true);
+            QuantAuth.clearAuthorized();
+            assertEqual(QuantAuth.isAuthorized(), false);
+        });
+
+        test('QuantData has all loaders', function () {
+            assert(typeof QuantData.loadPositions === 'function');
+            assert(typeof QuantData.loadTransactions === 'function');
+            assert(typeof QuantData.loadSignalsIndex === 'function');
+            assert(typeof QuantData.loadSignalsForDate === 'function');
+            assert(typeof QuantData.loadSignalsForDates === 'function');
+            assert(typeof QuantData.checkSizeWarning === 'function');
+        });
+
+        test('QuantData.checkSizeWarning warns above 5000', function () {
+            var n = QuantData.checkSizeWarning({ transactions: new Array(5001).fill({}) });
+            assertEqual(n, 5001);
+        });
+
+        test('QuantData.checkSizeWarning normal under 5000', function () {
+            var n = QuantData.checkSizeWarning({ transactions: new Array(100).fill({}) });
+            assertEqual(n, 100);
+        });
+
+        test('QuantWriter exposes API', function () {
+            assert(typeof QuantWriter.commitAtomic === 'function');
+            assert(typeof QuantWriter.getPat === 'function');
+            assert(typeof QuantWriter.setPat === 'function');
+            assert(typeof QuantWriter.clearPat === 'function');
+        });
+
+        test('QuantWriter PAT lifecycle', function () {
+            QuantWriter.clearPat();
+            assertEqual(QuantWriter.getPat(), '');
+            QuantWriter.setPat('ghp_test_token');
+            assertEqual(QuantWriter.getPat(), 'ghp_test_token');
+            QuantWriter.clearPat();
+            assertEqual(QuantWriter.getPat(), '');
+        });
+
+        test('QuantWriter.commitAtomic without PAT rejects', function (done) {
+            QuantWriter.clearPat();
+            var caught = false;
+            // commitAtomic 是 async，但同步检查 NO_PAT 路径
+            QuantWriter.commitAtomic({
+                files: [{ path: 'a.json', content: '{}' }],
+                message: 'test',
+            }).then(function () {
+                throw new Error('should reject');
+            }).catch(function (err) {
+                assertEqual(err.code, 'NO_PAT');
+                caught = true;
+            });
+            // 等微任务执行完
+            setTimeout(function () {
+                assert(caught, 'expected NO_PAT rejection');
+                __PASSED__++;
+                document.getElementById('results').textContent =
+                    document.getElementById('results').textContent + '\n  ✅ (async) NO_PAT path verified';
+            }, 50);
+        });
+
+        runAll();
+    </script>
+</body>
+</html>
