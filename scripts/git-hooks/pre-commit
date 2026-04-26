@@ -29,4 +29,41 @@ if [ -n "$DOCS_CHANGED" ]; then
   exit 1
 fi
 
+# v4: backtest sync 概念已废弃（workflow 直接生成到 docs/quant/backtest/，无 sync 链路）
+# 但仍保留对展示目录直接 commit 的轻量校验：若改了 docs/quant/backtest/*.md，跑一次 check
+DST_CHANGED=$(git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null \
+  | grep -E '^docs/quant/backtest/.*\.md$' || true)
+
+if [ -n "$DST_CHANGED" ]; then
+  if [ "$SKIP_BACKTEST_SYNC_CHECK" = "1" ]; then
+    echo "⚠️  SKIP_BACKTEST_SYNC_CHECK=1，跳过 backtest 自洽校验" >&2
+  else
+    # venv 优先，回退 python3（兼容无 venv 激活的 git commit 环境）
+    PYTHON=""
+    if [ -x "venv/bin/python" ]; then PYTHON="venv/bin/python"
+    elif command -v python3 >/dev/null 2>&1; then PYTHON="python3"
+    elif command -v python >/dev/null 2>&1; then PYTHON="python"
+    else
+      echo "⚠️  未找到 python/python3/venv，跳过 backtest check" >&2
+      exit 0
+    fi
+    if ! $PYTHON scripts/quant/build_quant_backtest.py check >/dev/null 2>&1; then
+      DETAIL=$($PYTHON scripts/quant/build_quant_backtest.py check 2>&1 || true)
+      echo "" >&2
+      echo "🚨 pre-commit 拒绝：docs/quant/backtest/ 改动但 check 不通过" >&2
+      echo "" >&2
+      echo "check 详情：" >&2
+      echo "$DETAIL" | sed 's/^/  /' >&2
+      echo "" >&2
+      echo "解决：" >&2
+      echo "  1. python scripts/quant/build_quant_backtest.py" >&2
+      echo "  2. git add docs/quant/backtest/" >&2
+      echo "" >&2
+      echo "  逃生阀：SKIP_BACKTEST_SYNC_CHECK=1 git commit ..." >&2
+      echo "" >&2
+      exit 1
+    fi
+  fi
+fi
+
 exit 0

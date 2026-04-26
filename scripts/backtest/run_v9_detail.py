@@ -1,22 +1,29 @@
-"""V9.2 详细报告：仿照 summary.md 出总览 + 每个指数单独 md。
+"""V9.2 详细报告：批量模式 + 单指数 CLI 模式。
 
-输出：
-    docs/agents/backtest/v9-summary.md    总览（14 指数排行 + 推荐组合）
-    docs/agents/backtest/v9-{code}.md     × 14（每指数年度+Calmar+交易日志）
+批量模式（无参）：
+    docs/agents/backtest/v9-summary.md    总览
+    docs/agents/backtest/v9-{code}.md     × 14
 
-不覆盖之前的 v9-manual-result.md（V9 多窗口报告保留）。
+单指数模式（v4.3 新增，用于 backtest.yml workflow）：
+    --code/--name/--region/--output-dir
+    fail-fast：任何步骤失败 exit 1
+    输出 {code}.md（无 v9- 前缀）到指定目录
+
+设计参考：docs/agents/quant/quant-backtest-runner-plan.md
 """
 from __future__ import annotations
 
+import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 
 from scripts.backtest.data_loader import load_index
 from scripts.backtest.engine import BacktestResult, run_strategy
+from scripts.backtest.index_registry import IndexMeta
 from scripts.backtest.reporter import compute_allocation, render_index_report
 from scripts.backtest.strategies import all_strategies
 from scripts.backtest.v9_registry import build_v9_registry
@@ -211,9 +218,105 @@ def _compute_sigma(daily_close: pd.Series) -> float:
     return float(log_ret.std() * math.sqrt(252) * 100)
 
 
+def process_single_index(meta: IndexMeta, output_dir: Path, file_prefix: str = "") -> Path:
+    """单指数 fail-fast：任何步骤失败抛异常（v4.3 新增）
+
+    Args:
+        meta: IndexMeta 4 元组
+        output_dir: 输出目录（自动 mkdir）
+        file_prefix: 文件名前缀（批量模式 'v9-'，单指数模式 ''）
+
+    Returns:
+        生成的 md 文件路径
+
+    Raises:
+        RuntimeError: 数据为空 / 无策略结果 / 写入失败
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    data = load_index(meta.code, meta.source, meta.name)
+    if data is None or data.daily.empty:
+        raise RuntimeError(f"数据为空：{meta.code} (source={meta.source})")
+
+    results: List[BacktestResult] = []
+    for strat in all_strategies():
+        try:
+            r = run_strategy(
+                data, strat,
+                min_evaluation_start=MIN_EVALUATION_START,
+                index_category=meta.category,
+            )
+            results.append(r)
+        except ValueError as e:
+            logger.warning("  [%s] 策略跳过：%s", strat.name, e)
+
+    if not results:
+        raise RuntimeError(f"无有效策略结果：{meta.code}")
+
+    content = render_index_report(results)
+    out = output_dir / f"{file_prefix}{meta.code}.md"
+    out.write_text(content, encoding="utf-8")
+    # 路径可能在 PROJECT_ROOT 外（如 /tmp 测试），打印绝对路径更安全
+    try:
+        rel = out.relative_to(PROJECT_ROOT)
+        logger.info("  已产出 %s", rel)
+    except ValueError:
+        logger.info("  已产出 %s", out)
+    return out
+
+
+def run_single_cli(args) -> int:
+    """单指数 CLI 模式（v4.3 新增）"""
+    from scripts.backtest.region_dispatcher import (
+        validate_inputs, preflight_data, region_to_source,
+    )
+
+    if not args.name or not args.region:
+        sys.stderr.write("❌ 单指数模式必须同时提供 --name 和 --region\n")
+        return 1
+
+    try:
+        validate_inputs(args.code, args.name, args.region)
+        preflight_data(args.code, args.region)
+    except ValueError as e:
+        sys.stderr.write(f"❌ {e}\n")
+        return 1
+
+    source = region_to_source(args.region)
+    # category = region（v4.3 设计：地域作为 category）
+    meta = IndexMeta(args.code, args.name, source, args.region)
+    output_dir = Path(args.output_dir)
+
+    try:
+        out_file = process_single_index(meta, output_dir=output_dir, file_prefix="")
+    except Exception as e:
+        sys.stderr.write(f"❌ 回测失败：{e}\n")
+        return 1
+
+    if not out_file.exists():
+        sys.stderr.write(f"❌ 回测未产出文件：{out_file}\n")
+        return 1
+    print(f"✅ {out_file}")
+    return 0
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s - %(message)s")
 
+    parser = argparse.ArgumentParser(description="V9 单指数回测器（批量模式 + 单 code CLI 模式）")
+    parser.add_argument('--code', help='单指数模式：指定指数 code（如 HSTECH）')
+    parser.add_argument('--name', help='单指数模式：指数名称（如 "恒生科技"）')
+    parser.add_argument('--region', choices=['cn', 'us', 'hk', 'btc'],
+                        help='单指数模式：地域')
+    parser.add_argument('--output-dir', default=str(OUTPUT_DIR),
+                        help='输出目录（默认 docs/agents/backtest；新流程用 docs/quant/backtest）')
+    args = parser.parse_args()
+
+    # 单指数模式
+    if args.code:
+        return run_single_cli(args)
+
+    # 批量模式（原行为，向后兼容）
     registry = build_v9_registry()
     logger.info("V9.2 池：%d 个指数", len(registry))
 

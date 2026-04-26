@@ -1,0 +1,158 @@
+name: Backtest 在线回测
+
+# Issue #1: run-name 含 request_id，前端按 run-name 关联（精确匹配）
+run-name: "backtest:${{ inputs.code }}:${{ inputs.request_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: '指数 code（如 HSTECH / 000300 / SPX / BTC）'
+        required: true
+      name:
+        description: '指数中文名（如 恒生科技）'
+        required: true
+      region:
+        description: '地域'
+        required: true
+        type: choice
+        options: [cn, us, hk, btc]
+      request_id:
+        description: 'UUID（前端生成；手动触发可填 "manual"）'
+        required: true
+        default: 'manual'
+
+permissions:
+  contents: write
+
+# Issue #5: 全局串行避免 index.json 写冲突
+concurrency:
+  group: backtest-global
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyyaml pandas
+
+      # Issue #3 + N2: 输入校验（env 注入避免 shell 引号问题；NAME 长度正确语法）
+      - name: 校验 inputs（白名单字符）
+        env:
+          CODE: ${{ inputs.code }}
+          NAME: ${{ inputs.name }}
+          REGION: ${{ inputs.region }}
+        run: |
+          if [[ ! "$CODE" =~ ^([0-9]{6}|[A-Z]{2,10})$ ]]; then
+            echo "::error::code 格式错误：$CODE"
+            exit 1
+          fi
+          # name 字符黑名单（拒绝 < > " ' \ 等 HTML 危险字符）
+          if echo "$NAME" | grep -qE '[<>"'"'"'\\\\]'; then
+            echo "::error::name 含非法字符"
+            exit 1
+          fi
+          if [ -z "$NAME" ] || [ "${#NAME}" -gt 30 ]; then
+            echo "::error::name 长度需 1-30（实际 ${#NAME}）"
+            exit 1
+          fi
+          if [[ ! "$REGION" =~ ^(cn|us|hk|btc)$ ]]; then
+            echo "::error::region 仅支持 cn/us/hk/btc"
+            exit 1
+          fi
+
+      # Issue #6: 单跑模式 fail-fast；脚本内含 preflight_data
+      - name: 跑回测（含预探测 + fail-fast）
+        run: |
+          python -m scripts.backtest.run_v9_detail \
+            --code "${{ inputs.code }}" \
+            --name "${{ inputs.name }}" \
+            --region "${{ inputs.region }}" \
+            --output-dir docs/quant/backtest
+
+      # Issue #6: assert 文件存在（双保险）
+      - name: assert 文件已生成
+        run: |
+          F="docs/quant/backtest/${{ inputs.code }}.md"
+          if [ ! -f "$F" ]; then
+            echo "::error::回测未产出文件 $F"
+            exit 1
+          fi
+          echo "✅ $F 存在 ($(wc -l < $F) 行)"
+
+      - name: enrich 单指数
+        run: python scripts/quant/build_quant_backtest.py enrich --only "${{ inputs.code }}"
+
+      - name: rebuild index
+        run: python scripts/quant/build_quant_backtest.py index
+
+      # Issue N1: push retry 失败必 exit 1
+      - name: commit + push（含 retry，失败必 exit 1）
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add docs/quant/backtest/
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+            exit 0
+          fi
+          git commit -m "feat(backtest): online run ${{ inputs.code }} (${{ inputs.region }}) [req=${{ inputs.request_id }}]"
+          PUSHED=false
+          for i in 1 2 3; do
+            git pull --rebase origin main || true
+            if git push origin main; then
+              echo "✅ pushed on attempt $i"
+              PUSHED=true
+              break
+            fi
+            sleep 3
+          done
+          if [ "$PUSHED" != "true" ]; then
+            echo "::error::3 次 push 都失败，main 未更新"
+            exit 1
+          fi
+
+      # Issue #2: 直接 publish quant-only 到 gh-pages（不依赖 quant.yml/update.yml）
+      - name: 准备 quant-only publish 目录
+        run: |
+          set -e
+          rm -rf /tmp/quant-publish
+          mkdir -p /tmp/quant-publish/data
+          if [ -d docs/quant ]; then
+            cp -r docs/quant /tmp/quant-publish/
+          fi
+          if [ -d docs/data/quant ]; then
+            cp -r docs/data/quant /tmp/quant-publish/data/
+          fi
+
+      - name: 同步到 gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/quant-publish
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: '[backtest] sync /quant after online run ${{ inputs.code }}'
+
+      - name: Step Summary
+        run: |
+          {
+            echo "## ✅ 回测完成 + 已部署"
+            echo "- 指数：${{ inputs.name }} (${{ inputs.code }})"
+            echo "- 地域：${{ inputs.region }}"
+            echo "- request_id：${{ inputs.request_id }}"
+            echo "- 报告：[查看](https://trend.loopq.cn/quant/backtest.html?code=${{ inputs.code }})"
+          } >> "$GITHUB_STEP_SUMMARY"

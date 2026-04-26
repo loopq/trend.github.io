@@ -227,3 +227,259 @@ table.txs th { background: #f8fafc; font-weight: 600; color: #4a5568; }
 
 a { color: #2c7a7b; text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+/* === backtest 报告查看器（v3.3）=== */
+
+.markdown-body {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    line-height: 1.7;
+    color: #2c3e50;
+}
+.markdown-body h1 {
+    font-size: 24px;
+    border-bottom: 2px solid #e1e4e8;
+    padding-bottom: 8px;
+    margin-top: 0;
+}
+.markdown-body h2 {
+    font-size: 18px;
+    margin-top: 24px;
+    color: #2d3748;
+    border-bottom: 1px solid #edf2f7;
+    padding-bottom: 6px;
+}
+.markdown-body h3 {
+    font-size: 16px;
+    color: #4a5568;
+    margin-top: 18px;
+}
+.markdown-body blockquote {
+    border-left: 4px solid #2c7a7b;
+    padding: 4px 12px;
+    color: #718096;
+    background: #f8fafc;
+    margin: 12px 0;
+}
+.markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 13px;
+    overflow-x: auto;
+    display: block;
+}
+.markdown-body table th,
+.markdown-body table td {
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+    white-space: nowrap;
+}
+.markdown-body table th {
+    background: #f8fafc;
+    font-weight: 600;
+}
+.markdown-body table tr:nth-child(even) {
+    background: #fafbfc;
+}
+.markdown-body code {
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-size: 13px;
+}
+.markdown-body pre code {
+    display: block;
+    padding: 12px;
+    overflow-x: auto;
+}
+.markdown-body strong { color: #2c7a7b; }
+.markdown-body hr {
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    margin: 20px 0;
+}
+.markdown-body ul,
+.markdown-body ol {
+    padding-left: 24px;
+}
+
+/* 列表页 */
+.report-list {
+    display: grid;
+    gap: 8px;
+}
+.report-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 0.8fr 0.6fr 1fr;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 6px;
+    cursor: pointer;
+    align-items: center;
+    transition: background 0.15s, transform 0.1s;
+}
+.report-row:hover,
+.report-row:focus {
+    background: #edf2f7;
+    outline: 2px solid #2c7a7b;
+    outline-offset: 0;
+}
+.report-row .name {
+    font-weight: 600;
+    color: #2d3748;
+}
+.report-row .code {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    color: #4a5568;
+    font-size: 13px;
+}
+.report-row .category {
+    font-size: 12px;
+    color: #718096;
+}
+.report-row .version {
+    font-size: 12px;
+    color: #2c7a7b;
+    font-weight: 600;
+}
+.report-row .mtime {
+    font-size: 12px;
+    color: #a0aec0;
+    text-align: right;
+}
+
+/* 顶部工具栏 */
+.viewer-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.viewer-toolbar input {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 240px;
+}
+.viewer-toolbar input:focus {
+    outline: 2px solid #2c7a7b;
+    border-color: #2c7a7b;
+}
+
+/* 状态机视觉（仅 backtest viewer，避免覆盖全局 .empty-state）*/
+.loading-state {
+    padding: 48px;
+    text-align: center;
+    color: #a0aec0;
+    font-size: 14px;
+}
+.error-state {
+    background: #fff;
+    border-radius: 10px;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    text-align: center;
+}
+.error-state h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    color: #c53030;
+    outline: none;
+}
+.error-state h2:focus {
+    outline: 2px solid #c53030;
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+.error-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* === backtest runner v4 === */
+
+.trigger-bar {
+    background: #f0fdfa;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: auto 1fr 1.5fr auto auto;
+    gap: 10px;
+    align-items: center;
+}
+.trigger-bar .bar-title {
+    margin: 0;
+    font-size: 15px;
+    color: #065f46;
+    white-space: nowrap;
+}
+.trigger-bar input,
+.trigger-bar select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+}
+.trigger-bar input:focus,
+.trigger-bar select:focus {
+    outline: 2px solid #2c7a7b;
+    border-color: #2c7a7b;
+}
+
+/* Running modal */
+.quant-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+.quant-modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    min-width: 380px;
+    max-width: 520px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+    text-align: left;
+}
+.quant-modal h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: #2d3748;
+    outline: none;
+}
+.quant-modal h3:focus-visible {
+    outline: 2px solid #2c7a7b;
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+.quant-modal .muted {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 4px 0;
+}
+.quant-modal .modal-actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+.quant-modal a.btn {
+    text-decoration: none;
+    display: inline-block;
+}
