@@ -65,49 +65,109 @@ class FixtureFetcher:
         return self._build("etfs", codes)
 
 
-class AkShareFetcher:  # pragma: no cover -- 联网，本地走通模式不跑
-    """生产版（调用 akshare 实时全量行情）。
+class DataAvailabilityError(Exception):
+    """缺数 ≥ 阈值时抛出（review H-8 降级策略）。"""
 
-    由于 akshare 实时接口在测试中不应该被触发，本类的方法体保持精简，
-    仅在上线模式被调用，覆盖率不计。
+
+class AkShareFetcher:  # pragma: no cover -- 联网，本地走通模式不跑
+    """生产版（调用 akshare 实时全量行情 + 主备源 fallback + 缺失阈值检查）。
+
+    降级策略矩阵（mvp-plan §6 / deployment-plan §一.6）：
+    - 单个指数缺失：跳过该指数，其他继续
+    - 主源（cs_index/stock_zh_index_spot_em）失败 → 切备用 sina（stock_zh_index_daily 拼最新）
+    - 主备双源都失败 + 缺失 ≥ 阈值（5/13）→ 抛 DataAvailabilityError
     """
 
-    def fetch_indices(self, codes: list[str]) -> dict[str, RealtimeQuote]:
-        import akshare as ak
+    def __init__(self, missing_threshold_indices: int = 5, missing_threshold_etfs: int = 8) -> None:
+        self.missing_threshold_indices = missing_threshold_indices
+        self.missing_threshold_etfs = missing_threshold_etfs
 
-        df = ak.stock_zh_index_spot_em()
-        out: dict[str, RealtimeQuote] = {}
+    def _ts(self) -> str:
         from datetime import datetime, timezone
-        ts = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-        for code in codes:
-            row = df[df["代码"] == code]
-            if row.empty:
-                continue
-            out[code] = RealtimeQuote(
-                code=code,
-                name=row["名称"].iloc[0],
-                price=float(row["最新价"].iloc[0]),
-                change_pct=float(row["涨跌幅"].iloc[0]),
-                timestamp=ts,
+        return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+
+    def fetch_indices(self, codes: list[str]) -> dict[str, RealtimeQuote]:
+        out: dict[str, RealtimeQuote] = {}
+        # 主源：东财
+        try:
+            import akshare as ak
+            df = ak.stock_zh_index_spot_em()
+            for code in codes:
+                row = df[df["代码"] == code]
+                if row.empty:
+                    continue
+                out[code] = RealtimeQuote(
+                    code=code,
+                    name=row["名称"].iloc[0],
+                    price=float(row["最新价"].iloc[0]),
+                    change_pct=float(row["涨跌幅"].iloc[0]),
+                    timestamp=self._ts(),
+                )
+        except Exception as e:
+            print(f"warning: 主源 stock_zh_index_spot_em 失败: {e}", file=__import__("sys").stderr)
+
+        # 备用源：sina（仅对主源缺失的指数）
+        missing = [c for c in codes if c not in out]
+        if missing:
+            try:
+                import akshare as ak
+                for code in missing:
+                    # 新浪需要 sh/sz 前缀（参考 scripts/data_fetcher.py 的 SINA_EXCHANGE_CODES）
+                    sina_code = self._to_sina_symbol(code)
+                    if not sina_code:
+                        continue
+                    df = ak.stock_zh_index_daily(symbol=sina_code)
+                    if df.empty:
+                        continue
+                    last = df.iloc[-1]
+                    out[code] = RealtimeQuote(
+                        code=code,
+                        name=code,  # 备用源没拿到名称
+                        price=float(last["close"]),
+                        change_pct=0.0,
+                        timestamp=self._ts(),
+                    )
+            except Exception as e:
+                print(f"warning: 备用源 sina 失败: {e}", file=__import__("sys").stderr)
+
+        # 阈值检查
+        missing = [c for c in codes if c not in out]
+        if len(missing) >= self.missing_threshold_indices:
+            raise DataAvailabilityError(
+                f"指数缺失 {len(missing)}/{len(codes)} ≥ 阈值 {self.missing_threshold_indices}: {missing}"
             )
         return out
 
-    def fetch_etfs(self, codes: list[str]) -> dict[str, RealtimeQuote]:
-        import akshare as ak
+    def _to_sina_symbol(self, code: str) -> str | None:
+        # 简化版：00/30/39 开头 → sz；60 开头 → sh；其他暂略
+        if code.startswith(("00", "30", "39")):
+            return f"sz{code}"
+        if code.startswith("60"):
+            return f"sh{code}"
+        return None
 
-        df = ak.fund_etf_spot_em()
+    def fetch_etfs(self, codes: list[str]) -> dict[str, RealtimeQuote]:
         out: dict[str, RealtimeQuote] = {}
-        from datetime import datetime, timezone
-        ts = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-        for code in codes:
-            row = df[df["代码"] == code]
-            if row.empty:
-                continue
-            out[code] = RealtimeQuote(
-                code=code,
-                name=row["名称"].iloc[0],
-                price=float(row["最新价"].iloc[0]),
-                change_pct=float(row["涨跌幅"].iloc[0]),
-                timestamp=ts,
+        try:
+            import akshare as ak
+            df = ak.fund_etf_spot_em()
+            for code in codes:
+                row = df[df["代码"] == code]
+                if row.empty:
+                    continue
+                out[code] = RealtimeQuote(
+                    code=code,
+                    name=row["名称"].iloc[0],
+                    price=float(row["最新价"].iloc[0]),
+                    change_pct=float(row["涨跌幅"].iloc[0]),
+                    timestamp=self._ts(),
+                )
+        except Exception as e:
+            print(f"warning: fund_etf_spot_em 失败: {e}", file=__import__("sys").stderr)
+
+        missing = [c for c in codes if c not in out]
+        if len(missing) >= self.missing_threshold_etfs:
+            raise DataAvailabilityError(
+                f"ETF 缺失 {len(missing)}/{len(codes)} ≥ 阈值 {self.missing_threshold_etfs}: {missing}"
             )
         return out

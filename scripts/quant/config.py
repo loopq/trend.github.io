@@ -97,15 +97,32 @@ def _build_index_spec(raw: dict) -> IndexSpec:
 
 
 def load_config(path: Path | str) -> Config:
+    """加载 config.yaml；若设置 QUANT_DATA_ROOT 环境变量，覆盖 paths 里的所有 data 路径。
+
+    设计参考 deployment-plan.md §3.5.1：mock-test 用 QUANT_DATA_ROOT=/tmp/quant-test 完全隔离。
+    """
+    import os
+
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"config not found: {path}")
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+    paths = dict(raw["paths"])
+    data_root_override = os.environ.get("QUANT_DATA_ROOT")
+    if data_root_override:
+        # 把 paths 里所有以 data_root 开头的路径替换
+        old_root = paths["data_root"]
+        new_root = data_root_override
+        for k, v in paths.items():
+            if isinstance(v, str) and v.startswith(old_root):
+                paths[k] = v.replace(old_root, new_root, 1)
+
     return Config(
         total_capital=raw["total_capital"],
         per_index_capital=raw["per_index_capital"],
         repo=raw["repo"],
-        paths=raw["paths"],
+        paths=paths,
         trigger=raw["trigger"],
         paper_trading=raw["paper_trading"],
         slo=raw["slo"],

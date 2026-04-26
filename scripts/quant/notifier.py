@@ -57,6 +57,18 @@ class Notifier(Protocol):
     def send(self, card: NotificationCard) -> None: ...
 
 
+class NoOpNotifier:
+    """完全空操作 Notifier，连本地 outbox 文件都不写。
+
+    用于 mock-test 模式（QUANT_NOTIFIER=disabled）：保证不会写任何文件 / 不发任何网络请求。
+    """
+
+    def send(self, card: NotificationCard) -> None:
+        # 静默丢弃；可选记录到 stderr 供调试
+        import sys
+        print(f"[NoOpNotifier] discarded: {card.title}", file=sys.stderr)
+
+
 class DryRunNotifier:
     """写 notify-outbox/{ts}.json，不发外部网络请求。"""
 

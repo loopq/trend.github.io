@@ -1,0 +1,64 @@
+name: Quant Heartbeat（哨兵：14:55 检查当日信号已产出）
+
+on:
+  schedule:
+    - cron: '55 6 * * 1-5'   # 14:55 SGT = 06:55 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install
+        run: |
+          pip install pyyaml akshare
+
+      - name: 检查今日是否交易日
+        id: cal
+        run: |
+          TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          # 简化：周末 + 法定假日检测
+          DAY_OF_WEEK=$(TZ=Asia/Shanghai date +%u)
+          if [ "$DAY_OF_WEEK" -gt 5 ]; then
+            echo "is_trading=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::今日 $TODAY 非工作日（周末），跳过哨兵"
+            exit 0
+          fi
+          echo "is_trading=true" >> "$GITHUB_OUTPUT"
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+      - name: 检查 .runs/signal-{date}.done 是否存在
+        if: steps.cal.outputs.is_trading == 'true'
+        run: |
+          DONE_FILE="docs/data/quant/.runs/signal-${{ steps.cal.outputs.today }}.done"
+          if [ -f "$DONE_FILE" ]; then
+            echo "::notice::✅ 今日 ${{ steps.cal.outputs.today }} signal 已跑过（$DONE_FILE 存在）"
+            exit 0
+          fi
+
+          # 兜底：检查 signals/{today}.json 是否存在（旧版数据）
+          SIGNAL_FILE="docs/data/quant/signals/${{ steps.cal.outputs.today }}.json"
+          if [ -f "$SIGNAL_FILE" ]; then
+            echo "::warning::signals 文件存在但 .runs/done 标记缺失（可能首次升级），不报警"
+            exit 0
+          fi
+
+          # 真正的报警：14:55 仍无 signals
+          MSG="⚠️ 量化哨兵警告：${{ steps.cal.outputs.today }} 14:55 仍未发现 signals/.runs/done 标记，cron 主备双路可能均失败。请手动 dispatch quant.yml mode=signal。"
+          echo "::error::$MSG"
+
+          # 发飞书警告
+          curl -s -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$MSG\"}}" || true
+
+          exit 1

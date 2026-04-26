@@ -204,12 +204,16 @@
             document.getElementById('recent-actions').innerHTML = html;
         }
 
-        // 跳过信号 / 确认成交（简化版本：写到 GitHub）
+        // 跳过信号 / 确认成交（v2.1.1 mergeFn 合同：拉最新 + 校验 + merge）
         window.skipSignal = function (signalId, fileDate) {
             if (!confirm('确认跳过该信号？')) return;
             updateSignalStatus(signalId, fileDate, { status: 'skipped', skip_reason: 'manual' })
                 .then(function () { window.location.reload(); })
-                .catch(function (err) { alert('提交失败：' + err.message); });
+                .catch(function (err) {
+                    var info = QuantWriter.describeError(err);
+                    if (info) { alert((info.type === 'info' ? 'ℹ️ ' : '⚠️ ') + info.msg); if (info.type === 'info') window.location.reload(); }
+                    else alert('提交失败：' + err.message);
+                });
         };
 
         window.openConfirmModal = function (signalId, fileDate) {
@@ -256,35 +260,48 @@
                 closeConfirmModal();
                 window.location.reload();
             }).catch(function (err) {
-                if (err.code === 'NO_PAT') {
-                    alert('请先在 settings.html 输入 GitHub PAT');
-                } else if (err.code === 'UNAUTHORIZED') {
-                    alert('PAT 失效，请到 settings.html 重新输入');
-                } else {
-                    alert('提交失败：' + err.message);
+                var info = QuantWriter.describeError(err);
+                if (info) {
+                    alert((info.type === 'info' ? 'ℹ️ ' : '⚠️ ') + info.msg);
+                    if (info.type === 'info') { closeConfirmModal(); window.location.reload(); }
+                    return;
                 }
+                if (err.code === 'NO_PAT') alert('请先在 settings.html 输入 GitHub PAT');
+                else if (err.code === 'UNAUTHORIZED') alert('PAT 失效，请到 settings.html 重新输入');
+                else alert('提交失败：' + err.message);
             });
         };
 
-        // 写入封装：fetch 当前 signals/{date}.json → merge 单条 → commit_atomic
+        // 写入封装（v2.1.1 mergeFn 合同 + operation_id）：每次都拉最新 + merge + 单 commit
         function updateSignalStatus(signalId, fileDate, patch) {
-            return QuantData.loadSignalsForDate(fileDate).then(function (payload) {
-                var found = false;
-                payload.signals.forEach(function (s) {
-                    if (s.id === signalId) {
-                        Object.assign(s, patch);
-                        found = true;
-                    }
-                });
-                if (!found) throw new Error('信号 ' + signalId + ' 未找到');
+            var opId = QuantWriter.generateOpId(patch.status === 'skipped' ? 'skip' : 'confirm', signalId);
+            var filePath = 'docs/data/quant/signals/' + fileDate + '.json';
 
-                return QuantWriter.commitAtomic({
-                    files: [
-                        { path: 'data/quant/signals/' + fileDate + '.json',
-                          content: JSON.stringify(payload, null, 2) },
-                    ],
-                    message: '[quant] update signal ' + signalId + ' → ' + patch.status,
-                });
+            return QuantWriter.commitAtomic({
+                files: [{
+                    path: filePath,
+                    mergeFn: function (latestRaw) {
+                        if (!latestRaw) return { ok: false, code: 'NOT_FOUND', message: filePath + ' 不存在' };
+                        var data;
+                        try { data = JSON.parse(latestRaw); }
+                        catch (e) { return { ok: false, code: 'SCHEMA_INVALID', message: 'JSON 解析失败: ' + e.message }; }
+                        if (!Array.isArray(data.signals)) {
+                            return { ok: false, code: 'SCHEMA_INVALID', message: 'signals 必须是数组' };
+                        }
+                        var sig = data.signals.find(function (s) { return s.id === signalId; });
+                        if (!sig) return { ok: false, code: 'NOT_FOUND', message: '信号 ' + signalId + ' 不在文件中' };
+                        if (sig.operation_id === opId) {
+                            return { ok: false, code: 'ALREADY_DONE', message: 'op ' + opId + ' 已应用' };
+                        }
+                        if (sig.status !== 'pending') {
+                            return { ok: false, code: 'CONFLICT', message: 'signal status=' + sig.status + ', 期望 pending' };
+                        }
+                        Object.assign(sig, patch);
+                        sig.operation_id = opId;
+                        return { ok: true, newContent: JSON.stringify(data, null, 2), operation_id: opId };
+                    },
+                }],
+                message: '[PAPER] [quant] ' + patch.status + ' ' + signalId + ' op=' + opId,
             });
         }
     </script>

@@ -63,6 +63,16 @@ jobs:
           TZ: Asia/Shanghai
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
 
+      - name: Quant morning-reconcile（合并 reconcile + close-confirm；故障隔离不影响主链路）
+        if: steps.run_script.outputs.should_deploy == 'true' && steps.mode.outputs.mode == 'morning'
+        continue-on-error: true
+        run: |
+          python -m scripts.quant.run_signal morning-reconcile \
+            --mock-now "$(TZ=Asia/Shanghai date -Iseconds)" \
+            --writer-mode commit
+        env:
+          TZ: Asia/Shanghai
+
       - name: Deploy to GitHub Pages
         if: steps.run_script.outputs.should_deploy == 'true'
         uses: peaceiris/actions-gh-pages@v4

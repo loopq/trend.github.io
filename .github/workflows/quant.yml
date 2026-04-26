@@ -1,0 +1,239 @@
+name: Quant 量化系统（多 mode）
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '运行 mode'
+        type: choice
+        options:
+          - signal              # 14:48 盘中信号生成（cron-job.org 主路 + GitHub schedule 备路）
+          - morning-reconcile   # 早间合并 reconcile + close-confirm（用昨日真值）
+          - deploy              # 仅同步 docs/* 到 gh-pages
+          - mock-test           # 完全隔离测试（QUANT_DATA_ROOT=/tmp + 5 道硬门）
+          - init                # 初始化 positions.json（首次或重置）
+        required: true
+        default: signal
+      mock_now:
+        description: 'Mock 当前时间 (ISO 8601, signal/morning-reconcile/mock-test 用)'
+        required: false
+        default: ''
+  repository_dispatch:
+    types:
+      - quant-trigger    # cron-job.org 触发，client_payload.mode 决定 mode
+  schedule:
+    # GitHub schedule 时区固定 UTC；备路（主路 cron-job.org 失效时兜底）
+    - cron: '50 6 * * 1-5'    # 14:50 SGT = 06:50 UTC，备 signal mode
+    - cron: '5 1 * * 1-5'     # 09:05 SGT = 01:05 UTC，备 morning-reconcile mode
+
+permissions:
+  contents: write
+
+# 动态 concurrency（review N-2）：mock-test 独立 group 不阻塞主链路
+concurrency:
+  group: ${{ (inputs.mode == 'mock-test' || github.event.client_payload.mode == 'mock-test') && 'quant-mock-test' || 'quant-state-main' }}
+  cancel-in-progress: false
+
+jobs:
+  quant:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 解析 mode
+        id: m
+        run: |
+          # mode 来源优先级：workflow_dispatch input > repository_dispatch payload > schedule 推断
+          MODE="${{ inputs.mode }}"
+          if [ -z "$MODE" ]; then
+            MODE="${{ github.event.client_payload.mode }}"
+          fi
+          if [ -z "$MODE" ] && [ "${{ github.event_name }}" = "schedule" ]; then
+            # 根据 cron 表达式推断
+            HOUR_UTC=$(date -u +%H)
+            if [ "$HOUR_UTC" = "06" ]; then MODE="signal"; fi
+            if [ "$HOUR_UTC" = "01" ]; then MODE="morning-reconcile"; fi
+          fi
+          if [ -z "$MODE" ]; then
+            echo "::error::无法确定 mode"
+            exit 1
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          echo "解析得到 mode=$MODE"
+
+      # ============ Checkout（mock-test 与其他 mode 分支处理） ============
+      - name: Checkout（普通 mode：保留 token）
+        if: steps.m.outputs.mode != 'mock-test'
+        uses: actions/checkout@v4
+
+      - name: Checkout（mock-test：禁持久化凭据）
+        if: steps.m.outputs.mode == 'mock-test'
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: 硬门 #1 — 移除 git remote 凭据（仅 mock-test）
+        if: steps.m.outputs.mode == 'mock-test'
+        run: |
+          git config --unset-all "http.https://github.com/.extraheader" || true
+          git remote set-url origin "https://invalid-mock-no-push@github.com/${GITHUB_REPOSITORY}.git"
+          echo "✅ git remote 凭据已移除，任何 push 必失败"
+
+      # ============ 公共：Python 环境 ============
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyyaml pandas
+
+      # ============ mode=init ============
+      - name: Init positions.json（仅 init）
+        if: steps.m.outputs.mode == 'init'
+        run: python -m scripts.quant.run_signal init --writer-mode commit
+
+      # ============ mode=signal ============
+      - name: 幂等检查（signal）— 今日已跑则退出
+        if: steps.m.outputs.mode == 'signal'
+        run: |
+          DONE_FILE="docs/data/quant/.runs/signal-${{ steps.m.outputs.TODAY }}.done"
+          if [ -f "$DONE_FILE" ]; then
+            echo "::notice::今日 signal 已跑过（$DONE_FILE 存在），跳过"
+            echo "SKIP_SIGNAL=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: 前置检查（signal）— 昨日 morning-reconcile 已完成
+        if: steps.m.outputs.mode == 'signal' && env.SKIP_SIGNAL != 'true'
+        run: |
+          YESTERDAY=$(TZ=Asia/Shanghai date -v-1d +%Y-%m-%d 2>/dev/null || TZ=Asia/Shanghai date -d 'yesterday' +%Y-%m-%d)
+          DONE_FILE="docs/data/quant/.runs/morning-reconcile-${YESTERDAY}.done"
+          if [ ! -f "$DONE_FILE" ]; then
+            echo "::warning::昨日 morning-reconcile 未跑（缺 $DONE_FILE），可能 yesterday_policy 失真"
+            # 飞书警告（不 fail，让 signal 继续跑，但记录风险）
+            curl -s -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"⚠️ 量化前置检查：${YESTERDAY} morning-reconcile 未跑，今日 signal 可能用陈旧 yesterday_policy\"}}" || true
+          fi
+
+      - name: 跑 signal
+        if: steps.m.outputs.mode == 'signal' && env.SKIP_SIGNAL != 'true'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          python -m scripts.quant.run_signal signal \
+            --mock-now "${{ inputs.mock_now || github.event.client_payload.mock_now }}" \
+            --calendar scripts/quant/tests/fixtures/trading_calendar_2026-04.json \
+            --realtime auto \
+            --writer-mode commit \
+            --notifier-mode feishu
+
+      - name: 写 .runs/signal-{date}.done（幂等标记）
+        if: steps.m.outputs.mode == 'signal' && env.SKIP_SIGNAL != 'true'
+        run: |
+          mkdir -p docs/data/quant/.runs
+          cat > "docs/data/quant/.runs/signal-${{ steps.m.outputs.TODAY }}.done" <<EOF
+          {"completed_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","trigger":"${{ github.event_name }}","run_id":"${{ github.run_id }}"}
+          EOF
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add docs/data/quant/.runs
+          git commit -m "[quant] mark signal-${{ steps.m.outputs.TODAY }} done" || true
+          git push origin main || true
+
+      # ============ mode=morning-reconcile ============
+      - name: 幂等检查（morning-reconcile）
+        if: steps.m.outputs.mode == 'morning-reconcile'
+        run: |
+          DONE_FILE="docs/data/quant/.runs/morning-reconcile-${{ steps.m.outputs.TODAY }}.done"
+          if [ -f "$DONE_FILE" ]; then
+            echo "::notice::今日 morning-reconcile 已跑过，跳过"
+            echo "SKIP_MR=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: 跑 morning-reconcile（reconcile + close-confirm 合并）
+        if: steps.m.outputs.mode == 'morning-reconcile' && env.SKIP_MR != 'true'
+        run: |
+          YESTERDAY=$(TZ=Asia/Shanghai date -v-1d +%Y-%m-%d 2>/dev/null || TZ=Asia/Shanghai date -d 'yesterday' +%Y-%m-%d)
+          # 1. close-confirm 昨日 provisional 信号 + 回正 policy_state
+          python -m scripts.quant.run_signal close-confirm \
+            --mock-now "${YESTERDAY}T15:30:00+08:00" \
+            --realtime auto \
+            --writer-mode commit
+          # 2. reconcile 跨日 pending → expired
+          python -m scripts.quant.run_signal reconcile \
+            --mock-now "${{ steps.m.outputs.TODAY }}T09:05:00+08:00" \
+            --writer-mode commit
+
+      - name: 写 .runs/morning-reconcile-{date}.done
+        if: steps.m.outputs.mode == 'morning-reconcile' && env.SKIP_MR != 'true'
+        run: |
+          mkdir -p docs/data/quant/.runs
+          cat > "docs/data/quant/.runs/morning-reconcile-${{ steps.m.outputs.TODAY }}.done" <<EOF
+          {"completed_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","trigger":"${{ github.event_name }}","run_id":"${{ github.run_id }}"}
+          EOF
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add docs/data/quant/.runs
+          git commit -m "[quant] mark morning-reconcile-${{ steps.m.outputs.TODAY }} done" || true
+          git push origin main || true
+
+      # ============ mode=mock-test（5 道硬门隔离）============
+      - name: mock-test 完全隔离运行
+        if: steps.m.outputs.mode == 'mock-test'
+        env:
+          QUANT_DATA_ROOT: /tmp/quant-test
+          QUANT_NOTIFIER: disabled
+          GITHUB_TOKEN: ''   # 硬门 #2：env token 清空
+        run: |
+          mkdir -p /tmp/quant-test/{cache,signals,notify-outbox,.runs}
+          MOCK_NOW="${{ inputs.mock_now }}"
+          if [ -z "$MOCK_NOW" ]; then MOCK_NOW="2026-04-25T14:48:00+08:00"; fi
+          python -m scripts.quant.run_signal mock-test \
+            --mock-now "$MOCK_NOW" \
+            --calendar scripts/quant/tests/fixtures/trading_calendar_2026-04.json \
+            --realtime scripts/quant/tests/fixtures/realtime_2026-04-25.json
+
+      - name: 硬门 #3 — 工作区零 diff 断言（mock-test）
+        if: steps.m.outputs.mode == 'mock-test'
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::❌ mock-test 后工作区有改动，违反隔离！"
+            git status
+            exit 1
+          fi
+          echo "✅ 工作区零 diff，隔离验证通过"
+
+      - name: 硬门 #4/#5 — 输出测试报告（mock-test）
+        if: steps.m.outputs.mode == 'mock-test'
+        run: |
+          echo "## Quant Mock Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**5 道硬门验证**：" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ #1 git remote 凭据已移除（无效 URL + unset extraheader）" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ #2 GITHUB_TOKEN env 已清空" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ #3 git status 零 diff（上一步断言通过）" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ #4 deploy step yml if 排除 mock-test，gh-pages 永不更新" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ #5 NoOpNotifier，飞书 webhook 永不被调用" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**数据隔离根目录**：/tmp/quant-test（不在仓库内）" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d /tmp/quant-test/signals ] && [ "$(ls /tmp/quant-test/signals/*.json 2>/dev/null)" ]; then
+            echo "**生成信号**：" >> $GITHUB_STEP_SUMMARY
+            for f in /tmp/quant-test/signals/*.json; do
+              echo "- $(basename $f)" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+
+      # ============ deploy step（除 mock-test 外都跑）============
+      - name: 同步 docs/ 到 gh-pages（signal/morning-reconcile/deploy/init）
+        if: steps.m.outputs.mode != 'mock-test'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: '[quant] sync docs/ (mode=${{ steps.m.outputs.mode }}, run=${{ github.run_id }})'
