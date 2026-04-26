@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置 · 量化信号</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="lib/md5.min.js"></script>
+    <script src="lib/config.js"></script>
+    <script src="lib/auth.js"></script>
+    <script src="lib/data-loader.js"></script>
+    <script src="lib/writer.js"></script>
+</head>
+<body>
+    <div class="quant-container">
+        <div class="quant-header">
+            <h1>设置</h1>
+            <div><a href="index.html">← 返回控制台</a></div>
+        </div>
+
+        <div class="section">
+            <h2>GitHub Personal Access Token</h2>
+            <p class="muted">PAT 用于「确认成交 / 跳过」时把状态文件写回仓库。仅存浏览器 localStorage，不上传任何服务器。</p>
+            <p class="muted">必勾权限：仅 <code>loopq/trend.github.io</code> 仓库的 <strong>Contents: Read &amp; Write</strong>。</p>
+            <p class="muted">禁勾权限：Workflows / Actions / Administration / Pages / Pull requests / Issues。</p>
+            <p class="muted">建议过期：90 天，到期重新生成。</p>
+            <input id="pat-input" type="password" placeholder="ghp_...（不会显示明文）">
+            <div style="margin-top:10px;display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="savePat()">保存 PAT</button>
+                <button class="btn btn-secondary" onclick="testPat()">验证有效性</button>
+                <button class="btn btn-danger" onclick="clearPat()">清除 PAT</button>
+            </div>
+            <div id="pat-status" class="muted" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="section">
+            <h2>访问授权（密码 gate）</h2>
+            <p class="muted">默认密码已经 hash 在前端代码内（弱保护，仅防偶然访问 / 搜索引擎）。</p>
+            <button class="btn btn-danger" onclick="resetAuth()">清除访问授权</button>
+            <p class="muted" style="margin-top:8px;">点击后下次访问会重新弹密码框。</p>
+        </div>
+
+        <div class="section">
+            <h2>数据导出</h2>
+            <p class="muted">下载当前 positions / transactions / signals 索引到本地。</p>
+            <button class="btn btn-secondary" onclick="exportPositions()">导出 positions.json</button>
+            <button class="btn btn-secondary" onclick="exportTransactions()">导出 transactions.json</button>
+        </div>
+
+        <div class="section">
+            <h2>Paper Trading 模式</h2>
+            <p class="muted">当前从 positions.json 读取标记。</p>
+            <div id="paper-state" class="muted">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        QuantAuth.gate({ onAuthorized: boot });
+
+        function boot() {
+            var pat = QuantWriter.getPat();
+            document.getElementById('pat-status').textContent = pat ? '当前已配置 PAT（' + pat.length + ' 字符）' : '未配置 PAT';
+            QuantData.loadPositions().then(function (p) {
+                document.getElementById('paper-state').textContent =
+                    'paper_trading = ' + (p.paper_trading ? 'true（mock 模式）' : 'false（实盘）');
+            });
+        }
+
+        window.savePat = function () {
+            var pat = document.getElementById('pat-input').value.trim();
+            if (!pat) { alert('请输入 PAT'); return; }
+            QuantWriter.setPat(pat);
+            document.getElementById('pat-status').textContent = '已保存 PAT（' + pat.length + ' 字符）';
+            document.getElementById('pat-input').value = '';
+        };
+
+        window.testPat = function () {
+            var pat = QuantWriter.getPat();
+            if (!pat) { alert('未配置 PAT'); return; }
+            var url = 'https://api.github.com/repos/' + QuantConfig.repo.owner + '/' + QuantConfig.repo.name;
+            fetch(url, {
+                headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github+json' }
+            }).then(function (r) {
+                if (r.status === 401) {
+                    document.getElementById('pat-status').textContent = '❌ PAT 无效或权限不足';
+                } else if (r.ok) {
+                    document.getElementById('pat-status').textContent = '✅ PAT 可访问目标仓库';
+                } else {
+                    document.getElementById('pat-status').textContent = '⚠️ HTTP ' + r.status;
+                }
+            });
+        };
+
+        window.clearPat = function () {
+            if (!confirm('确认清除 PAT？')) return;
+            QuantWriter.clearPat();
+            document.getElementById('pat-status').textContent = '已清除';
+        };
+
+        window.resetAuth = function () {
+            if (!confirm('确认清除访问授权？下次访问需要重新输入密码。')) return;
+            QuantAuth.clearAuthorized();
+            window.location.href = 'index.html';
+        };
+
+        function downloadJson(filename, content) {
+            var blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        window.exportPositions = function () {
+            QuantData.loadPositions().then(function (p) { downloadJson('positions.json', p); });
+        };
+        window.exportTransactions = function () {
+            QuantData.loadTransactions().then(function (t) { downloadJson('transactions.json', t); });
+        };
+    </script>
+</body>
+</html>

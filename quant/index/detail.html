@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单指数详情 · 量化信号</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="../lib/md5.min.js"></script>
+    <script src="../lib/config.js"></script>
+    <script src="../lib/auth.js"></script>
+    <script>
+        // 修正 BASE：当前 page 在 docs/quant/index/，data 在 docs/../data/quant/
+        // ../../data/quant/ 才是相对路径
+    </script>
+    <script>
+        // 重写 BASE 之后再加载 data-loader
+    </script>
+    <script src="../lib/data-loader.js"></script>
+    <script>QuantData.BASE = '../../data/quant/';</script>
+</head>
+<body>
+    <div class="quant-container">
+        <div class="quant-header">
+            <h1 id="page-title">指数详情</h1>
+            <div>
+                <a href="../index.html">← 返回控制台</a>
+                ·
+                <a href="../history.html">历史</a>
+            </div>
+        </div>
+
+        <div id="content"></div>
+    </div>
+
+    <script>
+        QuantAuth.gate({ onAuthorized: boot });
+
+        function getIndexCode() {
+            var p = new URLSearchParams(window.location.search);
+            return p.get('code') || '';
+        }
+
+        function boot() {
+            var code = getIndexCode();
+            if (!code) {
+                document.getElementById('content').innerHTML = '<div class="empty-state">请在 URL 加 ?code=399997 参数</div>';
+                return;
+            }
+
+            Promise.all([
+                QuantData.loadPositions(),
+                QuantData.loadTransactions(),
+                QuantData.loadSignalsIndex(),
+            ]).then(function (r) {
+                var positions = r[0];
+                var transactions = r[1].transactions || [];
+                var sigsIdx = r[2];
+                var dates = sigsIdx.entries.map(function (e) { return e.date; });
+                return QuantData.loadSignalsForDates(dates).then(function (files) {
+                    var allSigs = [];
+                    files.forEach(function (f) {
+                        (f.signals || []).forEach(function (s) {
+                            if (s.bucket_id.startsWith(code + '-')) {
+                                s._file_date = f.date;
+                                allSigs.push(s);
+                            }
+                        });
+                    });
+                    render(code, positions, transactions, allSigs);
+                });
+            });
+        }
+
+        function render(code, positions, transactions, signals) {
+            // 该指数 3 个 bucket
+            var buckets = {};
+            ['D', 'W', 'M'].forEach(function (f) {
+                buckets[f] = positions.buckets[code + '-' + f] || null;
+            });
+
+            // 标题
+            var anyBucket = buckets.D || buckets.W || buckets.M;
+            var indexName = anyBucket ? anyBucket.index_name : code;
+            var etfCode = anyBucket ? anyBucket.etf_code : '?';
+            var etfName = anyBucket ? anyBucket.etf_name : '?';
+            document.getElementById('page-title').textContent =
+                indexName + ' (' + code + ') → ' + etfName + ' (' + etfCode + ')';
+
+            // 当前状态总览
+            var html = '<div class="section"><h2>当前状态</h2><div class="summary-row">';
+            ['D', 'W', 'M'].forEach(function (f) {
+                var b = buckets[f];
+                if (!b) {
+                    html += card(f + ' bucket', 'N/A', 'state-NA');
+                    return;
+                }
+                var detail = b.actual_state === 'HOLD'
+                    ? (b.shares + ' @¥' + b.avg_cost.toFixed(3))
+                    : ('¥' + b.cash.toFixed(2));
+                html += card(f + ' bucket', b.actual_state + ' / ' + detail, 'state-' + b.actual_state);
+            });
+            html += '</div></div>';
+
+            // 完整交易日志（分 D/W/M 三段，全量）
+            html += '<div class="section"><h2>完整交易日志（不分页）</h2>';
+            ['D', 'W', 'M'].forEach(function (f) {
+                var bucketId = code + '-' + f;
+                var txs = transactions.filter(function (t) { return t.bucket_id === bucketId; });
+                html += '<h3 style="margin-top:20px;color:#4a5568;font-size:15px;">' + f + ' bucket（' + txs.length + ' 笔）</h3>';
+                if (!txs.length) {
+                    html += '<div class="empty-state">无交易记录</div>';
+                    return;
+                }
+                html += '<table class="txs"><thead><tr><th>#</th><th>日期</th><th>action</th><th>shares</th><th>price</th><th>amount</th><th>fee</th><th>PnL%</th></tr></thead><tbody>';
+                var lastBuyAvg = null;
+                txs.forEach(function (t, i) {
+                    var pnl = '';
+                    if (t.action === 'BUY') lastBuyAvg = t.price;
+                    if (t.action === 'SELL' && lastBuyAvg) {
+                        var pct = (t.price - lastBuyAvg) / lastBuyAvg * 100;
+                        pnl = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+                    }
+                    html += '<tr><td>' + (i + 1) + '</td><td>' + t.date + '</td>' +
+                        '<td><span class="state-' + (t.action === 'BUY' ? 'HOLD' : 'CASH') + '">' + t.action + '</span></td>' +
+                        '<td>' + t.shares + '</td><td>¥' + t.price + '</td>' +
+                        '<td>¥' + t.amount.toFixed(2) + '</td><td>¥' + t.fee.toFixed(3) + '</td>' +
+                        '<td>' + pnl + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            });
+            html += '</div>';
+
+            // 历史信号（含 expired/skipped 全部）
+            html += '<div class="section"><h2>历史信号（' + signals.length + ' 条，按日期倒序）</h2>';
+            html += '<div style="margin-bottom:12px;">' +
+                '<label><input type="checkbox" id="show-pending" checked> pending</label> ' +
+                '<label><input type="checkbox" id="show-confirmed" checked> confirmed</label> ' +
+                '<label><input type="checkbox" id="show-skipped" checked> skipped</label> ' +
+                '<label><input type="checkbox" id="show-expired" checked> expired</label></div>';
+            html += '<div id="signals-table-' + code + '"></div></div>';
+
+            document.getElementById('content').innerHTML = html;
+            renderSignalsTable(code, signals);
+
+            ['show-pending', 'show-confirmed', 'show-skipped', 'show-expired'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', function () { renderSignalsTable(code, signals); });
+            });
+        }
+
+        function renderSignalsTable(code, signals) {
+            var allowed = {};
+            ['pending', 'confirmed', 'skipped', 'expired'].forEach(function (s) {
+                var el = document.getElementById('show-' + s);
+                if (el) allowed[s] = el.checked;
+            });
+            var sorted = signals.slice().sort(function (a, b) {
+                return (b._file_date || '').localeCompare(a._file_date || '');
+            }).filter(function (s) { return allowed[s.status]; });
+
+            var html = '<table class="txs"><thead><tr><th>日期</th><th>bucket</th><th>action</th><th>触发条件</th><th>建议</th><th>实际</th><th>状态</th><th>confirmed_by_close</th></tr></thead><tbody>';
+            if (!sorted.length) {
+                html += '<tr><td colspan="8" class="empty-state">无匹配记录</td></tr>';
+            } else {
+                sorted.forEach(function (s) {
+                    var freq = s.bucket_id.split('-')[1];
+                    var actual = s.actual_shares ? (s.actual_shares + ' @¥' + s.actual_price) : '—';
+                    var cbc = s.confirmed_by_close === null ? '—' : (s.confirmed_by_close ? '✅' : '❌（假信号）');
+                    html += '<tr><td>' + s._file_date + '</td><td>' + freq + '</td>' +
+                        '<td><span class="state-' + (s.action === 'BUY' ? 'HOLD' : 'CASH') + '">' + s.action + '</span></td>' +
+                        '<td>' + (s.trigger_condition || '—') + '</td>' +
+                        '<td>' + s.suggested_shares + '</td>' +
+                        '<td>' + actual + '</td>' +
+                        '<td>' + s.status + (s.skip_reason ? ' (' + s.skip_reason + ')' : '') + '</td>' +
+                        '<td>' + cbc + '</td></tr>';
+                });
+            }
+            html += '</tbody></table>';
+            document.getElementById('signals-table-' + code).innerHTML = html;
+        }
+
+        function card(label, value, klass) {
+            return '<div class="summary-card"><div class="label">' + label + '</div>' +
+                   '<div class="value' + (klass ? ' ' + klass : '') + '">' + value + '</div></div>';
+        }
+    </script>
+</body>
+</html>

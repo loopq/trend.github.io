@@ -1,0 +1,229 @@
+/* 量化信号控制台样式 */
+body {
+    margin: 0;
+    background: #f5f7fa;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #2c3e50;
+    line-height: 1.6;
+}
+
+.quant-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.quant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e1e4e8;
+}
+
+.quant-header h1 {
+    margin: 0;
+    font-size: 22px;
+    color: #1a202c;
+}
+
+.paper-trading-banner {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #92400e;
+}
+
+.section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.section h2 {
+    margin: 0 0 16px;
+    font-size: 17px;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.summary-card {
+    padding: 14px;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.summary-card .label {
+    font-size: 12px;
+    color: #718096;
+    margin-bottom: 4px;
+}
+
+.summary-card .value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.summary-card .value.positive { color: #16a34a; }
+.summary-card .value.negative { color: #dc2626; }
+
+.signal-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+    transition: border-color 0.15s;
+}
+.signal-card:hover { border-color: #2c7a7b; }
+
+.signal-card.action-BUY { border-left: 4px solid #16a34a; }
+.signal-card.action-SELL { border-left: 4px solid #dc2626; }
+
+.signal-card .meta {
+    font-size: 13px;
+    color: #718096;
+    margin-bottom: 6px;
+}
+
+.signal-card .title {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.signal-card .trigger {
+    color: #4a5568;
+    font-size: 13px;
+}
+
+.signal-card .warning {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.signal-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+}
+
+button.btn {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+button.btn-primary {
+    background: #2c7a7b;
+    color: #fff;
+}
+button.btn-primary:hover { background: #285e61; }
+
+button.btn-secondary {
+    background: #e2e8f0;
+    color: #2d3748;
+}
+button.btn-secondary:hover { background: #cbd5e0; }
+
+button.btn-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.bucket-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.bucket-card {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.bucket-card:hover { background: #edf2f7; }
+
+.bucket-card .index-name {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2d3748;
+}
+
+.bucket-card .freq-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0;
+    color: #4a5568;
+}
+
+.state-HOLD { color: #16a34a; font-weight: 600; }
+.state-CASH { color: #718096; }
+.state-NA { color: #cbd5e0; }
+
+table.txs {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+table.txs th, table.txs td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #edf2f7;
+}
+table.txs th { background: #f8fafc; font-weight: 600; color: #4a5568; }
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 360px;
+    max-width: 520px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+.modal h3 { margin: 0 0 16px; font-size: 18px; }
+.modal label { display: block; font-size: 13px; color: #4a5568; margin: 10px 0 4px; }
+.modal input, .modal select, .modal textarea {
+    width: 100%; padding: 10px; border: 1px solid #e2e8f0;
+    border-radius: 6px; font-size: 14px; box-sizing: border-box;
+}
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+.muted { color: #a0aec0; font-size: 12px; }
+.empty-state { padding: 24px; text-align: center; color: #a0aec0; }
+
+a { color: #2c7a7b; text-decoration: none; }
+a:hover { text-decoration: underline; }
