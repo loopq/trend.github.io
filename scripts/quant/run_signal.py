@@ -166,28 +166,41 @@ def cmd_morning_reconcile(args, cfg, repo_root: Path) -> None:
                          ensure_ascii=False))
         return
 
-    # 1. close-confirm 昨日（如果有当日 signals 也处理）
+    # 1. close-confirm 昨日（用真实昨日收盘价 confirm 昨日 provisional 信号）
+    from datetime import timedelta
+    yesterday = today - timedelta(days=1)
+    # 找前一个工作日（简化：周日→周五，周一→周五）
+    while yesterday.weekday() >= 5:
+        yesterday -= timedelta(days=1)
+
     fetcher = _build_fetcher(args.realtime) if args.realtime != "skip" else None
     book = load_positions(repo_root / cfg.paths["positions"])
     writer = LocalWriter(repo_root, mode=args.writer_mode)
 
-    cc_result = {"confirmed": 0, "false_signals": 0}
-    if fetcher is not None:
+    cc_result = {"confirmed": 0, "false_signals": 0, "files_changed": []}
+    yesterday_signal_file = repo_root / cfg.paths["signals_dir"] / f"{yesterday.strftime('%Y-%m-%d')}.json"
+    if fetcher is not None and yesterday_signal_file.exists():
         cc_result = confirm_signals_with_close(
-            cfg=cfg, today=today, book=book, fetcher=fetcher,
+            cfg=cfg, today=yesterday, book=book, fetcher=fetcher,
             repo_root=repo_root, writer=writer,
         )
+    else:
+        cc_result["skipped_reason"] = "no signals file for yesterday" if not yesterday_signal_file.exists() else "fetcher disabled"
 
     # 2. reconcile 跨日 pending → expired
     rec_result = reconcile_pending_signals(cfg=cfg, today=today, repo_root=repo_root, writer=writer)
 
-    # 3. 写 done
-    done_file.parent.mkdir(parents=True, exist_ok=True)
-    done_file.write_text(json.dumps({
+    # 3. 写 done（writer_mode=commit 时 git add+commit；write_only 仅写文件）
+    from .writer import FileChange
+    done_payload = json.dumps({
         "completed_at": datetime.now().isoformat(timespec="seconds"),
         "close_confirm": cc_result,
         "reconcile": rec_result,
-    }, ensure_ascii=False, indent=2))
+    }, ensure_ascii=False, indent=2)
+    writer.commit_atomic(
+        [FileChange(path=done_file, content=done_payload)],
+        message=f"[quant] mark morning-reconcile-{today.strftime('%Y-%m-%d')} done",
+    )
 
     print(json.dumps({
         "date": today.strftime("%Y-%m-%d"),
@@ -232,7 +245,7 @@ def cmd_mock_test(args, cfg, repo_root: Path) -> None:
 
 def cmd_close_confirm(args, cfg, repo_root: Path) -> None:
     today = datetime.fromisoformat(args.mock_now).date() if args.mock_now else date.today()
-    fetcher = FixtureFetcher(args.realtime)
+    fetcher = _build_fetcher(args.realtime)   # bugfix: 支持 --realtime auto / fixture 路径
     book = load_positions(repo_root / cfg.paths["positions"])
     writer = LocalWriter(repo_root, mode=args.writer_mode)
     result = confirm_signals_with_close(

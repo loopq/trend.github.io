@@ -152,31 +152,21 @@ jobs:
             echo "SKIP_MR=true" >> "$GITHUB_ENV"
           fi
 
-      - name: 跑 morning-reconcile（reconcile + close-confirm 合并）
+      - name: 跑 morning-reconcile（一站式：close-confirm 昨日 + reconcile 跨日 pending + 写 done 标记）
         if: steps.m.outputs.mode == 'morning-reconcile' && env.SKIP_MR != 'true'
         run: |
-          YESTERDAY=$(TZ=Asia/Shanghai date -v-1d +%Y-%m-%d 2>/dev/null || TZ=Asia/Shanghai date -d 'yesterday' +%Y-%m-%d)
-          # 1. close-confirm 昨日 provisional 信号 + 回正 policy_state
-          python -m scripts.quant.run_signal close-confirm \
-            --mock-now "${YESTERDAY}T15:30:00+08:00" \
+          # 调一站式子命令；内部自动找前一个工作日做 close-confirm + reconcile + 写 done
+          python -m scripts.quant.run_signal morning-reconcile \
+            --mock-now "${{ steps.m.outputs.TODAY }}T09:05:00+08:00" \
             --realtime auto \
             --writer-mode commit
-          # 2. reconcile 跨日 pending → expired
-          python -m scripts.quant.run_signal reconcile \
-            --mock-now "${{ steps.m.outputs.TODAY }}T09:05:00+08:00" \
-            --writer-mode commit
 
-      - name: 写 .runs/morning-reconcile-{date}.done
+      - name: Push morning-reconcile commits
         if: steps.m.outputs.mode == 'morning-reconcile' && env.SKIP_MR != 'true'
         run: |
-          mkdir -p docs/data/quant/.runs
-          cat > "docs/data/quant/.runs/morning-reconcile-${{ steps.m.outputs.TODAY }}.done" <<EOF
-          {"completed_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","trigger":"${{ github.event_name }}","run_id":"${{ github.run_id }}"}
-          EOF
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add docs/data/quant/.runs
-          git commit -m "[quant] mark morning-reconcile-${{ steps.m.outputs.TODAY }} done" || true
+          # cmd_morning_reconcile 内 writer_mode=commit 已生成 commit；这里只 push
           git push origin main || true
 
       # ============ mode=mock-test（5 道硬门隔离）============
