@@ -404,3 +404,82 @@ a:hover { text-decoration: underline; }
     gap: 12px;
     justify-content: center;
 }
+
+/* === backtest runner v4 === */
+
+.trigger-bar {
+    background: #f0fdfa;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: auto 1fr 1.5fr auto auto;
+    gap: 10px;
+    align-items: center;
+}
+.trigger-bar .bar-title {
+    margin: 0;
+    font-size: 15px;
+    color: #065f46;
+    white-space: nowrap;
+}
+.trigger-bar input,
+.trigger-bar select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+}
+.trigger-bar input:focus,
+.trigger-bar select:focus {
+    outline: 2px solid #2c7a7b;
+    border-color: #2c7a7b;
+}
+
+/* Running modal */
+.quant-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+.quant-modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    min-width: 380px;
+    max-width: 520px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+    text-align: left;
+}
+.quant-modal h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: #2d3748;
+    outline: none;
+}
+.quant-modal h3:focus-visible {
+    outline: 2px solid #2c7a7b;
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+.quant-modal .muted {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 4px 0;
+}
+.quant-modal .modal-actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+.quant-modal a.btn {
+    text-decoration: none;
+    display: inline-block;
+}
