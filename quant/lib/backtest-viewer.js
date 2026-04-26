@@ -28,8 +28,10 @@
     var INDEX_PATH = 'backtest/index.json';
     var SS_KEY = 'quant_backtest_index_v1';
 
-    // GitHub API 路径（仓库可在 config.js 覆盖）
-    var REPO = (window.QuantConfig && QuantConfig.repo) || 'loopq/trend.github.io';
+    // GitHub API 路径（QuantConfig.repo 是 {owner, name, branch} 对象）
+    var REPO_CONF = (window.QuantConfig && QuantConfig.repo) || {owner: 'loopq', name: 'trend.github.io', branch: 'main'};
+    var REPO = REPO_CONF.owner + '/' + REPO_CONF.name;
+    var REPO_BRANCH = REPO_CONF.branch || 'main';
     var API_BASE = 'https://api.github.com/repos/' + REPO;
     var WORKFLOW_FILE = 'backtest.yml';
 
@@ -256,7 +258,7 @@
                     'X-GitHub-Api-Version': '2022-11-28',
                 },
                 body: JSON.stringify({
-                    ref: 'main',
+                    ref: REPO_BRANCH,
                     inputs: { code: code, name: name, region: region, request_id: requestId }
                 }),
             },
