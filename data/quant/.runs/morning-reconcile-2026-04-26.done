@@ -1,0 +1,13 @@
+{
+  "completed_at": "2026-04-26T15:31:27",
+  "close_confirm": {
+    "confirmed": 0,
+    "false_signals": 0,
+    "files_changed": [],
+    "skipped_reason": "no signals file for yesterday"
+  },
+  "reconcile": {
+    "expired_count": 0,
+    "files_changed": []
+  }
+}
