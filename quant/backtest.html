@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回测报告 - 量化信号控制台</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="lib/md5.min.js"></script>
+    <script src="lib/config.js"></script>
+    <script src="lib/auth.js"></script>
+    <script src="lib/marked.min.js"></script>
+    <script src="lib/backtest-viewer.js"></script>
+</head>
+<body>
+    <div class="quant-container">
+        <div class="quant-header">
+            <h1>📊 回测报告</h1>
+            <div>
+                <a href="index.html">控制台</a>
+                ·
+                <a href="../index.html">返回主站</a>
+            </div>
+        </div>
+        <div id="viewer-root" role="main" aria-live="polite" aria-busy="true">
+            <div class="loading-state">加载中...</div>
+        </div>
+    </div>
+    <script>
+        QuantAuth.gate({ onAuthorized: function () { BacktestViewer.boot(); } });
+    </script>
+</body>
+</html>
