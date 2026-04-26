@@ -26,10 +26,16 @@
     var MAX_RETRY = 3;
 
     function getPat() {
-        try { return window.localStorage.getItem(cfg().storage.patKey) || ''; } catch (e) { return ''; }
+        try {
+            var raw = window.localStorage.getItem(cfg().storage.patKey) || '';
+            return raw.trim();   // 防御：旧数据可能含换行/空格
+        } catch (e) { return ''; }
     }
     function setPat(token) {
-        try { window.localStorage.setItem(cfg().storage.patKey, token); } catch (e) { /* ignore */ }
+        try {
+            // 写入前 trim，杜绝复制粘贴带来的换行/空格污染
+            window.localStorage.setItem(cfg().storage.patKey, (token || '').trim());
+        } catch (e) { /* ignore */ }
     }
     function clearPat() {
         try { window.localStorage.removeItem(cfg().storage.patKey); } catch (e) { /* ignore */ }

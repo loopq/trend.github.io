@@ -213,6 +213,18 @@
         dispatchBacktest(code, name, region);
     }
 
+    // Issue: writer.js setPat 不 trim，PAT 复制带换行/空格会让 header 非法 → fetch throw
+    // 这里强制 trim + 白名单校验
+    function getCleanPat() {
+        var raw = QuantWriter.getPat() || '';
+        var clean = raw.trim();
+        // PAT 只能含 ASCII 字母数字 + 下划线 + 连字符
+        if (!/^[A-Za-z0-9_\-]+$/.test(clean)) {
+            throw new Error('PAT 含非法字符（粘贴时可能带了换行/空格/中文）。请去 settings.html 重新粘贴一次纯 PAT 字符串');
+        }
+        return clean;
+    }
+
     function dispatchBacktest(code, name, region) {
         var requestId = genRequestId();
         setState('running', { running: {
@@ -222,12 +234,24 @@
             workflowStatus: 'dispatching',
         }});
 
+        var cleanPat;
+        try {
+            cleanPat = getCleanPat();
+        } catch (e) {
+            closeRunningModal();
+            setState('error', { error: {
+                message: e.message,
+                retryFn: function () { location.href = 'settings.html'; }
+            }});
+            return;
+        }
+
         fetchWithTimeout(
             API_BASE + '/actions/workflows/' + WORKFLOW_FILE + '/dispatches',
             {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer ' + QuantWriter.getPat(),
+                    'Authorization': 'Bearer ' + cleanPat,
                     'Accept': 'application/vnd.github+json',
                     'X-GitHub-Api-Version': '2022-11-28',
                 },
@@ -256,8 +280,18 @@
         })
         .catch(function (err) {
             closeRunningModal();
+            // 增强诊断：区分 fetch network 错误 vs HTTP 错误
+            var msg = err && err.message ? err.message : String(err);
+            if (msg === 'Failed to fetch' || msg === 'Load failed' || (err && err.name === 'TypeError')) {
+                msg = '触发失败：浏览器 fetch 直接 reject（不是 HTTP 错误）。常见原因：\n' +
+                    '1. PAT 已被 GitHub revoke（请去 settings.html 重填新 PAT）\n' +
+                    '2. 浏览器扩展拦截 api.github.com（uBlock/Privacy Badger 等）\n' +
+                    '3. 网络/代理问题。打开 DevTools Network 看 dispatches 请求详情';
+            } else {
+                msg = '触发失败: ' + msg;
+            }
             setState('error', { error: {
-                message: '触发失败: ' + (err && err.message ? err.message : err),
+                message: msg,
                 retryFn: function () { triggerBacktest(code, name, region); }
             }});
         });
@@ -281,9 +315,12 @@
         var expectedRunName = 'backtest:' + code + ':' + requestId;
         return new Promise(function (resolve, reject) {
             function tryPage(page) {
+                var pat;
+                try { pat = getCleanPat(); }
+                catch (e) { return Promise.reject(Object.assign(e, {fatal: true})); }
                 return fetchWithTimeout(
                     API_BASE + '/actions/workflows/' + WORKFLOW_FILE + '/runs?per_page=30&page=' + page,
-                    { headers: { 'Authorization': 'Bearer ' + QuantWriter.getPat() }},
+                    { headers: { 'Authorization': 'Bearer ' + pat }},
                     10000
                 )
                 .then(checkApiResponse)
@@ -331,9 +368,17 @@
                 }});
                 return;
             }
+            var pollPat;
+            try { pollPat = getCleanPat(); }
+            catch (e) {
+                closeRunningModal();
+                setState('error', { error: { message: e.message,
+                    retryFn: function () { location.href = 'settings.html'; }}});
+                return;
+            }
             fetchWithTimeout(
                 API_BASE + '/actions/runs/' + runId,
-                { headers: { 'Authorization': 'Bearer ' + QuantWriter.getPat() }},
+                { headers: { 'Authorization': 'Bearer ' + pollPat }},
                 10000
             )
             .then(checkApiResponse)
