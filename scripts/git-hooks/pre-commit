@@ -1,0 +1,32 @@
+#!/bin/bash
+# 量化系统：防本地误推主站 docs 文件 hook
+# 检测 commit 是否含 docs/index.html 或 docs/archive/{YYYY-MM-DD}.html 改动
+# 命中则报警并拒绝；如确实需要 commit（如 backfill 历史），用 git commit --no-verify
+
+set -e
+
+DOCS_CHANGED=$(git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null \
+  | grep -E '^docs/(index\.html|archive/[0-9]{4}-[0-9]{2}-[0-9]{2}\.html|archive/index\.html)$' || true)
+
+if [ -n "$DOCS_CHANGED" ]; then
+  echo "" >&2
+  echo "🚨 pre-commit hook 拒绝：检测到主站 docs 文件改动" >&2
+  echo "" >&2
+  echo "改动的文件：" >&2
+  echo "$DOCS_CHANGED" | sed 's/^/  - /' >&2
+  echo "" >&2
+  echo "原因：这些文件由 GitHub Actions update.yml 自动生成 + 推到 gh-pages，" >&2
+  echo "      本地 commit 它们会污染 main 分支，导致下次 deploy 把过时版本覆盖到线上。" >&2
+  echo "" >&2
+  echo "解决：" >&2
+  echo "  - 如果是本地跑 main.py morning 测试产生的，请丢弃改动：" >&2
+  echo "      git restore --staged docs/index.html docs/archive/" >&2
+  echo "      git restore docs/index.html docs/archive/" >&2
+  echo "" >&2
+  echo "  - 如果确实要 commit（例如 backfill 历史 archive），用 --no-verify：" >&2
+  echo "      git commit --no-verify -m 'fix: backfill archive 2026-XX-XX'" >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0

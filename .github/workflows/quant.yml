@@ -104,17 +104,27 @@ jobs:
             echo "SKIP_SIGNAL=true" >> "$GITHUB_ENV"
           fi
 
-      - name: 前置检查（signal）— 昨日 morning-reconcile 已完成
+      - name: 前置检查（signal）— 前一工作日 morning-reconcile 已完成
         if: steps.m.outputs.mode == 'signal' && env.SKIP_SIGNAL != 'true'
         run: |
-          YESTERDAY=$(TZ=Asia/Shanghai date -v-1d +%Y-%m-%d 2>/dev/null || TZ=Asia/Shanghai date -d 'yesterday' +%Y-%m-%d)
-          DONE_FILE="docs/data/quant/.runs/morning-reconcile-${YESTERDAY}.done"
+          # 用 Python 找前一个工作日（跳过周末）
+          PREV_WORKDAY=$(python3 -c "
+          from datetime import date, timedelta
+          d = date.fromisoformat('${{ steps.m.outputs.TODAY }}')
+          d -= timedelta(days=1)
+          while d.weekday() >= 5:
+              d -= timedelta(days=1)
+          print(d.strftime('%Y-%m-%d'))
+          ")
+          DONE_FILE="docs/data/quant/.runs/morning-reconcile-${PREV_WORKDAY}.done"
           if [ ! -f "$DONE_FILE" ]; then
-            echo "::warning::昨日 morning-reconcile 未跑（缺 $DONE_FILE），可能 yesterday_policy 失真"
-            # 飞书警告（不 fail，让 signal 继续跑，但记录风险）
+            MSG="⚠️ 量化前置检查：前一工作日 ${PREV_WORKDAY} 的 morning-reconcile 未跑，今日 signal 可能用陈旧 yesterday_policy"
+            echo "::warning::$MSG"
             curl -s -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
               -H "Content-Type: application/json" \
-              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"⚠️ 量化前置检查：${YESTERDAY} morning-reconcile 未跑，今日 signal 可能用陈旧 yesterday_policy\"}}" || true
+              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$MSG\"}}" || true
+          else
+            echo "::notice::✅ 前一工作日 ${PREV_WORKDAY} 的 morning-reconcile 已完成"
           fi
 
       - name: 跑 signal
@@ -216,14 +226,31 @@ jobs:
             done
           fi
 
-      # ============ deploy step（除 mock-test 外都跑）============
-      - name: 同步 docs/ 到 gh-pages（signal/morning-reconcile/deploy/init）
+      # ============ deploy step（除 mock-test 外都跑；只同步 quant 资源不动主站）============
+      - name: 准备 quant-only publish 目录（仅 quant 资源，绝不碰主站）
+        if: steps.m.outputs.mode != 'mock-test'
+        run: |
+          set -e
+          rm -rf /tmp/quant-publish
+          mkdir -p /tmp/quant-publish/data
+          # 仅拷贝 quant 子树，不碰 docs/index.html / docs/archive / docs/css / docs/js / docs/CNAME 等主站资源
+          if [ -d docs/quant ]; then
+            cp -r docs/quant /tmp/quant-publish/
+          fi
+          if [ -d docs/data/quant ]; then
+            cp -r docs/data/quant /tmp/quant-publish/data/
+          fi
+          echo "publish 目录内容："
+          find /tmp/quant-publish -type f | head -30
+          echo "总文件数：$(find /tmp/quant-publish -type f | wc -l)"
+
+      - name: 同步 quant-only 目录到 gh-pages（keep_files=true 保留主站既有）
         if: steps.m.outputs.mode != 'mock-test'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          keep_files: true
+          publish_dir: /tmp/quant-publish
+          keep_files: true   # 必须 true，保留 gh-pages 上的 index.html / archive / css / js / CNAME
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: '[quant] sync docs/ (mode=${{ steps.m.outputs.mode }}, run=${{ github.run_id }})'
+          commit_message: '[quant] sync /quant + /data/quant (mode=${{ steps.m.outputs.mode }}, run=${{ github.run_id }})'
