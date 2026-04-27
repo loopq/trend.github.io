@@ -150,7 +150,7 @@ def check_code_markers() -> list[Check]:
         (src / "notifier.py", "NoOpNotifier", "notifier.py 实施 NoOpNotifier"),
         (src / "run_signal.py", "mock-test", "run_signal.py 含 mock-test 子命令"),
         (src / "run_signal.py", "_runs_done_file", "run_signal.py 实施 .runs/done 标记"),
-        (src / "run_signal.py", "_check_yesterday_morning_reconcile_done", "run_signal.py signal 前置检查"),
+        (src / "run_signal.py", "_check_today_morning_reconcile_done", "run_signal.py signal 前置检查"),
         (src / "data_fetcher.py", "DataAvailabilityError", "data_fetcher.py 实施降级阈值"),
         (web / "writer.js", "mergeFn", "writer.js 实施 mergeFn 模式"),
         (web / "writer.js", "operation_id", "writer.js 实施 operation_id"),

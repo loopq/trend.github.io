@@ -18,6 +18,10 @@ on:
   repository_dispatch:
     types: [morning]
 
+concurrency:
+  group: quant-state-main
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -35,6 +39,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+
+      - name: Configure git identity（quant morning-reconcile 内部 commit 用）
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -73,12 +82,29 @@ jobs:
         env:
           TZ: Asia/Shanghai
 
+      - name: Push quant morning-reconcile commits（不静默吞错）
+        if: steps.run_script.outputs.should_deploy == 'true' && steps.mode.outputs.mode == 'morning'
+        continue-on-error: true
+        run: |
+          set -e
+          for i in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push origin main; then
+              echo "✅ quant morning-reconcile commits pushed"
+              exit 0
+            fi
+            echo "::warning::push 失败（attempt $i/3），sleep 后重试"
+            sleep $((RANDOM % 10 + 5))
+          done
+          echo "::error::quant morning-reconcile push failed after 3 retries"
+          exit 1
+
       - name: Deploy to GitHub Pages
         if: steps.run_script.outputs.should_deploy == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
+          exclude_assets: '.github,data/quant/cache/**'
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'Update trend data - ${{ steps.mode.outputs.mode }}'

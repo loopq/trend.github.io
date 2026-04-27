@@ -22,6 +22,7 @@ from scripts.quant.close_confirm import confirm_signals_with_close
 from scripts.quant.config import load_config
 from scripts.quant.data_fetcher import FixtureFetcher
 from scripts.quant.reconcile import reconcile_pending_signals
+from scripts.quant.run_signal import _check_today_morning_reconcile_done
 from scripts.quant.signal_generator import run_signal_generation
 from scripts.quant.state import init_positions, load_positions, save_positions
 from scripts.quant.writer import LocalWriter
@@ -273,3 +274,35 @@ def test_skip_buy_then_downturn_no_sell_signal(repo: Path, cfg) -> None:
     # actual_state 仍 CASH
     assert book.buckets[f"{INDEX}-D"].actual_state == "CASH"
     assert book.buckets[f"{INDEX}-D"].policy_state == "CASH"
+
+
+def test_check_today_morning_reconcile_done_returns_false_when_missing(repo: Path, cfg) -> None:
+    """前置门禁：当日 done 文件不存在 → False。"""
+    today = date(2026, 4, 27)
+    assert _check_today_morning_reconcile_done(repo, cfg, today) is False
+
+
+def test_check_today_morning_reconcile_done_returns_true_when_today_done_exists(repo: Path, cfg) -> None:
+    """前置门禁：仅当 morning-reconcile-{today}.done 存在时返回 True。
+
+    回归测试：本次 plan §1.3 把检查从 yesterday.done 改为 today.done，语义是
+    "D 日 14:48 signal 用的 yesterday_policy 来源于 D 日 09:05 morning-reconcile
+    对 D-1 真值的 confirm"，所以前置检查必须确认 D 日 morning 已跑。
+    """
+    today = date(2026, 4, 27)
+    runs_dir = repo / cfg.paths["data_root"] / ".runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    (runs_dir / f"morning-reconcile-{today.strftime('%Y-%m-%d')}.done").write_text("{}")
+
+    assert _check_today_morning_reconcile_done(repo, cfg, today) is True
+
+
+def test_check_today_morning_reconcile_done_ignores_yesterday_done(repo: Path, cfg) -> None:
+    """前置门禁：yesterday.done 存在但 today.done 不存在 → False（旧语义不再被接受）。"""
+    today = date(2026, 4, 27)
+    yesterday = date(2026, 4, 24)  # 周五
+    runs_dir = repo / cfg.paths["data_root"] / ".runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    (runs_dir / f"morning-reconcile-{yesterday.strftime('%Y-%m-%d')}.done").write_text("{}")
+
+    assert _check_today_morning_reconcile_done(repo, cfg, today) is False

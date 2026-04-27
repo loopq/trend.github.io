@@ -30,21 +30,21 @@ from .notifier import DryRunNotifier, NoOpNotifier, NotificationCard
 from .reconcile import reconcile_pending_signals
 from .signal_generator import run_signal_generation
 from .state import init_positions, load_positions, save_positions
-from .writer import LocalWriter
+from .writer import FileChange, LocalWriter
 
 
 def _runs_done_file(repo_root: Path, cfg, mode: str, date_str: str) -> Path:
     return repo_root / cfg.paths["data_root"] / ".runs" / f"{mode}-{date_str}.done"
 
 
-def _check_yesterday_morning_reconcile_done(repo_root: Path, cfg, today: date) -> bool:
-    """signal mode 前置检查：昨日 morning-reconcile 是否已跑（review C-2）。"""
-    from datetime import timedelta
-    yesterday = today - timedelta(days=1)
-    # 找前一个交易日（简化：如果昨天是周六/日，往前推到周五）
-    while yesterday.weekday() >= 5:
-        yesterday -= timedelta(days=1)
-    return _runs_done_file(repo_root, cfg, "morning-reconcile", yesterday.strftime("%Y-%m-%d")).exists()
+def _check_today_morning_reconcile_done(repo_root: Path, cfg, today: date) -> bool:
+    """signal 前置检查：今日 morning-reconcile 是否已跑。
+
+    语义：D 日 14:48 signal 用的 yesterday_policy 来源于 D 日 09:05 morning-reconcile
+    对 D-1 真值的 confirm（写入 positions.json.policy_state）。所以前置检查必须确认
+    D 日 morning 已跑——找 morning-reconcile-{today}.done。
+    """
+    return _runs_done_file(repo_root, cfg, "morning-reconcile", today.strftime("%Y-%m-%d")).exists()
 
 
 def _build_notifier(repo_root: Path, cfg, mode: str):
@@ -110,9 +110,9 @@ def cmd_signal_for_one_day(args, cfg, repo_root: Path) -> None:
                           "done_file": str(done_file)}, ensure_ascii=False))
         return
 
-    # 前置检查（review C-2）：昨日 morning-reconcile 已跑
-    if not _check_yesterday_morning_reconcile_done(repo_root, cfg, today):
-        print(f"::warning::昨日 morning-reconcile 未跑，yesterday_policy 可能失真", file=sys.stderr)
+    # 前置检查（review C-2）：今日 morning-reconcile 已跑
+    if not _check_today_morning_reconcile_done(repo_root, cfg, today):
+        print(f"::warning::今日 morning-reconcile 未跑，yesterday_policy 可能失真", file=sys.stderr)
         # 不 fail（让用户在 paper trading 期容忍），但飞书会从 workflow 端发警告
 
     cal = _load_calendar(Path(args.calendar))
@@ -140,13 +140,16 @@ def cmd_signal_for_one_day(args, cfg, repo_root: Path) -> None:
         )
         notifier.send(card)
 
-    # 写 .runs/signal-{date}.done 幂等标记
-    done_file.parent.mkdir(parents=True, exist_ok=True)
-    done_file.write_text(json.dumps({
+    # 写 .runs/signal-{date}.done 幂等标记（走 writer.commit_atomic，杜绝绕过 LocalWriter 硬约束）
+    done_payload = json.dumps({
         "completed_at": datetime.now().isoformat(timespec="seconds"),
-        "trigger": "manual",
+        "trigger": "manual" if args.mock_now else "auto",
         "signals_count": len(result.signals),
-    }, ensure_ascii=False, indent=2))
+    }, ensure_ascii=False, indent=2)
+    writer.commit_atomic(
+        [FileChange(path=done_file, content=done_payload)],
+        message=f"[quant] mark signal-{today.strftime('%Y-%m-%d')} done",
+    )
 
     print(json.dumps({
         "date": result.date,
