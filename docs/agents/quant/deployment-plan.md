@@ -6,6 +6,8 @@
 > 适用范围：**首次上线** + **后续运维 / 故障处理 / 本地开发与线上数据隔离**
 > 前置：`docs/agents/quant/mvp-plan.md` v1.5 已实施（86 pytest + 10 selenium 全过）
 
+> ⚠️ **本文档部分内容已废弃（2026-04-27）**：§一.3「备路：GitHub native schedule」「Heartbeat 哨兵」以及任何"GitHub schedule 备路 + heartbeat"相关章节已**不适用**。当前架构改为 cron-job.org 单路触发（仅 morning + signal 两条任务），无 schedule 备路、无 heartbeat 哨兵。详见 [`cron-cleanup-single-source.md`](cron-cleanup-single-source.md)。本文正文将在下次 commit 单独重写。
+
 ## 重大设计调整（v2.0 vs v1.0）
 
 | 项 | v1.0（已废弃）| v2.0（当前）|

@@ -7,7 +7,7 @@ on:
         description: '运行 mode'
         type: choice
         options:
-          - signal              # 14:48 盘中信号生成（cron-job.org 主路 + GitHub schedule 备路）
+          - signal              # 14:48 盘中信号生成（cron-job.org 触发）
           - morning-reconcile   # 早间合并 reconcile + close-confirm（用昨日真值）
           - deploy              # 仅同步 docs/* 到 gh-pages
           - mock-test           # 完全隔离测试（QUANT_DATA_ROOT=/tmp + 5 道硬门）
@@ -21,10 +21,6 @@ on:
   repository_dispatch:
     types:
       - quant-trigger    # cron-job.org 触发，client_payload.mode 决定 mode
-  schedule:
-    # GitHub schedule 时区固定 UTC；备路（主路 cron-job.org 失效时兜底）
-    - cron: '50 6 * * 1-5'    # 14:50 SGT = 06:50 UTC，备 signal mode
-    - cron: '5 1 * * 1-5'     # 09:05 SGT = 01:05 UTC，备 morning-reconcile mode
 
 permissions:
   contents: write
@@ -41,16 +37,10 @@ jobs:
       - name: 解析 mode
         id: m
         run: |
-          # mode 来源优先级：workflow_dispatch input > repository_dispatch payload > schedule 推断
+          # mode 来源：workflow_dispatch input 或 repository_dispatch payload（cron-job.org）
           MODE="${{ inputs.mode }}"
           if [ -z "$MODE" ]; then
             MODE="${{ github.event.client_payload.mode }}"
-          fi
-          if [ -z "$MODE" ] && [ "${{ github.event_name }}" = "schedule" ]; then
-            # 根据 cron 表达式推断
-            HOUR_UTC=$(date -u +%H)
-            if [ "$HOUR_UTC" = "06" ]; then MODE="signal"; fi
-            if [ "$HOUR_UTC" = "01" ]; then MODE="morning-reconcile"; fi
           fi
           if [ -z "$MODE" ]; then
             echo "::error::无法确定 mode"

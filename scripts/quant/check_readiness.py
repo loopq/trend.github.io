@@ -77,15 +77,15 @@ def check_gitignore() -> list[Check]:
 def check_workflows() -> list[Check]:
     out = []
     wf_dir = PROJECT_ROOT / ".github" / "workflows"
-    must_exist = ["quant.yml", "quant-heartbeat.yml", "quant-test.yml", "update.yml"]
+    must_exist = ["quant.yml", "quant-test.yml", "update.yml"]
     for f in must_exist:
         out.append(
             Check(f"workflow {f} 存在").passed() if (wf_dir / f).exists()
             else Check(f"workflow {f} 存在").failed(f"{f} 缺失")
         )
 
-    # 旧 3 yml 已删
-    must_not_exist = ["quant-signal.yml", "quant-cache.yml", "quant-close-confirm.yml"]
+    # 旧 3 yml 已删 + 单路化反向断言：quant-heartbeat.yml 必须不存在
+    must_not_exist = ["quant-signal.yml", "quant-cache.yml", "quant-close-confirm.yml", "quant-heartbeat.yml"]
     for f in must_not_exist:
         out.append(
             Check(f"旧 workflow {f} 已删").passed() if not (wf_dir / f).exists()
@@ -99,13 +99,19 @@ def check_workflows() -> list[Check]:
         else Check("update.yml 含 quant morning-reconcile step").failed("缺少 step")
     )
 
-    # quant.yml 含 5 mode + concurrency + schedule
+    # quant.yml 含 5 mode + concurrency + peaceiris
     quant_yml = (wf_dir / "quant.yml").read_text(encoding="utf-8") if (wf_dir / "quant.yml").exists() else ""
-    for keyword in ["mock-test", "morning-reconcile", "deploy", "init", "concurrency", "schedule:", "peaceiris"]:
+    for keyword in ["mock-test", "morning-reconcile", "deploy", "init", "concurrency", "peaceiris"]:
         out.append(
             Check(f"quant.yml 含 '{keyword}'").passed() if keyword in quant_yml
             else Check(f"quant.yml 含 '{keyword}'").failed("缺失")
         )
+
+    # 单路化反向断言：quant.yml 不得再出现 schedule 块（防 GitHub schedule 备路误回归）
+    out.append(
+        Check("quant.yml 不含 schedule:").passed() if "schedule:" not in quant_yml
+        else Check("quant.yml 不含 schedule:").failed("发现残留 schedule 块，违反单路化")
+    )
     return out
 
 
