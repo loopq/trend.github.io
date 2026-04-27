@@ -6,6 +6,8 @@
 > 范围：基于 V9.2 回测结果，落地一套半自动量化信号系统
 > 形式：PRD（产品需求）+ TDD 实施计划
 
+> ⚠️ **本文档部分内容已废弃（2026-04-27）**：§5.9「cron-job.org 失效」§7 触发说明、§10 Phase 7 中提及的「GitHub schedule 备路 / heartbeat 哨兵 / 多个 cron-job.org 任务（14:48/09:00/15:30）」均已**不适用**。当前架构改为 cron-job.org 单路触发（仅 morning + signal 两条任务）。详见 [`cron-cleanup-single-source.md`](cron-cleanup-single-source.md)。
+
 ---
 
 ## 一、需求背景
