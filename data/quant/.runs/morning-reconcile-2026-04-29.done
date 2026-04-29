@@ -1,0 +1,16 @@
+{
+  "completed_at": "2026-04-29T08:01:37",
+  "close_confirm": {
+    "confirmed": 0,
+    "false_signals": 0,
+    "files_changed": [
+      "/home/runner/work/trend.github.io/trend.github.io/docs/data/quant/signals/2026-04-28.json",
+      "/home/runner/work/trend.github.io/trend.github.io/docs/data/quant/positions.json",
+      "/home/runner/work/trend.github.io/trend.github.io/docs/data/quant/signals/index.json"
+    ]
+  },
+  "reconcile": {
+    "expired_count": 0,
+    "files_changed": []
+  }
+}
