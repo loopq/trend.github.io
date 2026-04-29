@@ -1,10 +1,22 @@
 {
   "version": 1,
-  "updated_at": "2026-04-29T08:01:37+08:00",
+  "updated_at": "2026-04-29T06:49:29+00:00",
   "entries": [
     {
       "date": "2026-04-28",
       "file": "signals/2026-04-28.json",
+      "signal_count": 0,
+      "pending_count": 0,
+      "confirmed_count": 0,
+      "skipped_count": 0,
+      "expired_count": 0,
+      "buckets": [
+        "D"
+      ]
+    },
+    {
+      "date": "2026-04-29",
+      "file": "signals/2026-04-29.json",
       "signal_count": 0,
       "pending_count": 0,
       "confirmed_count": 0,
