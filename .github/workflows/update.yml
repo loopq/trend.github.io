@@ -73,7 +73,10 @@ jobs:
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
 
       - name: Quant morning-reconcile（合并 reconcile + close-confirm；故障隔离不影响主链路）
-        if: steps.run_script.outputs.should_deploy == 'true' && steps.mode.outputs.mode == 'morning'
+        # v4：解除 should_deploy 拦截。主站不部署的日子（节假日 / 数据延迟），quant
+        # morning-reconcile 仍然要跑，目的是：增量拉历史 K cache + 写"今日已检查"缓存，
+        # 让 14:48 signal 在节后第一交易日（如 5-6）能正常算 MA20（从 cache 读历史）。
+        if: steps.mode.outputs.mode == 'morning'
         continue-on-error: true
         run: |
           python -m scripts.quant.run_signal morning-reconcile \
@@ -83,7 +86,7 @@ jobs:
           TZ: Asia/Shanghai
 
       - name: Push quant morning-reconcile commits（不静默吞错）
-        if: steps.run_script.outputs.should_deploy == 'true' && steps.mode.outputs.mode == 'morning'
+        if: steps.mode.outputs.mode == 'morning'
         continue-on-error: true
         run: |
           set -e

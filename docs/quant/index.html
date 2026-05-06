@@ -109,13 +109,48 @@
                    '<div class="value' + (klass ? ' ' + klass : '') + '">' + value + '</div></div>';
         }
 
+        // C5：从 .runs/*.done 文件派生今日运行状态文字（追加到「需确认」标题旁）
+        function fetchRunStatus(today) {
+            function tryFetch(path) {
+                return fetch(path, { cache: 'no-store' }).then(function (r) {
+                    return r.ok ? r.json() : null;
+                }).catch(function () { return null; });
+            }
+            return Promise.all([
+                tryFetch('../data/quant/.runs/morning-reconcile-' + today + '.done'),
+                tryFetch('../data/quant/.runs/signal-' + today + '.done'),
+            ]).then(function (r) {
+                var mr = r[0], sg = r[1];
+                if (mr && sg) return ' · ' + today + ' 已检查 · ' + (sg.signals_count || 0) + ' 信号';
+                if (mr && !sg) return ' · ' + today + ' 已检查 · 当日非交易';
+                if (!mr && sg) return ' · ' + today + ' 已生成 ' + (sg.signals_count || 0) + ' 信号（晨检异常）';
+                return ' · ' + today + ' 未跑';
+            });
+        }
+
+        function _todayLocal() {
+            var d = new Date();
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + dd;
+        }
+
         function renderPending(signals) {
             var el = document.getElementById('pending-signals');
-            if (!signals.length) {
-                el.innerHTML = '<div class="section"><h2>🔔 需确认 (0)</h2><div class="empty-state">今日无待确认信号</div></div>';
-                return;
-            }
-            var html = '<div class="section"><h2>🔔 需确认 (' + signals.length + ')</h2>';
+            var today = _todayLocal();
+            fetchRunStatus(today).then(function (status) {
+                var statusHtml = '<span class="run-status">' + status + '</span>';
+                if (!signals.length) {
+                    el.innerHTML = '<div class="section"><h2>🔔 需确认 (0)' + statusHtml + '</h2><div class="empty-state">今日无待确认信号</div></div>';
+                    return;
+                }
+                var html = '<div class="section"><h2>🔔 需确认 (' + signals.length + ')' + statusHtml + '</h2>';
+                renderPendingBody(signals, html, el);
+            });
+        }
+
+        function renderPendingBody(signals, html, el) {
             signals.forEach(function (s) {
                 var idxCode = s.bucket_id.split('-')[0];
                 var freq = s.bucket_id.split('-')[1];

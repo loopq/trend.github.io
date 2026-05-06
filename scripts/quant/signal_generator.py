@@ -145,8 +145,26 @@ def run_signal_generation(
     t0 = time.monotonic()
     today_str = today.strftime("%Y-%m-%d")
 
-    trigger_buckets = decide_buckets_to_run(today, cal)
-    if not trigger_buckets:
+    index_codes = [s.index_code for s in cfg.indices]
+    etf_codes = [s.etf_code for s in cfg.indices]
+
+    # C4：自探测代替静态 cal（拉不到实时 → 非交易日）
+    t_fetch = time.monotonic()
+    try:
+        index_quotes = fetcher.fetch_indices(index_codes)
+        etf_quotes = fetcher.fetch_etfs(etf_codes)
+    except Exception as e:
+        # 全部缺失（DataAvailabilityError）或网络异常 → 当作非交易日，静默 skip
+        return SignalRunResult(
+            date=today_str,
+            trigger_buckets=[],
+            signals=[],
+            invariant_errors=[f"fetch failed → treat as non-trading day: {e}"],
+            skipped_non_trading_day=True,
+            timings={"total_seconds": time.monotonic() - t0},
+        )
+    if not index_quotes:
+        # 空 dict（fetcher 没抛但全空）→ 非交易日
         return SignalRunResult(
             date=today_str,
             trigger_buckets=[],
@@ -155,14 +173,22 @@ def run_signal_generation(
             skipped_non_trading_day=True,
             timings={"total_seconds": time.monotonic() - t0},
         )
-
-    index_codes = [s.index_code for s in cfg.indices]
-    etf_codes = [s.etf_code for s in cfg.indices]
-
-    t_fetch = time.monotonic()
-    index_quotes = fetcher.fetch_indices(index_codes)
-    etf_quotes = fetcher.fetch_etfs(etf_codes)
     timings["fetch_seconds"] = time.monotonic() - t_fetch
+
+    # 今日已确认是交易日（fetch 成功）；判断 D/W/M 触发
+    # 用包装 cal：今日强制 True，未来日期由 base cal（cache + 节假日表）回答
+    class _TodayForcedCal:
+        def __init__(self, base, t):
+            self.base = base
+            self.t = t
+
+        def __call__(self, d):
+            if d == self.t:
+                return True
+            return self.base(d)
+
+    forced_cal = _TodayForcedCal(cal, today)
+    trigger_buckets = decide_buckets_to_run(today, forced_cal)
 
     cache_dir = repo_root / cfg.paths["cache_dir"]
     signals_out: list[dict] = []

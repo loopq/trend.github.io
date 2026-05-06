@@ -99,19 +99,8 @@ jobs:
             echo "SKIP_SIGNAL=true" >> "$GITHUB_ENV"
           fi
 
-      - name: 前置检查（signal）— 今日 morning-reconcile 已完成
-        if: steps.m.outputs.mode == 'signal' && env.SKIP_SIGNAL != 'true'
-        run: |
-          DONE_FILE="docs/data/quant/.runs/morning-reconcile-${{ steps.m.outputs.TODAY }}.done"
-          if [ ! -f "$DONE_FILE" ]; then
-            MSG="⚠️ 量化前置检查：今日 ${{ steps.m.outputs.TODAY }} 的 morning-reconcile 未跑，yesterday_policy 可能失真"
-            echo "::warning::$MSG"
-            curl -s -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
-              -H "Content-Type: application/json" \
-              -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"$MSG\"}}" || true
-          else
-            echo "::notice::✅ 今日 ${{ steps.m.outputs.TODAY }} 的 morning-reconcile 已完成"
-          fi
+      # v4：删除前置检查 step——signal 自包含（fetch_indices 异常即非交易日 → skip）
+      # cal 由 cmd_signal 内部从 cache + 节假日表派生（删除 --calendar 静态 fixture 依赖）
 
       - name: 跑 signal
         if: steps.m.outputs.mode == 'signal' && env.SKIP_SIGNAL != 'true'
@@ -120,7 +109,6 @@ jobs:
         run: |
           python -m scripts.quant.run_signal signal \
             --mock-now "${{ inputs.mock_now || github.event.client_payload.mock_now }}" \
-            --calendar scripts/quant/tests/fixtures/trading_calendar_2026-04.json \
             --realtime auto \
             --writer-mode commit \
             --notifier-mode feishu
