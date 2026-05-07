@@ -483,3 +483,11 @@ a:hover { text-decoration: underline; }
     text-decoration: none;
     display: inline-block;
 }
+
+/* C5: morning-reconcile / signal 运行状态文字（标题旁追加）*/
+.run-status {
+    font-size: 0.6em;
+    color: #888;
+    font-weight: normal;
+    margin-left: 8px;
+}
