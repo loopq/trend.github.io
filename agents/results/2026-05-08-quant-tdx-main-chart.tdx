@@ -1,0 +1,38 @@
+{ 文件: agents/results/2026-05-08-quant-tdx-main-chart.tdx              }
+{ Plan: agents/plans/2026-05-08-quant-tdx-main-chart.md                  }
+{                                                                         }
+{ 通达信手机版主图叠加公式：MA + LOW/HIGH 干净 K 线方向 B/S 信号         }
+{ 严格对应 scripts/backtest/signal.py classify_bar + DirectionState      }
+{ 周期由用户切换（日/周/月）自然适配——公式自动用当前周期的 H/L/C       }
+{                                                                         }
+{ 不变性：信号序列必然 BSBSBS 交替，绝不出现连续 BB / SS（spec §3.1 证明）}
+{                                                                         }
+{ 注：本文件为手机版兼容版（不依赖 IFNONE）；PC V6+ 也可直接使用         }
+
+MA5 : MA(C,  5),  COLORWHITE;
+MA10: MA(C, 10),  COLORYELLOW;
+MA20: MA(C, 20),  COLORMAGENTA;
+MA60: MA(C, 60),  COLORCYAN;
+
+{ 干净 K 线方向（与 backtest classify_bar 等价） }
+TODAYUP   := L > MA20;
+TODAYDOWN := H < MA20;
+
+{ 历史最近的"非触碰" K 线根数（不含今天） }
+{ BARSLAST 在 condition 从未为真时部分版本返回 -1，部分返回大数 }
+{ 用双边检查 [0, TOTALBARS) 确保只有"真出现过"才接受，否则用 9999 兜底 }
+LASTUPRAW   := BARSLAST(REF(TODAYUP,   1));
+LASTDOWNRAW := BARSLAST(REF(TODAYDOWN, 1));
+TOTALBARS   := BARSCOUNT(C);
+
+PREVUP   := IF(LASTUPRAW   >= 0 AND LASTUPRAW   < TOTALBARS, LASTUPRAW,   9999);
+PREVDOWN := IF(LASTDOWNRAW >= 0 AND LASTDOWNRAW < TOTALBARS, LASTDOWNRAW, 9999);
+
+{ 翻转判定：今日 UP/DOWN 且历史最近非触碰是反向（或从未） }
+B := TODAYUP   AND PREVDOWN <= PREVUP;
+S := TODAYDOWN AND PREVUP   <= PREVDOWN;
+
+{ 显示：B 在 K 线上方（突破事件，黄色醒目），S 在 K 线下方（破位事件，绿色） }
+{ B 不用红色：与阳线红 K 视觉融合；改黄色与 MA10 同名但单字符 vs 连续线可区分 }
+DRAWTEXT(B, H * 1.01, 'B'), COLORYELLOW;
+DRAWTEXT(S, L * 0.99, 'S'), COLORGREEN;
