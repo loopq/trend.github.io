@@ -2,7 +2,7 @@
 
 > 完全独立的离线回测系统，**不参与生产链路**（生产指标计算用 `scripts/calculator.py`）。
 >
-> 所有产出在 `docs/agents/backtest/`。
+> 所有产出在 `docs/agents/results/`。
 
 ## 设计原则
 
@@ -61,7 +61,7 @@
 ## 关键产出文件
 
 ```
-docs/agents/backtest/
+docs/agents/results/
 ├── conclusion.md        # V4.2 多窗口结论（剔除 BTC，16 指数）
 ├── v5-result.md         # V5 90 行业 4 维排行榜
 ├── v5-summary.md        # V5 运行清单 + 失败清单 + 全数据表
@@ -69,8 +69,8 @@ docs/agents/backtest/
 ├── v6-sector-result.md  # V6 20 行业多窗口（毛 CAGR）
 └── v6-friction-result.md # V6 + 万一免五磨损（净 CAGR）
 
-docs/agents/v5-plan.md   # V5 实施计划（517 行详细规划）
-docs/agents/ma20-backtest-plan.md # V1-V4 早期 plan + 4 轮 codex review
+docs/agents/plans/v5-plan.md   # V5 实施计划（517 行详细规划）
+docs/agents/plans/ma20-backtest-plan.md # V1-V4 早期 plan + 4 轮 codex review
 ```
 
 ## 怎么跑

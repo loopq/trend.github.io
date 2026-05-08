@@ -20,7 +20,7 @@ from scripts.backtest.strategies import all_strategies
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT_DIR = PROJECT_ROOT / "docs" / "agents" / "backtest"
+OUTPUT_DIR = PROJECT_ROOT / "docs" / "agents" / "results"
 
 MIN_EVALUATION_START = pd.Timestamp("2016-01-01")
 

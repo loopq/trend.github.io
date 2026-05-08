@@ -10,7 +10,7 @@
     build_quant_backtest.py index
         → 重写 index.json
 
-设计参考：docs/agents/quant/quant-backtest-runner-plan.md (v4.3)
+设计参考：docs/agents/plans/quant-backtest-runner-plan.md (v4.3)
 """
 
 import argparse

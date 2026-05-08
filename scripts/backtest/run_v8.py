@@ -2,8 +2,8 @@
 
 复用 V5 的 screen_sector（已通用），换 registry 为 V8 中证池。
 输出：
-    docs/agents/backtest/v8-result.md         全部 344 候选 + 4 排行榜
-    docs/agents/backtest/v8-tiny-result.md    Top 20 精选 + V6 对比 + 业务关联分析
+    docs/agents/results/v8-result.md         全部 344 候选 + 4 排行榜
+    docs/agents/results/v8-tiny-result.md    Top 20 精选 + V6 对比 + 业务关联分析
 """
 from __future__ import annotations
 
@@ -35,9 +35,9 @@ from scripts.backtest.v8_registry import build_v8_registry
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT_RESULT = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v8-result.md"
-OUTPUT_SUMMARY = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v8-summary.md"
-OUTPUT_TINY = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v8-tiny-result.md"
+OUTPUT_RESULT = PROJECT_ROOT / "docs" / "agents" / "results" / "v8-result.md"
+OUTPUT_SUMMARY = PROJECT_ROOT / "docs" / "agents" / "results" / "v8-summary.md"
+OUTPUT_TINY = PROJECT_ROOT / "docs" / "agents" / "results" / "v8-tiny-result.md"
 
 # V8 不强制纳入任何（因为整池都有 ETF 了）
 V8_FORCE_INCLUDE: set = set()

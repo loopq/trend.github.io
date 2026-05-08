@@ -30,7 +30,7 @@ from scripts.backtest.window_engine import (
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v6-sector-result.md"
+OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v6-sector-result.md"
 
 WINDOWS = [3, 5, 8, 10]
 MIN_EVALUATION_START = pd.Timestamp("2016-01-01")
@@ -151,7 +151,7 @@ def render_v6_result(
             f"| **{delta:+.2f}%** |"
         )
     lines.append("")
-    lines.append("> V4.2 数据来自 docs/agents/backtest/conclusion.md（剔除 BTC 后的 16 指数组合）")
+    lines.append("> V4.2 数据来自 docs/agents/results/conclusion.md（剔除 BTC 后的 16 指数组合）")
     return "\n".join(lines)
 
 

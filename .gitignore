@@ -29,3 +29,6 @@ docs/data/quant/notify-outbox/*.json
 docs/data/quant/cache/*.csv
 # signals/{date}.json 不再 ignore：上线后由 quant.yml signal mode 在仓库生成 + commit + sync gh-pages
 # 本地 demo 走 QUANT_DATA_ROOT=/tmp 隔离（mvp-plan §3.5.1）
+
+# review-loop 自动产物（按需手动归档至 docs/agents/reviews/）
+agents

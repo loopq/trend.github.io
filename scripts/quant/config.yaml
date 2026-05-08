@@ -1,6 +1,6 @@
 # 量化信号系统配置（V9.2 基线，13 指数 / 36 有效 bucket）
-# 详细设计见 docs/agents/quant/mvp-plan.md
-# 基线快照来源：docs/agents/backtest/v9-summary.md 排名表
+# 详细设计见 docs/agents/plans/mvp-plan.md
+# 基线快照来源：docs/agents/results/v9-summary.md 排名表
 
 total_capital: 130000        # 总本金 13 万
 per_index_capital: 10000     # 每指数 1 万

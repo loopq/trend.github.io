@@ -5,5 +5,5 @@
 - cache / data_fetcher / writer / notifier：IO 层
 - signal_generator / reconcile / close_confirm / run_signal：流程层
 
-详细设计见 `docs/agents/quant/mvp-plan.md`。
+详细设计见 `docs/agents/plans/mvp-plan.md`。
 """

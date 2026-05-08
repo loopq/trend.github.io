@@ -17,9 +17,9 @@ from scripts.backtest.v5_screener import SectorMetrics, screen_sector
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v5-result.md"
-SUMMARY_OUTPUT = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v5-summary.md"
-TINY_OUTPUT = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v5-tiny-result.md"
+OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v5-result.md"
+SUMMARY_OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v5-summary.md"
+TINY_OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v5-tiny-result.md"
 
 # Tiny 筛选标准（精选 ≤ 20 个用于后续详细验证）
 TINY_MIN_SIGMA = 28.0

@@ -1,6 +1,6 @@
 """C4：signal 14:48 自探测 + 删除前置检查。
 
-参考：docs/agents/quant/morning-reconcile-cache.md §C4 §7.2
+参考：docs/agents/plans/morning-reconcile-cache.md §C4 §7.2
 """
 from __future__ import annotations
 

@@ -39,7 +39,7 @@ from scripts.backtest.window_engine import (
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT = PROJECT_ROOT / "docs" / "agents" / "backtest" / "v9-manual-result.md"
+OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v9-manual-result.md"
 
 WINDOWS = [3, 5, 8, 10]
 AS_OF = pd.Timestamp("2026-04-25")

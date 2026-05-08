@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """一次性迁移：v3.3 上线的 14 个旧 v9 报告 category → cn
 
-设计参考：docs/agents/quant/quant-backtest-runner-plan.md §4.7
+设计参考：docs/agents/plans/quant-backtest-runner-plan.md §4.7
 
 特性（按 Codex Round-1 Issue #8 修复）：
 - 仅处理 LEGACY_CODES 白名单 14 个 code，不通杀目录

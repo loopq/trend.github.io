@@ -1,6 +1,6 @@
 """Region → source 映射 + 输入校验 + 数据预探测
 
-设计参考：docs/agents/quant/quant-backtest-runner-plan.md (v4.3)
+设计参考：docs/agents/plans/quant-backtest-runner-plan.md (v4.3)
 
 本模块是 backtest 在线触发的安全网：
 - validate_inputs：双层校验的脚本层（workflow 是第一层）
