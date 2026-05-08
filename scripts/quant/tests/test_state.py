@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.quant.state import (
+    BucketPosition,
     PositionsBook,
     StateInvariantError,
     Transaction,
@@ -30,7 +31,8 @@ def test_init_positions_creates_36_buckets_all_cash(cfg) -> None:
     assert len(book.buckets) == 36
     for bucket_id, b in book.buckets.items():
         assert b.actual_state == "CASH"
-        assert b.policy_state == "CASH"
+        # plan §1.2：默认 policy_state=UNKNOWN（首日观察期，由 close-confirm 自然填充）
+        assert b.policy_state == "UNKNOWN"
         assert b.shares == 0
         assert b.avg_cost == 0.0
         assert b.cash > 0  # 起始资金 > 0
@@ -178,3 +180,110 @@ def test_apply_buy_external_funded_bypasses_cash_check(cfg) -> None:
     b = book.buckets["399997-D"]
     assert b.actual_state == "HOLD"
     assert b.cash < 0  # 外部资金补足
+
+
+# ---------------- I3: 三态 + baseline 字段 + load_positions 容错 ----------------
+
+
+def _minimal_bucket() -> BucketPosition:
+    """构造最小合法 BucketPosition（仅 mandatory 字段），用于 default 字段断言。"""
+    return BucketPosition(
+        index_code="399997",
+        index_name="中证白酒",
+        etf_code="159843",
+        etf_name="白酒 ETF",
+        calmar_weight=1.0,
+        initial_capital=10000.0,
+    )
+
+
+def test_bucket_default_policy_state_is_unknown() -> None:
+    """plan §1.2：新建 BucketPosition 默认 policy_state == UNKNOWN（首日观察期）。"""
+    bucket = _minimal_bucket()
+    assert bucket.policy_state == "UNKNOWN"
+
+
+def test_bucket_baseline_default_none() -> None:
+    """plan §3.3.1：baseline 字段 + last_error 默认均 None。"""
+    bucket = _minimal_bucket()
+    assert bucket.policy_baseline_today is None
+    assert bucket.policy_baseline_date is None
+    assert bucket.last_error is None
+
+
+def test_load_positions_tolerates_legacy_two_state(tmp_data_dir) -> None:
+    """旧二态 JSON（无 baseline / last_error 字段，policy_state="CASH"）→ 不报错，缺失填 None。"""
+    import json
+    legacy = {
+        "version": 1,
+        "updated_at": "2026-05-07T15:30:00+08:00",
+        "paper_trading": True,
+        "buckets": {
+            "399997-D": {
+                "index_code": "399997",
+                "index_name": "中证白酒",
+                "etf_code": "159843",
+                "etf_name": "白酒 ETF",
+                "calmar_weight": 1.0,
+                "initial_capital": 10000.0,
+                "actual_state": "CASH",
+                "policy_state": "CASH",  # 旧二态
+                "shares": 0,
+                "avg_cost": 0.0,
+                "cash": 10000.0,
+                "last_action_date": None,
+                "last_action_type": None,
+            }
+        }
+    }
+    path = tmp_data_dir / "legacy_positions.json"
+    path.write_text(json.dumps(legacy))
+    book = load_positions(path)
+    b = book.buckets["399997-D"]
+    assert b.policy_state == "CASH"  # 保留旧值，不强制升 UNKNOWN
+    assert b.policy_baseline_today is None
+    assert b.policy_baseline_date is None
+    assert b.last_error is None
+
+
+def test_load_positions_filters_unknown_keys(tmp_data_dir) -> None:
+    """JSON 多余字段（未来 schema 演进）应被忽略，不抛 TypeError。"""
+    import json
+    payload = {
+        "version": 1,
+        "updated_at": "2026-05-08T15:30:00+08:00",
+        "paper_trading": True,
+        "buckets": {
+            "399997-D": {
+                "index_code": "399997",
+                "index_name": "中证白酒",
+                "etf_code": "159843",
+                "etf_name": "白酒 ETF",
+                "calmar_weight": 1.0,
+                "initial_capital": 10000.0,
+                "policy_state": "UNKNOWN",
+                "bogus_field": "should be ignored",
+                "another_unknown": 42,
+            }
+        }
+    }
+    path = tmp_data_dir / "future_positions.json"
+    path.write_text(json.dumps(payload))
+    book = load_positions(path)  # 不抛 TypeError
+    assert book.buckets["399997-D"].policy_state == "UNKNOWN"
+
+
+def test_validate_invariants_accepts_unknown_policy(cfg) -> None:
+    """plan §1.2：policy_state == UNKNOWN 通过校验（不出现在 errors）。"""
+    book = init_positions(cfg)
+    for b in book.buckets.values():
+        b.policy_state = "UNKNOWN"
+    errors = validate_invariants(book)
+    assert all("policy_state 非法值" not in e for e in errors)
+
+
+def test_validate_invariants_rejects_bogus_policy(cfg) -> None:
+    book = init_positions(cfg)
+    book.buckets["399997-D"].policy_state = "BOGUS"
+    errors = validate_invariants(book)
+    assert any("399997-D" in e and "BOGUS" in e for e in errors)

@@ -24,9 +24,11 @@ from .signal_engine import (
     GeneratedSignal,
     MA_WINDOW,
     SignalAction,
+    _q,
     compute_ma20,
-    decide_policy_state,
+    derive_policy_state,
     generate_signal,
+    is_finite_price,
     resample_to_monthly_close,
     resample_to_weekly_close,
     splice_realtime,
@@ -113,8 +115,42 @@ def _build_realtime_aware_history(
     return splice_realtime(history, today_close, today)
 
 
-def _ma20_for_frequency(spliced: pd.DataFrame, frequency: str) -> tuple[float, float]:
-    """返回 (today_close, ma20) 对应频率（D/W/M）。"""
+def _validate_bar(low: float, high: float, ma20: float) -> str | None:
+    """plan §3.2 bar_validation：检查 OHLC + MA20 是否合法。
+
+    返回 `None` 表示合法；返回 `"data_invalid"` 表示数据非法（NaN / inf / None / low>high），
+    调用方应将该 reason 写入 `bucket.last_error` 并跳过当前 bucket 评估。
+    """
+    if not (is_finite_price(low) and is_finite_price(high) and is_finite_price(ma20)):
+        return "data_invalid"
+    if low > high:
+        return "data_invalid"
+    return None
+
+
+def _apply_baseline_first_write_wins(book: PositionsBook, today_str: str) -> None:
+    """plan §3.3.1：14:48 主循环前对所有 bucket 写入 today 的 policy_baseline 快照。
+
+    First-write-wins：当日已写入（policy_baseline_date == today_str）→ 跳过，
+    防止盘中重跑覆盖；否则把当前 policy_state 快照到 baseline。
+    跨日时（baseline_date != today_str）会用今日 policy_state 重写。
+
+    用途：close_confirm 在 15:30 用 baseline + 真值 LOW/HIGH 推导真今日 policy；
+    若直接用 bucket.policy_state（14:48 已变）则丢失"昨日"信息。
+    """
+    for bucket in book.buckets.values():
+        if bucket.policy_baseline_date != today_str:
+            bucket.policy_baseline_today = bucket.policy_state
+            bucket.policy_baseline_date = today_str
+
+
+def _ma20_for_frequency(spliced: pd.DataFrame, frequency: str) -> tuple[float, float, float, float]:
+    """返回 (close, low, high, ma20) 对应频率（D/W/M）。
+
+    plan §3.2：last 行 low/high 取 OHLC 真值；NaN（如 14:48 splice 新增行只有 close）
+    fallback 为 close。这样 14:48 路径用 close 近似（low=high=close 视为触碰），
+    D+1 morning-reconcile 路径用 cache 真实 OHLC（精确 LOW/HIGH 推导）。
+    """
     if frequency == "D":
         df = compute_ma20(spliced)
     elif frequency == "W":
@@ -124,7 +160,13 @@ def _ma20_for_frequency(spliced: pd.DataFrame, frequency: str) -> tuple[float, f
     else:
         raise ValueError(f"unknown frequency {frequency}")
     last = df.iloc[-1]
-    return float(last["close"]), float(last["ma20"])
+    close = float(last["close"])
+    ma20 = float(last["ma20"])
+    low_raw = last.get("low") if "low" in last.index else None
+    high_raw = last.get("high") if "high" in last.index else None
+    low = float(low_raw) if pd.notna(low_raw) else close
+    high = float(high_raw) if pd.notna(high_raw) else close
+    return close, low, high, ma20
 
 
 def run_signal_generation(
@@ -194,6 +236,9 @@ def run_signal_generation(
     signals_out: list[dict] = []
     errors: list[str] = []
 
+    # plan §3.3.1：进入主循环前 first-write-wins baseline，让 15:30 close-confirm 能拿到"昨日"前态。
+    _apply_baseline_first_write_wins(book, today_str)
+
     t_engine = time.monotonic()
     for spec in cfg.indices:
         idx_code = spec.index_code
@@ -210,7 +255,7 @@ def run_signal_generation(
             bucket = book.buckets[bucket_id]
             yesterday_policy = bucket.policy_state
             try:
-                close, ma20 = _ma20_for_frequency(spliced, freq)
+                close, low, high, ma20 = _ma20_for_frequency(spliced, freq)
             except Exception as e:
                 errors.append(f"[{bucket_id}] MA20 计算失败：{e}")
                 continue
@@ -218,13 +263,22 @@ def run_signal_generation(
                 errors.append(f"[{bucket_id}] MA20 数据不足（< {MA_WINDOW} 个 {freq} 周期）")
                 continue
 
-            today_policy = decide_policy_state(close, ma20)
+            # plan §3.2 bar_validation：NaN/inf/None/low>high → 标记并跳过，不污染其他 bucket
+            invalid_reason = _validate_bar(low, high, ma20)
+            if invalid_reason is not None:
+                bucket.last_error = invalid_reason
+                errors.append(f"[{bucket_id}] bar_validation 失败 low={low} high={high} ma20={ma20}")
+                continue
+            bucket.last_error = None
+
+            today_policy = derive_policy_state(yesterday_policy, low, high, ma20)
             try:
                 generated = generate_signal(
                     bucket_id=bucket_id,
                     actual_state=bucket.actual_state,
                     yesterday_policy=yesterday_policy,
-                    today_close=close,
+                    today_low=low,
+                    today_high=high,
                     ma20=ma20,
                 )
             except StateInvariantError as e:
@@ -238,6 +292,15 @@ def run_signal_generation(
             if generated is None:
                 continue
 
+            # plan §3.2：trigger_condition 文案使用 LOW/HIGH 精度对齐后的值
+            low_q = _q(low)
+            high_q = _q(high)
+            ma20_q = _q(ma20)
+            if generated.action == SignalAction.BUY:
+                trigger_text = f"low {low_q:.4f} > MA20 {ma20_q:.4f}"
+            else:  # SELL
+                trigger_text = f"high {high_q:.4f} < MA20 {ma20_q:.4f}"
+
             aff = compute_affordability(bucket_cash=bucket.cash, etf_price=etf_quote.price)
             sig = _empty_signal_dict()
             sig.update({
@@ -247,9 +310,7 @@ def run_signal_generation(
                 "trigger_event": (
                     "policy_cash_to_hold" if generated.action == SignalAction.BUY else "policy_hold_to_cash"
                 ),
-                "trigger_condition": (
-                    f"close {close:.4f} {'>' if today_policy == 'HOLD' else '<='} MA20 {ma20:.4f}"
-                ),
+                "trigger_condition": trigger_text,
                 "yesterday_policy": yesterday_policy,
                 "today_policy": today_policy,
                 "actual_state": bucket.actual_state,

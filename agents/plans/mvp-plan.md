@@ -8,6 +8,8 @@
 
 > ⚠️ **本文档部分内容已废弃（2026-04-27）**：§5.9「cron-job.org 失效」§7 触发说明、§10 Phase 7 中提及的「GitHub schedule 备路 / heartbeat 哨兵 / 多个 cron-job.org 任务（14:48/09:00/15:30）」均已**不适用**。当前架构改为 cron-job.org 单路触发（仅 morning + signal 两条任务）。详见 [`cron-cleanup-single-source.md`](cron-cleanup-single-source.md)。
 
+> ⚠️ **状态机语义已升级（2026-05-08）**：本文档所有 `close vs MA20` 单值判定（`close > ma20 → HOLD` / `close <= ma20 → CASH`）均已**作废**，新规则为 **LOW/HIGH 未触碰才动作 + 触碰保前态（含 UNKNOWN 三态）**。详见 [`2026-05-08-quant-ma20-low-high-untouched.md`](2026-05-08-quant-ma20-low-high-untouched.md)。原 close 单值伪代码以 `scripts/quant/signal_engine.py` 的 `derive_policy_state` 实现为准。
+
 ---
 
 ## 一、需求背景

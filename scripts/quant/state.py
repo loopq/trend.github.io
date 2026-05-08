@@ -38,13 +38,18 @@ class BucketPosition:
     etf_name: str
     calmar_weight: float
     initial_capital: float
-    actual_state: str = "CASH"        # CASH | HOLD
-    policy_state: str = "CASH"        # CASH | HOLD
+    actual_state: str = "CASH"            # CASH | HOLD
+    policy_state: str = "UNKNOWN"         # CASH | HOLD | UNKNOWN（plan §1.2）
     shares: int = 0
     avg_cost: float = 0.0
     cash: float = 0.0
     last_action_date: str | None = None
-    last_action_type: str | None = None  # BUY | SELL
+    last_action_type: str | None = None   # BUY | SELL
+    # plan §3.3.1：bucket 级 baseline（14:48 first-write-wins / 15:30 清理）
+    policy_baseline_today: str | None = None
+    policy_baseline_date: str | None = None
+    # plan §3.2：bar_validation 失败标记
+    last_error: str | None = None
 
 
 @dataclass
@@ -107,11 +112,17 @@ def save_positions(book: PositionsBook, path: Path | str) -> None:
 
 def load_positions(path: Path | str) -> PositionsBook:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    # 反序列化容忍旧二态 / 未来未知字段：filter 到当前 dataclass 字段集。
+    bucket_field_names = {f.name for f in BucketPosition.__dataclass_fields__.values()}
+    buckets: dict[str, BucketPosition] = {}
+    for bid, v in raw.get("buckets", {}).items():
+        clean = {k: val for k, val in v.items() if k in bucket_field_names}
+        buckets[bid] = BucketPosition(**clean)
     return PositionsBook(
         version=raw.get("version", SCHEMA_VERSION),
         updated_at=raw.get("updated_at", ""),
         paper_trading=raw.get("paper_trading", True),
-        buckets={bid: BucketPosition(**v) for bid, v in raw.get("buckets", {}).items()},
+        buckets=buckets,
     )
 
 
@@ -206,6 +217,7 @@ def validate_invariants(book: PositionsBook) -> list[str]:
             errors.append(f"[{bid}] actual_state=CASH 但 shares={b.shares}")
         if b.actual_state not in ("CASH", "HOLD"):
             errors.append(f"[{bid}] actual_state 非法值 {b.actual_state}")
-        if b.policy_state not in ("CASH", "HOLD"):
+        # plan §1.2：policy_state 三态（CASH | HOLD | UNKNOWN）
+        if b.policy_state not in ("CASH", "HOLD", "UNKNOWN"):
             errors.append(f"[{bid}] policy_state 非法值 {b.policy_state}")
     return errors
