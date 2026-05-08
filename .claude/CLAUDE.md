@@ -3,8 +3,8 @@
 GitHub Pages 静态站；每日 AkShare/yfinance 取数算 MA20，无本地 DB。
 
 ## 子系统
-- `scripts/main.py`：主链路（每日趋势页面），plan 在 `docs/agents/plans/`。
-- `scripts/quant/`：量化信号（13 指数 × 36 bucket），plan 见 `docs/agents/plans/mvp-plan.md`。
+- `scripts/main.py`：主链路（每日趋势页面），plan 在 `agents/plans/`。
+- `scripts/quant/`：量化信号（13 指数 × 36 bucket），plan 见 `agents/plans/mvp-plan.md`。
 - `scripts/backtest/`：离线回测，详见 `scripts/backtest/CLAUDE.md`。
 
 ## 命令
@@ -24,4 +24,4 @@ cd docs && python -m http.server 8000   # 本地预览
 ## 规范
 - 不主动 `git commit` / `push`。
 - 优先编辑现有文件，不擅自新建；仅改必要代码，避免全文件格式化。
-- review-loop 产物落根 `/reviews/`（已 .gitignore），按需归档至 `docs/agents/reviews/`。
+- review-loop 产物落根 `/reviews/`（已 .gitignore），按需归档至 `agents/reviews/`。
