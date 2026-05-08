@@ -32,3 +32,4 @@ docs/data/quant/cache/*.csv
 
 # review-loop 自动产物（按需手动归档至 agents/reviews/）
 /reviews/
+agents
