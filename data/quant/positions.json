@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-08T06:49:18+00:00",
+  "updated_at": "2026-05-09T08:01:33+08:00",
   "paper_trading": true,
   "buckets": {
     "931151-D": {
@@ -16,7 +16,10 @@
       "avg_cost": 0.0,
       "cash": 6150.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931151-W": {
       "index_code": "931151",
@@ -31,7 +34,10 @@
       "avg_cost": 0.0,
       "cash": 2520.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931151-M": {
       "index_code": "931151",
@@ -46,7 +52,10 @@
       "avg_cost": 0.0,
       "cash": 1330.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000819-D": {
       "index_code": "000819",
@@ -61,7 +70,10 @@
       "avg_cost": 0.0,
       "cash": 5310.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000819-W": {
       "index_code": "000819",
@@ -76,7 +88,10 @@
       "avg_cost": 0.0,
       "cash": 970.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000819-M": {
       "index_code": "000819",
@@ -91,7 +106,10 @@
       "avg_cost": 0.0,
       "cash": 3720.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399997-D": {
       "index_code": "399997",
@@ -106,7 +124,10 @@
       "avg_cost": 0.0,
       "cash": 7270.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399997-W": {
       "index_code": "399997",
@@ -121,7 +142,10 @@
       "avg_cost": 0.0,
       "cash": 610.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399997-M": {
       "index_code": "399997",
@@ -136,7 +160,10 @@
       "avg_cost": 0.0,
       "cash": 2120.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399989-D": {
       "index_code": "399989",
@@ -151,7 +178,10 @@
       "avg_cost": 0.0,
       "cash": 7560.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399989-M": {
       "index_code": "399989",
@@ -166,7 +196,10 @@
       "avg_cost": 0.0,
       "cash": 2440.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931079-D": {
       "index_code": "931079",
@@ -181,7 +214,10 @@
       "avg_cost": 0.0,
       "cash": 6110.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931079-W": {
       "index_code": "931079",
@@ -196,7 +232,10 @@
       "avg_cost": 0.0,
       "cash": 1170.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931079-M": {
       "index_code": "931079",
@@ -211,7 +250,10 @@
       "avg_cost": 0.0,
       "cash": 2720.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399808-D": {
       "index_code": "399808",
@@ -226,7 +268,10 @@
       "avg_cost": 0.0,
       "cash": 3180.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399808-W": {
       "index_code": "399808",
@@ -241,7 +286,10 @@
       "avg_cost": 0.0,
       "cash": 4620.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399808-M": {
       "index_code": "399808",
@@ -256,7 +304,10 @@
       "avg_cost": 0.0,
       "cash": 2200.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931071-D": {
       "index_code": "931071",
@@ -271,7 +322,10 @@
       "avg_cost": 0.0,
       "cash": 6340.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931071-W": {
       "index_code": "931071",
@@ -286,7 +340,10 @@
       "avg_cost": 0.0,
       "cash": 2030.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "931071-M": {
       "index_code": "931071",
@@ -301,7 +358,10 @@
       "avg_cost": 0.0,
       "cash": 1630.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "930721-D": {
       "index_code": "930721",
@@ -316,7 +376,10 @@
       "avg_cost": 0.0,
       "cash": 8000.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "930721-M": {
       "index_code": "930721",
@@ -331,7 +394,10 @@
       "avg_cost": 0.0,
       "cash": 2000.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399967-D": {
       "index_code": "399967",
@@ -346,7 +412,10 @@
       "avg_cost": 0.0,
       "cash": 6480.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399967-M": {
       "index_code": "399967",
@@ -361,7 +430,10 @@
       "avg_cost": 0.0,
       "cash": 3520.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399673-D": {
       "index_code": "399673",
@@ -376,7 +448,10 @@
       "avg_cost": 0.0,
       "cash": 2160.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399673-W": {
       "index_code": "399673",
@@ -391,7 +466,10 @@
       "avg_cost": 0.0,
       "cash": 2370.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399673-M": {
       "index_code": "399673",
@@ -406,7 +484,10 @@
       "avg_cost": 0.0,
       "cash": 5470.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000688-D": {
       "index_code": "000688",
@@ -421,7 +502,10 @@
       "avg_cost": 0.0,
       "cash": 6280.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000688-W": {
       "index_code": "000688",
@@ -436,7 +520,10 @@
       "avg_cost": 0.0,
       "cash": 1690.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000688-M": {
       "index_code": "000688",
@@ -451,7 +538,10 @@
       "avg_cost": 0.0,
       "cash": 2030.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000813-D": {
       "index_code": "000813",
@@ -466,7 +556,10 @@
       "avg_cost": 0.0,
       "cash": 7400.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000813-W": {
       "index_code": "000813",
@@ -481,7 +574,10 @@
       "avg_cost": 0.0,
       "cash": 950.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "000813-M": {
       "index_code": "000813",
@@ -496,7 +592,10 @@
       "avg_cost": 0.0,
       "cash": 1640.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399976-D": {
       "index_code": "399976",
@@ -511,7 +610,10 @@
       "avg_cost": 0.0,
       "cash": 3440.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399976-W": {
       "index_code": "399976",
@@ -526,7 +628,10 @@
       "avg_cost": 0.0,
       "cash": 3660.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     },
     "399976-M": {
       "index_code": "399976",
@@ -541,7 +646,10 @@
       "avg_cost": 0.0,
       "cash": 2910.0,
       "last_action_date": null,
-      "last_action_type": null
+      "last_action_type": null,
+      "policy_baseline_today": null,
+      "policy_baseline_date": null,
+      "last_error": null
     }
   }
 }
