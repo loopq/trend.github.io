@@ -30,6 +30,7 @@ class FilterContext:
 @runtime_checkable
 class Decider(Protocol):
     name: str
+    required_indicators: Tuple[Tuple[str, str, int], ...] = ()  # (cycle, col_name, window) 列表，默认空
     def decide(self, *, cycle: str, bar: pd.Series, position_shares: float) -> Optional[Signal]:
         """根据当根 K 线和当前持仓决定 BUY / SELL / 无动作。
 
@@ -57,3 +58,4 @@ class Strategy:
     decider: Decider
     filters: Tuple[Filter, ...] = field(default_factory=tuple)
     cycles: Tuple[str, ...] = ("D", "W", "M")
+    aggregator: str = "cycle-calmar"   # "cycle-calmar"|"equal-weight"|"cross-sectional-topk"
