@@ -1,7 +1,7 @@
 """内置 Decider / Filter，并注册标准策略。"""
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -162,11 +162,79 @@ class FaberMonthlyMaDecider:
         return None
 
 
+class DonchianBreakoutDecider:
+    """Donchian 通道突破（月线版）。
+
+    每根月线 K 线：
+      若空仓 + buffer ≥ entry_window：close > max(buffer[-entry_window:]) → BUY
+      若持仓 + buffer ≥ exit_window：close < min(buffer[-exit_window:]) → SELL
+      close NaN → None
+    决策完后追加当月 close 到 buffer，裁剪到最近 max(entry, exit) 个。
+
+    与 FaberMonthlyMaDecider 区别：
+    - Faber 比 close vs MA10（均值），Donchian 比 close vs max/min（极值）
+    - Faber 的状态翻转高频（均值穿越易触发），Donchian 的状态翻转低频（必须创新高/破新低）
+    - Donchian 自维护 close buffer，required_indicators=()，不依赖 _ensure_indicators
+
+    默认 entry=10 / exit=5（月线 10/5 ≈ 日线 200/100，与海龟系统 1 同级别）。
+    """
+
+    name = "donchian-breakout-monthly"
+
+    def __init__(self, entry_window: int = 10, exit_window: int = 5) -> None:
+        self.entry_window = entry_window
+        self.exit_window = exit_window
+        self.required_indicators: Tuple[Tuple[str, str, int], ...] = ()
+        self._close_buffer_by_cycle: Dict[str, List[float]] = {}
+
+    def decide(self, *, cycle: str, bar: pd.Series, position_shares: float) -> Optional[Signal]:
+        close = bar.get("close")
+        if pd.isna(close):
+            return None
+
+        buf = self._close_buffer_by_cycle.setdefault(cycle, [])
+        max_window = max(self.entry_window, self.exit_window)
+
+        signal: Optional[Signal] = None
+        if position_shares == 0 and len(buf) >= self.entry_window:
+            entry_high = max(buf[-self.entry_window:])
+            if close > entry_high:
+                signal = Signal(
+                    action="BUY", cycle=cycle, price=float(close),
+                    bar_date=pd.Timestamp(bar.name) if bar.name is not None else pd.NaT,
+                )
+        elif position_shares > 0 and len(buf) >= self.exit_window:
+            exit_low = min(buf[-self.exit_window:])
+            if close < exit_low:
+                signal = Signal(
+                    action="SELL", cycle=cycle, price=float(close),
+                    bar_date=pd.Timestamp(bar.name) if bar.name is not None else pd.NaT,
+                )
+
+        # 决策后追加当月 close（避免 look-ahead bias）
+        buf.append(float(close))
+        if len(buf) > max_window:
+            del buf[: len(buf) - max_window]
+
+        return signal
+
+
 @register("faber-gtaa")
 def _faber_gtaa() -> Strategy:
     return Strategy(
         name="faber-gtaa",
         decider=FaberMonthlyMaDecider(window=10),
+        filters=(),
+        cycles=("M",),
+        aggregator="equal-weight",
+    )
+
+
+@register("donchian-200")
+def _donchian_200() -> Strategy:
+    return Strategy(
+        name="donchian-200",
+        decider=DonchianBreakoutDecider(entry_window=10, exit_window=5),
         filters=(),
         cycles=("M",),
         aggregator="equal-weight",

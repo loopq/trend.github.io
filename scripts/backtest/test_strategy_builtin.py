@@ -312,3 +312,120 @@ def test_faber_gtaa_registered():
     assert s.aggregator == "equal-weight"
     assert isinstance(s.decider, _FaberCls)
     assert s.decider.window == 10
+
+
+# ---------- DonchianBreakoutDecider ----------
+
+from scripts.backtest.strategy.builtin import DonchianBreakoutDecider
+
+
+def _donchian_bar(close, name=None):
+    """构造 K 线（Donchian 仅用 close）。"""
+    s = pd.Series({
+        "open": close, "high": close + 1, "low": close - 1, "close": close,
+    })
+    if name is not None:
+        s.name = name
+    return s
+
+
+def _feed(decider, cycle, closes, position_shares=0):
+    """喂一段 close 序列给 decider；返回最后一根的信号。"""
+    sig = None
+    for c in closes:
+        sig = decider.decide(cycle=cycle, bar=_donchian_bar(c), position_shares=position_shares)
+    return sig
+
+
+class TestDonchianBreakoutDecider:
+    def setup_method(self):
+        self.d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+
+    def test_buffer_warm_up_no_signal(self):
+        """buffer 长度 < entry_window 时不产生 BUY，即使 close 巨幅上涨。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        sig = _feed(d, "M", [100] * 9 + [200], position_shares=0)
+        assert sig is None
+
+    def test_breakout_above_max_buys(self):
+        """buffer 满 (entry_window=10) + 第 11 根 close > 历史最高 + 空仓 → BUY。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        closes = list(range(100, 110)) + [110]
+        sig = _feed(d, "M", closes, position_shares=0)
+        assert sig is not None
+        assert sig.action == "BUY"
+        assert sig.cycle == "M"
+        assert sig.price == pytest.approx(110)
+
+    def test_no_breakout_no_signal(self):
+        """buffer 满 + close ≤ 历史最高 + 空仓 → None。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        closes = list(range(100, 110)) + [108]
+        sig = _feed(d, "M", closes, position_shares=0)
+        assert sig is None
+
+    def test_close_equals_max_no_breakout(self):
+        """close == max 严格不算突破（必须严格 >）。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        closes = list(range(100, 110)) + [109]
+        sig = _feed(d, "M", closes, position_shares=0)
+        assert sig is None
+
+    def test_breakdown_below_min_sells(self):
+        """持仓 + close < 历史最低 → SELL。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        sig = _feed(d, "M", [105, 106, 107, 108, 109], position_shares=1.0)
+        assert sig is None  # buffer 满 5 根但还没第 6 根来比较
+        sig = d.decide(cycle="M", bar=_donchian_bar(100), position_shares=1.0)
+        assert sig is not None
+        assert sig.action == "SELL"
+        assert sig.price == pytest.approx(100)
+
+    def test_no_breakdown_no_signal(self):
+        """持仓 + close ≥ 历史最低 → None。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        _feed(d, "M", [105, 106, 107, 108, 109], position_shares=1.0)
+        sig = d.decide(cycle="M", bar=_donchian_bar(106), position_shares=1.0)
+        assert sig is None
+
+    def test_close_equals_min_no_breakdown(self):
+        """close == min 严格不算跌破（必须严格 <）。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        _feed(d, "M", [105, 106, 107, 108, 109], position_shares=1.0)
+        sig = d.decide(cycle="M", bar=_donchian_bar(105), position_shares=1.0)
+        assert sig is None
+
+    def test_already_in_no_resignal(self):
+        """已持仓 + close 又创新高 → None（不重复 BUY）。"""
+        d = DonchianBreakoutDecider(entry_window=10, exit_window=5)
+        _feed(d, "M", list(range(100, 110)), position_shares=0)
+        sig = d.decide(cycle="M", bar=_donchian_bar(200), position_shares=1.0)
+        assert sig is None
+
+    def test_nan_close_returns_none(self):
+        sig = self.d.decide(cycle="M", bar=_donchian_bar(float("nan")), position_shares=0)
+        assert sig is None
+
+    def test_required_indicators_empty(self):
+        assert DonchianBreakoutDecider().required_indicators == ()
+
+    def test_custom_window(self):
+        """entry_window=8 / exit_window=4 自定义参数。"""
+        d = DonchianBreakoutDecider(entry_window=8, exit_window=4)
+        closes = list(range(100, 108)) + [108]
+        sig = _feed(d, "M", closes, position_shares=0)
+        assert sig is not None and sig.action == "BUY"
+
+
+def test_donchian_200_registered():
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("donchian-200")
+    assert s.name == "donchian-200"
+    assert s.filters == ()
+    assert s.cycles == ("M",)
+    assert s.aggregator == "equal-weight"
+    from scripts.backtest.strategy.builtin import DonchianBreakoutDecider as _DonchianCls
+    assert isinstance(s.decider, _DonchianCls)
+    assert s.decider.entry_window == 10
+    assert s.decider.exit_window == 5
