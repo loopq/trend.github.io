@@ -232,3 +232,83 @@ def test_v9_3_bear_registered():
     assert len(s.filters) == 1
     assert s.filters[0].name == "bear-trend-filter"
     assert s.cycles == ("D", "W", "M")
+
+
+# ---------- FaberMonthlyMaDecider ----------
+
+from scripts.backtest.strategy.builtin import FaberMonthlyMaDecider
+
+
+def _monthly_bar(close, ma10, name=None):
+    """构造月线 K（含 ma10 列；high/low/open 不参与 Faber 决策）。"""
+    s = pd.Series({
+        "open": close, "high": close + 1, "low": close - 1,
+        "close": close, "ma10": ma10,
+    })
+    if name is not None:
+        s.name = name
+    return s
+
+
+class TestFaberMonthlyMaDecider:
+    def setup_method(self):
+        self.d = FaberMonthlyMaDecider(window=10)
+
+    def test_close_above_ma_no_pos_buy(self):
+        sig = self.d.decide(cycle="M", bar=_monthly_bar(110, 100), position_shares=0)
+        assert sig is not None
+        assert sig.action == "BUY"
+        assert sig.cycle == "M"
+        assert sig.price == pytest.approx(110)
+
+    def test_close_below_ma_with_pos_sell(self):
+        d = FaberMonthlyMaDecider(window=10)
+        d.decide(cycle="M", bar=_monthly_bar(110, 100), position_shares=0)  # 先 BUY → state=UP
+        sig = d.decide(cycle="M", bar=_monthly_bar(90, 100), position_shares=1.0)
+        assert sig is not None
+        assert sig.action == "SELL"
+        assert sig.price == pytest.approx(90)
+
+    def test_same_dir_no_resignal(self):
+        d = FaberMonthlyMaDecider(window=10)
+        d.decide(cycle="M", bar=_monthly_bar(110, 100), position_shares=0)  # BUY
+        sig = d.decide(cycle="M", bar=_monthly_bar(115, 100), position_shares=1.0)
+        assert sig is None
+
+    def test_ma_nan_returns_none(self):
+        sig = self.d.decide(cycle="M", bar=_monthly_bar(110, float("nan")), position_shares=0)
+        assert sig is None
+
+    def test_close_equals_ma_treated_as_down(self):
+        # close == ma 严格不算 UP（必须 close > ma）
+        d = FaberMonthlyMaDecider(window=10)
+        d.decide(cycle="M", bar=_monthly_bar(110, 100), position_shares=0)  # BUY → state=UP
+        sig = d.decide(cycle="M", bar=_monthly_bar(100, 100), position_shares=1.0)
+        # close==ma → state→DOWN，UP→DOWN 翻转 + pos>0 → SELL
+        assert sig is not None
+        assert sig.action == "SELL"
+
+    def test_required_indicators_attr(self):
+        assert FaberMonthlyMaDecider().required_indicators == (("M", "ma10", 10),)
+
+    def test_custom_window(self):
+        d = FaberMonthlyMaDecider(window=20)
+        assert d.required_indicators == (("M", "ma20", 20),)
+        # 用 ma20 列而非 ma10
+        bar = pd.Series({"open": 110, "high": 111, "low": 109, "close": 110, "ma20": 100})
+        sig = d.decide(cycle="M", bar=bar, position_shares=0)
+        assert sig is not None and sig.action == "BUY"
+
+
+def test_faber_gtaa_registered():
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    # 重新 import：reload 之后类对象会换地址，外层 import 的 FaberMonthlyMaDecider 旧引用失效
+    from scripts.backtest.strategy.builtin import FaberMonthlyMaDecider as _FaberCls
+    s = get("faber-gtaa")
+    assert s.name == "faber-gtaa"
+    assert s.filters == ()
+    assert s.cycles == ("M",)
+    assert s.aggregator == "equal-weight"
+    assert isinstance(s.decider, _FaberCls)
+    assert s.decider.window == 10

@@ -119,3 +119,55 @@ def _v9_3_bear() -> Strategy:
         decider=MA20CrossDecider(),
         filters=(BearTrendFilter(scope=("D", "W")),),
     )
+
+
+class FaberMonthlyMaDecider:
+    """Faber 2007 月线 MA10 趋势跟踪。
+
+    每根月线 K 线：
+      close > MA{window} → 状态切 UP；UP 翻转 + 空仓 → BUY
+      close ≤ MA{window} → 状态切 DOWN；DOWN 翻转 + 持仓 → SELL
+      MA NaN → None（数据不足）
+
+    与 MA20CrossDecider 的区别：
+    - 用 close 直接比 MA，不用 low/high "干净 K 线"语义
+    - 默认窗口 10 个月（论文原值）
+    - 仅跑 monthly cycle（用 strategy.cycles=("M",) 约束）
+    """
+
+    name = "faber-monthly-ma"
+
+    def __init__(self, window: int = 10) -> None:
+        self.window = window
+        self.required_indicators = (("M", f"ma{window}", window),)
+        self._state_by_cycle: Dict[str, Optional[str]] = {}
+
+    def decide(self, *, cycle: str, bar: pd.Series, position_shares: float) -> Optional[Signal]:
+        ma_col = f"ma{self.window}"
+        ma = bar.get(ma_col)
+        close = bar.get("close")
+        if pd.isna(ma) or pd.isna(close):
+            return None
+        new_dir = "UP" if close > ma else "DOWN"
+        prev = self._state_by_cycle.get(cycle)
+        if new_dir == prev:
+            return None
+        self._state_by_cycle[cycle] = new_dir
+        if new_dir == "UP" and position_shares == 0:
+            return Signal(action="BUY", cycle=cycle, price=float(close),
+                          bar_date=pd.Timestamp(bar.name) if bar.name is not None else pd.NaT)
+        if new_dir == "DOWN" and position_shares > 0:
+            return Signal(action="SELL", cycle=cycle, price=float(close),
+                          bar_date=pd.Timestamp(bar.name) if bar.name is not None else pd.NaT)
+        return None
+
+
+@register("faber-gtaa")
+def _faber_gtaa() -> Strategy:
+    return Strategy(
+        name="faber-gtaa",
+        decider=FaberMonthlyMaDecider(window=10),
+        filters=(),
+        cycles=("M",),
+        aggregator="equal-weight",
+    )
