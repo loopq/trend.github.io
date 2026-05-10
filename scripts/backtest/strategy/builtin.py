@@ -219,6 +219,22 @@ class DonchianBreakoutDecider:
         return signal
 
 
+class DualMomentumNoOpDecider:
+    """cross-sectional 策略占位 Decider。decide 永远返回 None。
+
+    cross-sectional 决策走 _run_cross_sectional_topk 的 universe-wide scan，
+    不调用 decide(*, cycle, bar, position_shares)。本类仅满足 Strategy.decider Protocol 契约。
+    """
+
+    name = "dual-momentum-noop"
+
+    def __init__(self) -> None:
+        self.required_indicators: Tuple[Tuple[str, str, int], ...] = ()
+
+    def decide(self, *, cycle: str, bar: pd.Series, position_shares: float) -> Optional[Signal]:
+        return None
+
+
 @register("faber-gtaa")
 def _faber_gtaa() -> Strategy:
     return Strategy(
@@ -238,4 +254,20 @@ def _donchian_200() -> Strategy:
         filters=(),
         cycles=("M",),
         aggregator="equal-weight",
+    )
+
+
+@register("dual-momentum-top5")
+def _dual_momentum_top5() -> Strategy:
+    return Strategy(
+        name="dual-momentum-top5",
+        decider=DualMomentumNoOpDecider(),
+        filters=(),
+        cycles=("M",),
+        aggregator="cross-sectional-topk",
+        params={
+            "lookback_months": 12,
+            "topk": 5,
+            "abs_threshold": 0.0,
+        },
     )

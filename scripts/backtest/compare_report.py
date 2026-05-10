@@ -127,6 +127,14 @@ def write_compare_report(
     diff_sections = []
     for other in other_names:
         _, _, _, other_full, _ = results_by_strategy[other]
+        if not other_full:
+            # 横截面策略（cross-sectional-topk）无 per-index full_results
+            diff_sections.append(
+                f"### Δ ({other} − {base_name})\n\n"
+                f"（{other} 走横截面 top-K 路径，无 per-index 持仓数据，不可逐指数对比 baseline。"
+                f"组合层数据见上方“组合层对比”段。）"
+            )
+            continue
         diffs = []
         for meta in registry:
             base_r = base_full.get(meta.code)

@@ -450,3 +450,29 @@ def test_strategy_params_custom():
         params={"lookback_months": 12, "topk": 5},
     )
     assert s.params == {"lookback_months": 12, "topk": 5}
+
+
+# ---------- DualMomentumNoOpDecider + dual-momentum-top5 (cycle 3) ----------
+
+from scripts.backtest.strategy.builtin import DualMomentumNoOpDecider
+
+
+def test_dual_momentum_noop_decider_returns_none():
+    d = DualMomentumNoOpDecider()
+    assert d.required_indicators == ()
+    bar = pd.Series({"open": 100, "high": 101, "low": 99, "close": 100})
+    assert d.decide(cycle="M", bar=bar, position_shares=0) is None
+    assert d.decide(cycle="M", bar=bar, position_shares=1.0) is None
+
+
+def test_dual_momentum_top5_registered():
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("dual-momentum-top5")
+    assert s.name == "dual-momentum-top5"
+    assert s.filters == ()
+    assert s.cycles == ("M",)
+    assert s.aggregator == "cross-sectional-topk"
+    assert s.params == {"lookback_months": 12, "topk": 5, "abs_threshold": 0.0}
+    from scripts.backtest.strategy.builtin import DualMomentumNoOpDecider as _NoOpCls
+    assert isinstance(s.decider, _NoOpCls)

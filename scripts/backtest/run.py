@@ -180,7 +180,7 @@ def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]
     elif strat.aggregator == "equal-weight":
         return _run_equal_weight(strat, registry, windows)
     elif strat.aggregator == "cross-sectional-topk":
-        raise NotImplementedError("cross-sectional-topk 留给 A 周期实施（Dual Momentum）")
+        return _run_cross_sectional_topk(strat, registry, windows)
     else:
         raise ValueError(f"unknown aggregator: {strat.aggregator!r}")
 
@@ -228,6 +228,62 @@ def _run_equal_weight(strategy, registry, windows: List[int]):
         logger.info("  %d 年 总 CAGR %.2f%% / MDD %.2f%%", n, wr.cagr, wr.max_drawdown)
         window_results.append(wr)
 
+    return strategy, registry, index_data, full_results, window_results
+
+
+def _run_cross_sectional_topk(strategy, registry, windows: List[int]):
+    """横截面 top-K 路径（Dual Momentum 等）：
+    每月 universe scan → 选 top-K 等权持有；不出 per-index BacktestResult。
+
+    要求 strategy.cycles = ("M",)。
+    strategy.params: {"lookback_months", "topk", "abs_threshold"}（必填，无默认）
+    """
+    from scripts.backtest.cross_sectional import build_holdings_schedule
+    from scripts.backtest.window_engine import run_portfolio_window_cross_sectional_topk
+
+    if len(strategy.cycles) != 1 or strategy.cycles[0] != "M":
+        raise ValueError(
+            f"cross-sectional-topk requires cycles=('M',), got {strategy.cycles}"
+        )
+
+    params = strategy.params or {}
+    lookback = params.get("lookback_months", 12)
+    topk = params.get("topk", 5)
+    abs_threshold = params.get("abs_threshold", 0.0)
+
+    logger.info("加载 %d 个指数数据 ...", len(registry))
+    monthly_close_by_code: Dict[str, pd.Series] = {}
+    index_data: Dict[str, IndexData] = {}
+    for meta in registry:
+        data = load_index(meta.code, meta.source, meta.name)
+        if data is None or data.monthly.empty:
+            logger.warning("  %s 数据缺失", meta.code)
+            continue
+        monthly_close_by_code[meta.code] = data.monthly["close"]
+        index_data[meta.code] = data
+
+    if not monthly_close_by_code:
+        raise ValueError("无可用指数月线数据")
+
+    schedule = build_holdings_schedule(
+        monthly_close_by_code,
+        lookback_months=lookback,
+        topk=topk,
+        abs_threshold=abs_threshold,
+    )
+
+    window_results: List[WindowResult] = []
+    for n in windows:
+        wr = run_portfolio_window_cross_sectional_topk(
+            monthly_close_by_code=monthly_close_by_code,
+            holdings_schedule=schedule,
+            window_years=n,
+            as_of=AS_OF,
+        )
+        logger.info("  %d 年 总 CAGR %.2f%% / MDD %.2f%%", n, wr.cagr, wr.max_drawdown)
+        window_results.append(wr)
+
+    full_results: Dict[str, List[BacktestResult]] = {}
     return strategy, registry, index_data, full_results, window_results
 
 
