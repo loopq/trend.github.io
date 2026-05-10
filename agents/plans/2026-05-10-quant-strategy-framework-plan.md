@@ -1508,7 +1508,6 @@ from scripts.backtest.engine import BacktestResult, run_with_strategy
 from scripts.backtest.strategy import get as get_strategy, list_all
 from scripts.backtest.v9_registry import build_v9_registry
 from scripts.backtest.window_engine import (
-    INDEX_CAPITAL,
     WindowResult,
     run_portfolio_window,
 )
@@ -1520,7 +1519,6 @@ RESULTS_DIR = PROJECT_ROOT / "agents" / "results"
 
 AS_OF = pd.Timestamp("2026-04-25")
 MIN_EVALUATION_START = pd.Timestamp("2016-01-01")
-DEFAULT_WINDOWS = [3, 5, 8, 10]
 
 UNIVERSES = {"v9": build_v9_registry}
 
