@@ -346,6 +346,19 @@ def _build_filter_context(
     )
 
 
+def _ensure_indicators(data: IndexData, requirements) -> None:
+    """按 decider.required_indicators 在 data.{daily,weekly,monthly} 上加 MA 列。
+
+    requirements: ((cycle, col_name, window), ...)，cycle 取 "D"/"W"/"M"。
+    若列已存在则跳过；用 compute_ma 计算并 inplace 赋值。
+    """
+    for cycle, col_name, window in requirements:
+        target_df = {"D": data.daily, "W": data.weekly, "M": data.monthly}[cycle]
+        if col_name in target_df.columns:
+            continue
+        target_df[col_name] = compute_ma(target_df["close"], window=window)
+
+
 def run_with_strategy(
     data: IndexData,
     strategy: _ComposedStrategy,
@@ -356,6 +369,7 @@ def run_with_strategy(
 
     复用 _compute_evaluation_start / 各类指标计算（CAGR/MaxDD/胜率），保证与旧 run_strategy 同口径。
     """
+    _ensure_indicators(data, getattr(strategy.decider, "required_indicators", ()))
     cycles_set = set(strategy.cycles)
     timeframes = [tf for tf in (DAILY, WEEKLY, MONTHLY) if _TF_TO_CYCLE[tf] in cycles_set]
 
