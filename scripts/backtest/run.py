@@ -36,7 +36,36 @@ RESULTS_DIR = PROJECT_ROOT / "agents" / "results"
 AS_OF = pd.Timestamp("2026-04-25")
 MIN_EVALUATION_START = pd.Timestamp("2016-01-01")
 
-UNIVERSES = {"v9": build_v9_registry}
+def _build_main_online_universe():
+    """https://trend.loopq.cn/ 首页『主要指数』模块的 16 个标的。
+
+    宽基 + 港股 + 美股 + 商品 + 加密——与 v9 主题/行业 universe 互补。
+    """
+    from scripts.backtest.index_registry import IndexMeta
+    return [
+        IndexMeta("NDX",     "纳指100",   "us",          "海外宽基"),
+        IndexMeta("399673",  "创业板50",  "sina_index",  "宽基"),
+        IndexMeta("000688",  "科创50",    "cs_index",    "宽基"),
+        IndexMeta("SPX",     "标普500",   "us",          "海外宽基"),
+        IndexMeta("BTC",     "比特币",    "crypto",      "加密"),
+        IndexMeta("000852",  "中证1000",  "cs_index",    "宽基"),
+        IndexMeta("899050",  "北证50",    "cs_index",    "宽基"),
+        IndexMeta("000905",  "中证500",   "cs_index",    "宽基"),
+        IndexMeta("000300",  "沪深300",   "cs_index",    "宽基"),
+        IndexMeta("932000",  "中证2000",  "cs_index",    "宽基"),
+        IndexMeta("000016",  "上证50",    "cs_index",    "宽基"),
+        IndexMeta("HSCEI",   "国企指数",  "hk",          "港股"),
+        IndexMeta("HSI",     "恒生指数",  "hk",          "港股"),
+        IndexMeta("HSTECH",  "恒生科技",  "hk",          "港股"),
+        IndexMeta("XAG",     "白银现价",  "spot_price",  "商品"),
+        IndexMeta("XAU",     "黄金现价",  "spot_price",  "商品"),
+    ]
+
+
+UNIVERSES = {
+    "v9": build_v9_registry,
+    "main-online": _build_main_online_universe,
+}
 
 
 def _load_universe(name: str):
