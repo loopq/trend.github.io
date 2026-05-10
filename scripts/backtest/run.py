@@ -62,9 +62,51 @@ def _build_main_online_universe():
     ]
 
 
+def _build_combined_27_universe():
+    """v9 universe 14 + main-online 16，去重 3 个（创业板50/科创50/中证2000）= 27 个唯一指数。"""
+    from scripts.backtest.index_registry import IndexMeta
+    return [
+        # ---- A 股宽基 8 ----
+        IndexMeta("000300", "沪深300",   "cs_index",    "宽基"),
+        IndexMeta("000016", "上证50",    "cs_index",    "宽基"),
+        IndexMeta("000905", "中证500",   "cs_index",    "宽基"),
+        IndexMeta("000852", "中证1000",  "cs_index",    "宽基"),
+        IndexMeta("000688", "科创50",    "cs_index",    "宽基"),
+        IndexMeta("932000", "中证2000",  "cs_index",    "宽基"),
+        IndexMeta("399673", "创业板50",  "sina_index",  "宽基"),
+        IndexMeta("899050", "北证50",    "cs_index",    "宽基"),
+        # ---- A 股主题 9 ----
+        IndexMeta("931151", "光伏产业",  "cs_index",    "主题"),
+        IndexMeta("399997", "中证白酒",  "cs_index",    "主题"),
+        IndexMeta("399989", "中证医疗",  "cs_index",    "主题"),
+        IndexMeta("931079", "5G通信",    "cs_index",    "主题"),
+        IndexMeta("399808", "中证新能",  "cs_index",    "主题"),
+        IndexMeta("931071", "人工智能",  "cs_index",    "主题"),
+        IndexMeta("930721", "CS智汽车",  "cs_index",    "主题"),
+        IndexMeta("399967", "中证军工",  "cs_index",    "主题"),
+        IndexMeta("399976", "CS新能车",  "sina_index",  "主题"),
+        # ---- A 股行业 2 ----
+        IndexMeta("000819", "有色金属",  "cs_index",    "行业"),
+        IndexMeta("000813", "细分化工",  "cs_index",    "行业"),
+        # ---- 港股 3 ----
+        IndexMeta("HSI",    "恒生指数",  "hk",          "港股"),
+        IndexMeta("HSCEI",  "国企指数",  "hk",          "港股"),
+        IndexMeta("HSTECH", "恒生科技",  "hk",          "港股"),
+        # ---- 海外宽基 2 ----
+        IndexMeta("NDX",    "纳指100",   "us",          "海外宽基"),
+        IndexMeta("SPX",    "标普500",   "us",          "海外宽基"),
+        # ---- 加密 1 ----
+        IndexMeta("BTC",    "比特币",    "crypto",      "加密"),
+        # ---- 商品 2 ----
+        IndexMeta("XAU",    "黄金现价",  "spot_price",  "商品"),
+        IndexMeta("XAG",    "白银现价",  "spot_price",  "商品"),
+    ]
+
+
 UNIVERSES = {
     "v9": build_v9_registry,
     "main-online": _build_main_online_universe,
+    "combined-27": _build_combined_27_universe,
 }
 
 
