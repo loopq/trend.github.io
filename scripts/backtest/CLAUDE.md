@@ -20,6 +20,32 @@
 - 方向翻转 → 交易：UP→BUY（仅当空仓），DOWN→SELL（仅当持仓）
 - 三个独立时间维度：D（日）/ W（周）/ M（月）
 
+## 组件化策略框架（V10）
+
+新策略走 `scripts/backtest/strategy/` 模块（注意是单数 `strategy/`，与旧 `strategies.py` 复数共存）：
+
+- `protocol.py`：`Decider` / `Filter` Protocol + `Strategy` / `FilterContext` / `Signal` dataclass
+- `registry.py`：`@register("name")` 装饰器 + `get` / `list_all`
+- `builtin.py`：`MA20CrossDecider`（与现有 signal.py 行为等价的 cycle-aware 状态机）+ `BearTrendFilter`（D/W BUY 加月线 C>MA5 + 双空头过滤）+ 注册 `v9-baseline` 与 `v9.3-bear`
+
+跑新策略：
+
+```bash
+python -m scripts.backtest.run --list                                       # 列出已注册策略
+python -m scripts.backtest.run --strategy v9-baseline --universe v9         # 单策略
+python -m scripts.backtest.run --compare v9-baseline,v9.3-bear --universe v9 # 对比报告
+```
+
+旧入口（`run_v5/v6/v6_friction/v8/v9/v9_detail/windows`）保留作历史复现专用，新策略不再走老链路。
+
+新策略加法：
+1. 在 `strategy/builtin.py` 写 `Decider` 或新 `Filter`（也可放新文件）
+2. 用 `@register("strategy-name")` 装饰返回 `Strategy(...)` 的工厂
+3. 加 `test_strategy_*.py` 单测覆盖关键边界
+4. `python -m scripts.backtest.run --strategy strategy-name --universe v9` 即可跑
+
+注意：`_run_one_strategy` 按 `strategy.cycles` 拆开跑（每 cycle 一个 cycle-only Strategy 实例），三个 BacktestResult 喂给旧 `run_portfolio_window` 复用 Calmar 权重 + 多窗口聚合。Filter 按 `scope` 在各自 cycle 内自然生效。
+
 ## 文件结构
 
 | 文件 | 职责 |
@@ -40,6 +66,12 @@
 | `run_v5.py` | V5 CLI（90 个 THS 行业 → 4 排行榜 + 精选 Top 20） |
 | `run_v6.py` | V6 CLI（精选 20 行业 × 多窗口） |
 | `run_v6_friction.py` | V6 + 万一免五磨损扣减 |
+| `indicators.py` | 共用指标：`compute_ma` / `resample_weekly` / `resample_monthly` / `is_bear`（V10） |
+| `strategy/protocol.py` | Decider / Filter Protocol + Strategy / FilterContext / Signal dataclass（V10） |
+| `strategy/registry.py` | 策略注册表（`@register` / `get` / `list_all`，V10） |
+| `strategy/builtin.py` | MA20CrossDecider / BearTrendFilter / v9-baseline / v9.3-bear（V10） |
+| `run.py` | 统一 CLI（`--list` / `--strategy` / `--compare`，V10） |
+| `compare_report.py` | 三张表对比报告生成器（组合层 / 分指数差异 / Filter 命中，V10） |
 
 ## 迭代史（V1-V6）
 
@@ -57,6 +89,7 @@
 | **V5 Tiny** | 硬门槛筛选精选 20 个甜点行业 | σ ≥ 28% + alpha ≥ +50% + Calmar ≥ 0.25 |
 | **V6** | 20 行业 × 多窗口 + Calmar 权重 | **CAGR 12-19%（vs V4.2 6-9%，翻倍）** |
 | **V6 + 磨损** | 万一免五账户扣减成本 | **净 CAGR 18-19%** 仍 > V4.2 翻倍 |
+| **V10** | 组件化策略框架（Decider+FilterChain）+ v9.3-bear 加月线 C>MA5 与双空头过滤 | v9.3-bear 实测跑输 baseline 1.3-3.1pp（CAGR），见 `agents/results/2026-05-10-compare-v9-baseline-vs-v9.3-bear.md`；框架闭环 + 后续可调 N/eps/scope |
 
 ## 关键产出文件
 
