@@ -374,9 +374,13 @@ def run_with_strategy(
     weekly_set = set(data.weekly.index)
     monthly_set = set(data.monthly.index)
 
+    has_filters = bool(strategy.filters)
+
     for date, daily_bar in daily_range.iterrows():
-        # 构造一次 FilterContext（D / W / M 共享，因为 today 不变）
-        ctx = _build_filter_context(today=date, daily=data.daily)
+        # FilterContext 按需 lazy 构造：仅当 strategy.filters 非空 + 真出现 sig 时才计算。
+        # baseline（filters=()）完全跳过；bear 仅在 sig 时构造（同日 D/W/M 多 cycle 共享同一 ctx）。
+        # 等价性：构造逻辑不变，只是延迟到必要时；filter 看到的输入完全一致。
+        ctx = None
 
         for tf in timeframes:
             if tf == DAILY:
@@ -395,9 +399,12 @@ def run_with_strategy(
             sig = strategy.decider.decide(cycle=cycle, bar=bar, position_shares=bucket.shares)
             if sig is None:
                 continue
-            # 过 filter
-            if not all(f.allow(sig, ctx) for f in strategy.filters):
-                continue
+            # 过 filter（lazy 构造 ctx）
+            if has_filters:
+                if ctx is None:
+                    ctx = _build_filter_context(today=date, daily=data.daily)
+                if not all(f.allow(sig, ctx) for f in strategy.filters):
+                    continue
             # 落 trade
             if sig.action == BUY:
                 shares = bucket.buy_all(bar["close"])
