@@ -300,3 +300,173 @@ def run_strategy(data: IndexData, strategy: BucketGroup,
         bh_annualized_return=bh_cagr,
         bh_max_drawdown=bh_mdd,
     )
+
+
+# === 新框架入口（V10 组件化策略） =========================================
+
+from scripts.backtest.indicators import compute_ma, resample_weekly, resample_monthly
+from scripts.backtest.strategy.protocol import (
+    FilterContext,
+    Signal as _StrategySignal,
+    Strategy as _ComposedStrategy,
+)
+
+
+_TF_TO_CYCLE = {DAILY: "D", WEEKLY: "W", MONTHLY: "M"}
+_CYCLE_TO_TF = {v: k for k, v in _TF_TO_CYCLE.items()}
+
+
+def _build_filter_context(
+    *, today: pd.Timestamp, daily: pd.DataFrame,
+) -> FilterContext:
+    """从 daily 截到 today 后重新 resample 出 weekly_until / monthly_until。
+
+    这个方式自动保证「当月 close = today 的日 K close」语义，无未来数据泄漏。
+    每个回测日重 resample 一次（pandas resample 是 O(n)，14 指数 × ~1万 K 线
+    总开销可接受；先正确，再优化）。
+    """
+    today_close = float(daily.loc[today, "close"])
+    daily_until = daily.loc[:today].reset_index().rename(columns={daily.index.name or "index": "date"})
+    if "date" not in daily_until.columns:
+        # daily 的 index 名可能是 None，确保有 date 列
+        daily_until = daily.loc[:today].copy()
+        daily_until["date"] = daily_until.index
+        daily_until = daily_until.reset_index(drop=True)
+
+    weekly_until = resample_weekly(daily_until)
+    monthly_until = resample_monthly(daily_until)
+
+    month_ma5_series = compute_ma(monthly_until["close"], window=5)
+    month_ma5 = float(month_ma5_series.iloc[-1]) if len(month_ma5_series.dropna()) > 0 else float("nan")
+    weekly_ma60_series = compute_ma(weekly_until["close"], window=60)
+    monthly_ma20_series = compute_ma(monthly_until["close"], window=20)
+
+    return FilterContext(
+        today=today,
+        today_close=today_close,
+        month_close_spliced=float(monthly_until["close"].iloc[-1]) if len(monthly_until) else today_close,
+        month_ma5=month_ma5,
+        weekly_ma60_series=weekly_ma60_series,
+        monthly_ma20_series=monthly_ma20_series,
+    )
+
+
+def run_with_strategy(
+    data: IndexData,
+    strategy: _ComposedStrategy,
+    min_evaluation_start: Optional[pd.Timestamp] = None,
+    index_category: str = "",
+) -> BacktestResult:
+    """新框架入口：按 strategy.cycles 遍历 bucket，每根 K 线先 decide → 过 filters → 落 trade。
+
+    复用 _compute_evaluation_start / 各类指标计算（CAGR/MaxDD/胜率），保证与旧 run_strategy 同口径。
+    """
+    cycles_set = set(strategy.cycles)
+    timeframes = [tf for tf in (DAILY, WEEKLY, MONTHLY) if _TF_TO_CYCLE[tf] in cycles_set]
+
+    # 与 run_strategy 保持同样的"评估起点 = max(D/W/M 的 MA20 就绪日, min_start)"
+    evaluation_start = _compute_evaluation_start(data, min_evaluation_start)
+
+    # 每 cycle 一个 Bucket（仅记账用，不依赖 BucketGroup）
+    buckets: Dict[str, Bucket] = {tf: Bucket(timeframe=tf, capital=BUCKET_CAPITAL) for tf in timeframes}
+
+    trades: List[Trade] = []
+    closed_pairs: List[ClosedPair] = []
+    last_buy_by_bucket: Dict[int, Tuple[pd.Timestamp, float]] = {}
+    equity_records: Dict[pd.Timestamp, float] = {}
+
+    daily_range = data.daily[data.daily.index >= evaluation_start]
+    weekly_set = set(data.weekly.index)
+    monthly_set = set(data.monthly.index)
+
+    for date, daily_bar in daily_range.iterrows():
+        # 构造一次 FilterContext（D / W / M 共享，因为 today 不变）
+        ctx = _build_filter_context(today=date, daily=data.daily)
+
+        for tf in timeframes:
+            if tf == DAILY:
+                bar = daily_bar
+            elif tf == WEEKLY:
+                if date not in weekly_set:
+                    continue
+                bar = data.weekly.loc[date]
+            else:  # MONTHLY
+                if date not in monthly_set:
+                    continue
+                bar = data.monthly.loc[date]
+
+            cycle = _TF_TO_CYCLE[tf]
+            bucket = buckets[tf]
+            sig = strategy.decider.decide(cycle=cycle, bar=bar, position_shares=bucket.shares)
+            if sig is None:
+                continue
+            # 过 filter
+            if not all(f.allow(sig, ctx) for f in strategy.filters):
+                continue
+            # 落 trade
+            if sig.action == "BUY":
+                shares = bucket.buy_all(bar["close"])
+                trades.append(Trade(date=date, timeframe=tf, action="BUY",
+                                    price=float(bar["close"]), shares=shares,
+                                    cash_after=bucket.cash,
+                                    bar_high=float(bar["high"]),
+                                    bar_low=float(bar["low"]),
+                                    bar_ma20=float(bar["ma20"])))
+                last_buy_by_bucket[id(bucket)] = (date, float(bar["close"]))
+            elif sig.action == "SELL":
+                shares = bucket.sell_all(bar["close"])
+                trades.append(Trade(date=date, timeframe=tf, action="SELL",
+                                    price=float(bar["close"]), shares=shares,
+                                    cash_after=bucket.cash,
+                                    bar_high=float(bar["high"]),
+                                    bar_low=float(bar["low"]),
+                                    bar_ma20=float(bar["ma20"])))
+                buy_info = last_buy_by_bucket.pop(id(bucket), None)
+                if buy_info is not None:
+                    buy_date, buy_price = buy_info
+                    closed_pairs.append(ClosedPair(
+                        buy_date=buy_date, sell_date=date, timeframe=tf,
+                        buy_price=buy_price, sell_price=float(bar["close"]),
+                        pnl=(float(bar["close"]) - buy_price) * shares,
+                    ))
+
+        equity_records[date] = sum(b.position_value(daily_bar["close"]) for b in buckets.values())
+
+    equity_curve = pd.Series(equity_records).sort_index()
+    yearly = _yearly_returns_from_curve(equity_curve)
+    total_ret = _total_return(equity_curve)
+    ann_ret = _cagr(equity_curve)
+    mdd = _max_drawdown(equity_curve)
+    wr = _win_rate(closed_pairs)
+    final_close = data.daily["close"].iloc[-1] if not data.daily.empty else 0.0
+    unrealized = _unrealized_pnl(list(buckets.values()), final_close, last_buy_by_bucket)
+
+    bh_curve = _buy_and_hold_curve(data, evaluation_start, capital=BUCKET_CAPITAL)
+    bh_yearly = _yearly_returns_from_curve(bh_curve) if not bh_curve.empty else {}
+    bh_total = _total_return(bh_curve) if not bh_curve.empty else 0.0
+    bh_cagr = _cagr(bh_curve) if not bh_curve.empty else 0.0
+    bh_mdd = _max_drawdown(bh_curve) if not bh_curve.empty else 0.0
+
+    return BacktestResult(
+        index_code=data.code,
+        index_name=data.name,
+        index_category=index_category,
+        strategy_name=strategy.name,
+        evaluation_start=evaluation_start,
+        evaluation_end=equity_curve.index[-1] if not equity_curve.empty else evaluation_start,
+        equity_curve=equity_curve,
+        trades=trades,
+        closed_pairs=closed_pairs,
+        yearly_returns=yearly,
+        total_return=total_ret,
+        annualized_return=ann_ret,
+        max_drawdown=mdd,
+        win_rate=wr,
+        trade_count=len(closed_pairs),
+        unrealized_pnl=unrealized,
+        bh_equity_curve=bh_curve,
+        bh_yearly_returns=bh_yearly,
+        bh_total_return=bh_total,
+        bh_annualized_return=bh_cagr,
+        bh_max_drawdown=bh_mdd,
+    )
