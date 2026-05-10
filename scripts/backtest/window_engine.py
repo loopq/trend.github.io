@@ -325,3 +325,88 @@ def run_portfolio_window_equal_weight(
         max_drawdown=max_dd,
         per_index=per_index_list,
     )
+
+
+def run_portfolio_window_cross_sectional_topk(
+    monthly_close_by_code: Dict[str, pd.Series],
+    holdings_schedule: Dict[pd.Timestamp, set],
+    window_years: int,
+    as_of: pd.Timestamp,
+) -> WindowResult:
+    """横截面 top-K 路径：portfolio-level equity，无 per-index BacktestResult。
+
+    与 run_portfolio_window_equal_weight 的差别：
+    - 不接受 IndexData / full_results；接受预算好的 holdings_schedule
+    - 资金统一池（TOTAL_CAPITAL = INDEX_CAPITAL × len(monthly_close_by_code)），
+      每月 rebalance 平均分给 holdings；空 holdings 月 → cash idle (return = 0)
+    - WindowResult.per_index = []（横截面无 per-index 概念）
+
+    Args:
+        monthly_close_by_code: code -> monthly close series
+        holdings_schedule: rebalance_date -> set of codes（cross_sectional.build_holdings_schedule 输出）
+        window_years: 窗口年数
+        as_of: 评估日
+    """
+    window_start = as_of - pd.DateOffset(years=window_years)
+    total_capital = INDEX_CAPITAL * len(monthly_close_by_code)
+
+    # 取窗口内的 rebalance dates（升序）
+    window_dates = sorted([d for d in holdings_schedule if window_start <= d <= as_of])
+    if not window_dates:
+        # 窗口内无 rebalance（universe 数据全在窗口外）→ flat
+        portfolio_curve = pd.Series([total_capital], index=[as_of])
+        return WindowResult(
+            window_years=window_years, window_start=window_start, as_of=as_of,
+            index_count=0, initial_capital=total_capital, final_value=total_capital,
+            total_return=0.0, cagr=0.0, max_drawdown=0.0, per_index=[],
+        )
+
+    # 累积 equity_curve（月度 series）
+    equity_records: Dict[pd.Timestamp, float] = {window_start: total_capital}
+    cur_equity = total_capital
+    prev_holdings: set = set()
+    prev_date: Optional[pd.Timestamp] = None
+
+    for date in window_dates:
+        if prev_date is not None and prev_holdings:
+            # 计算 prev_holdings 在 (prev_date, date] 的平均收益
+            returns = []
+            for code in prev_holdings:
+                s = monthly_close_by_code.get(code)
+                if s is None or prev_date not in s.index or date not in s.index:
+                    continue
+                p0 = float(s.loc[prev_date])
+                p1 = float(s.loc[date])
+                if p0 > 0 and not pd.isna(p0) and not pd.isna(p1):
+                    returns.append(p1 / p0 - 1)
+            if returns:
+                portfolio_return = sum(returns) / len(returns)  # 等权
+                cur_equity = cur_equity * (1 + portfolio_return)
+        equity_records[date] = cur_equity
+        prev_holdings = holdings_schedule[date]
+        prev_date = date
+
+    portfolio_curve = pd.Series(equity_records).sort_index()
+
+    final_value = float(portfolio_curve.iloc[-1])
+    total_return = (final_value / total_capital - 1) * 100
+    years = (as_of - window_start).days / 365.25
+    cagr = (
+        ((final_value / total_capital) ** (1 / years) - 1) * 100
+        if years > 0 and total_capital > 0
+        else 0.0
+    )
+    max_dd = _max_drawdown(portfolio_curve)
+
+    return WindowResult(
+        window_years=window_years,
+        window_start=window_start,
+        as_of=as_of,
+        index_count=len(monthly_close_by_code),
+        initial_capital=total_capital,
+        final_value=final_value,
+        total_return=total_return,
+        cagr=cagr,
+        max_drawdown=max_dd,
+        per_index=[],   # 横截面无 per-index
+    )

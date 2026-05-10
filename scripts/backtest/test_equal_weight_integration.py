@@ -122,3 +122,43 @@ def test_equal_weight_uses_real_decider_not_ma20_default():
     assert final_value < 22000, (
         f"final_value={final_value:.2f} 异常高，可能是 BUY 价格不对（如用了第 1 根 close=100 而非第 2 根 110）"
     )
+
+
+# ---- cross-sectional-topk integration test ----
+
+def test_cross_sectional_topk_window_basic():
+    """3 个 toy 指数 + topk=2 + lookback=2，验证 portfolio equity 累积逻辑。"""
+    from scripts.backtest.window_engine import (
+        run_portfolio_window_cross_sectional_topk, INDEX_CAPITAL,
+    )
+    from scripts.backtest.cross_sectional import build_holdings_schedule
+
+    # 4 个月，3 指数
+    closes_by_code = {
+        "A": pd.Series([100, 110, 130, 150],
+                       index=pd.date_range("2024-01-31", periods=4, freq="ME")),
+        "B": pd.Series([100, 105, 115, 110],
+                       index=pd.date_range("2024-01-31", periods=4, freq="ME")),
+        "C": pd.Series([100, 120, 100, 90],
+                       index=pd.date_range("2024-01-31", periods=4, freq="ME")),
+    }
+    schedule = build_holdings_schedule(closes_by_code, lookback_months=2, topk=2, abs_threshold=0.0)
+    # idx 0/1: 数据不足空；idx 2/3: holdings = {A,B}
+
+    as_of = closes_by_code["A"].index[-1]  # 2024-04-30
+    wr = run_portfolio_window_cross_sectional_topk(
+        monthly_close_by_code=closes_by_code,
+        holdings_schedule=schedule,
+        window_years=1,  # 覆盖 4 个月
+        as_of=as_of,
+    )
+
+    # initial_capital = 3 * INDEX_CAPITAL = 30000
+    assert wr.initial_capital == 3 * INDEX_CAPITAL
+    # idx=2 holdings = {A,B}（在 idx=2 的 rebalance 时点确定持仓 → 但 idx=2 时刻 cur_equity 还没增长，因为 prev_holdings = 空）
+    # idx=3: prev_holdings = {A,B}, A return = 150/130-1 = 0.1538, B return = 110/115-1 = -0.0435,
+    #   mean ≈ 0.0552; cur_equity = 30000 * 1.0552 ≈ 31655.5
+    assert wr.final_value > 30000  # 增长（A 主导）
+    assert wr.final_value < 35000  # 不应过度增长（B 拉后腿）
+    assert wr.index_count == 3
+    assert wr.per_index == []  # 横截面无 per-index
