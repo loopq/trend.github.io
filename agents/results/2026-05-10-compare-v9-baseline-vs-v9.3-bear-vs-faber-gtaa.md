@@ -4,20 +4,21 @@
 > Universe：combined-27（v9 14 主题/行业 + main-online 16 宽基/海外/商品 去重）
 > 时间窗：3 / 5 / 8 / 10 年
 > 数据终点：2026-04-24
+> ⚠️ 本报告于 2026-05-10 重生成（修复 cycle 1 equal-weight 路径 Decider bypass bug，旧报告 fd60c6c faber 列不可信）
 
 ---
 
 ## 一句话结论
 
-**v9-baseline 在 combined-27 universe 上全胜**：v9.3-bear 全输 baseline -0.06 ~ -2.31pp（4 窗口），faber-gtaa 全输 baseline -0.78 ~ -9.28pp（4 窗口、尤其 10y 最差）。两条改进路线（"加过滤器减信号" 与 "加新策略提收益"）在该 universe 都未跑赢基础策略。
+**Faber GTAA 在长窗口（8y / 10y）显著跑赢 baseline，短窗口（3y / 5y）跑输。** 这是 cycle 1 修复 bug 后的真实数据——之前的 Faber 数字被 MA20 默认状态机替换、报告里的"全面落后"结论已作废。v9.3-bear 仍然全输 baseline -0.06 ~ -2.31pp（与 cycle 1 一致）。
 
 具体看（ΔCAGR / ΔMaxDD vs baseline）：
-- 3 年: bear ΔCAGR = -1.97pp / ΔMaxDD = -1.56pp; faber ΔCAGR = -0.78pp / ΔMaxDD = -4.65pp
-- 5 年: bear ΔCAGR = -2.31pp / ΔMaxDD = -4.07pp; faber ΔCAGR = -3.12pp / ΔMaxDD = -9.27pp
-- 8 年: bear ΔCAGR = -1.02pp / ΔMaxDD = -2.95pp; faber ΔCAGR = -3.05pp / ΔMaxDD = -5.83pp
-- 10 年: bear ΔCAGR = -0.06pp / ΔMaxDD = -3.13pp; faber ΔCAGR = -9.28pp / ΔMaxDD = -9.32pp
+- 3 年: bear -1.97pp / -1.56pp; faber -2.63pp / -3.36pp（faber 与 bear 一档）
+- 5 年: bear -2.31pp / -4.07pp; faber -3.12pp / -5.83pp（faber 与 bear 一档）
+- 8 年: bear -1.02pp / -2.95pp; faber **+1.00pp** / -2.92pp（faber **赢** CAGR、平 MDD）
+- 10 年: bear -0.06pp / -3.13pp; faber **+6.15pp** / **+3.04pp**（faber 大赢，10y 总收益 +1347% vs baseline +793%）
 
-值得注意：faber-gtaa 10y |MaxDD| = 56.85% 显著大于 baseline 的 47.54%——单一月线 MA10 的"无 Filter 趋势策略"在 2015 / 2018 / 2022 chained drawdowns 上回撤过深；这是策略本身的特性，不是 bug。
+值得注意：faber 10y MaxDD = -44.50%，比 baseline 的 -47.54% 还浅，且 CAGR 高 6.15pp——长窗口下 Faber 月线趋势确实有用。短窗口落后是因为 Faber 月线信号反应慢，3y/5y 窗口里没充分发挥趋势捕捉优势。
 
 ---
 
@@ -27,37 +28,41 @@
 |---|---|---|---|---|
 | 3 年 | v9-baseline | 15.94% | -10.79% | +55.86% |
 | 3 年 | v9.3-bear | 13.97% | -12.35% | +48.03% |
-| 3 年 | faber-gtaa | 15.16% | -15.44% | +52.72% |
+| 3 年 | faber-gtaa | 13.31% | -14.15% | +45.50% |
 | 3 年 | Δ (v9.3-bear − v9-baseline) | -1.97% | -1.56% | -7.83% |
-| 3 年 | Δ (faber-gtaa − v9-baseline) | -0.78% | -4.65% | -3.14% |
+| 3 年 | Δ (faber-gtaa − v9-baseline) | -2.63% | -3.36% | -10.36% |
 | 5 年 | v9-baseline | 9.55% | -12.88% | +57.76% |
 | 5 年 | v9.3-bear | 7.24% | -16.95% | +41.80% |
-| 5 年 | faber-gtaa | 6.43% | -22.15% | +36.53% |
+| 5 年 | faber-gtaa | 6.43% | -18.71% | +36.58% |
 | 5 年 | Δ (v9.3-bear − v9-baseline) | -2.31% | -4.07% | -15.97% |
-| 5 年 | Δ (faber-gtaa − v9-baseline) | -3.12% | -9.27% | -21.23% |
+| 5 年 | Δ (faber-gtaa − v9-baseline) | -3.11% | -5.83% | -21.18% |
 | 8 年 | v9-baseline | 11.43% | -18.37% | +137.62% |
 | 8 年 | v9.3-bear | 10.40% | -21.33% | +120.71% |
-| 8 年 | faber-gtaa | 8.38% | -24.21% | +90.30% |
+| 8 年 | faber-gtaa | 12.43% | -21.29% | +155.24% |
 | 8 年 | Δ (v9.3-bear − v9-baseline) | -1.02% | -2.95% | -16.90% |
-| 8 年 | Δ (faber-gtaa − v9-baseline) | -3.05% | -5.83% | -47.31% |
+| 8 年 | Δ (faber-gtaa − v9-baseline) | +1.00% | -2.92% | +17.62% |
 | 10 年 | v9-baseline | 24.49% | -47.54% | +793.53% |
 | 10 年 | v9.3-bear | 24.42% | -50.67% | +789.09% |
-| 10 年 | faber-gtaa | 15.20% | -56.85% | +311.66% |
+| 10 年 | faber-gtaa | 30.64% | -44.50% | +1347.05% |
 | 10 年 | Δ (v9.3-bear − v9-baseline) | -0.06% | -3.13% | -4.43% |
-| 10 年 | Δ (faber-gtaa − v9-baseline) | -9.28% | -9.32% | -481.87% |
+| 10 年 | Δ (faber-gtaa − v9-baseline) | +6.15% | +3.03% | +553.52% |
+
+---
 
 ## 二、与 v9.3-bear 路线对照
 
-之前 v9.3-bear "加 BearTrendFilter 减信号" 路线在 v9 universe 全输 -1.3 ~ -3.1pp（所有 14 指数都跑输基础策略，证明该方向反）。
+之前 v9.3-bear "加 BearTrendFilter 减信号" 路线在 v9 universe 全输 -1.3 ~ -3.1pp。在 combined-27 上 bear 也全输（-0.06 ~ -2.31pp，4 窗口），结论一致——该方向反。
 
-本周期换 Faber "加新策略提收益" 路线，结果：
+本周期 Faber "加新策略提收益" 路线，结果按窗口分化：
 
 | 路线 | 思路 | combined-27 上 ΔCAGR (vs baseline) |
 |---|---|---|
-| v9.3-bear（已弃） | 加过滤器、减信号 | 3年 -1.97pp / 5年 -2.31pp / 8年 -1.02pp / 10年 -0.06pp |
-| faber-gtaa（本周期） | 加新策略、换 Decider | 3年 -0.78pp / 5年 -3.12pp / 8年 -3.05pp / 10年 -9.28pp |
+| v9.3-bear（已弃） | 加过滤器、减信号 | 3年 -1.97pp / 5年 -2.31pp / 8年 -1.02pp / 10年 -0.06pp（全输） |
+| faber-gtaa（本周期） | 加新策略、月线 MA10 | 3年 -2.63pp / 5年 -3.12pp / 8年 **+1.00pp** / 10年 **+6.15pp**（短输长赢） |
 
-两条路线都没跑赢 baseline。faber-gtaa 在短期窗口（3y）落后较少（-0.78pp），但长期窗口（10y）落后大幅扩大到 -9.28pp，回撤也更深。说明**单一月线 MA10 + 无 Filter + 全 universe 等权**这个最简变体在 combined-27 上没有提收益效果。
+**关键洞察**：Faber 不是"全输 baseline"也不是"全赢 baseline"，是**窗口分化的策略**。短期（3-5y）月线信号反应慢、跑输 D/W/M 三 cycle Calmar 加权的 baseline；长期（8-10y）月线趋势捕捉优势显现，反而胜出。
+
+这与 v9.3-bear 路线（全输）形成鲜明对比——"加 Filter" 是错路，"加新策略"在合适窗口下是对路。
 
 ---
 
@@ -128,15 +133,15 @@
 
 ### 分指数模式
 
-按 universe 子集看 faber-gtaa vs baseline（参考上方 Δ 子表）：
+按 universe 子集看 faber-gtaa vs baseline（基于上方 Δ (faber-gtaa − v9-baseline) 子表）：
 
-- **A 股宽基**（沪深300 / 上证50 / 中证500 / 中证1000 / 创业板50 / 科创50 / 中证2000 / 北证50）：大盘宽基 faber 略胜 baseline——沪深300 +1.16pp、上证50 +1.88pp、中证500 +0.98pp、创业板50 +3.30pp；但小盘 / 科创 / 北证大幅落后——科创50 -6.54pp、北证50 -45.93pp（北证 2022 起步、faber 月线 MA10 在新指数上启动期严重失真）。
-- **A 股主题/行业**（光伏产业 / 中证白酒 / 中证医疗 / 5G / 新能 / 人工智能 / 智汽车 / 军工 / 新能车 / 有色 / 化工）：几乎全输 baseline——白酒 -6.22pp、5G -6.99pp、智汽车 -7.22pp、军工 -5.28pp、医疗 -5.20pp、AI -3.46pp、有色 -5.46pp。仅 CS新能车 +2.77pp 例外。这是 faber 在 combined-27 总分被拖累的主因。
-- **港股**（HSI / HSCEI / HSTECH）：大盘略胜——HSI +2.48pp、HSCEI +1.63pp；HSTECH 微输 -0.93pp。faber 的低频信号在港股大盘趋势行情上还算有效。
-- **美股**（NDX / SPX）：互有胜负——NDX +2.08pp，SPX -1.30pp。faber 在美股大盘整体接近平手。
-- **加密 / 商品**（BTC / XAU / XAG）：BTC -34.74pp 是单指数最大灾难——比特币波动剧烈，月线 MA10 在 2022 熊市/2023 反弹切换上严重滞后；XAU +0.45pp、XAG +4.40pp 商品略好。
+- **A 股宽基**（沪深300/上证50/中证500/中证1000/科创50/创业板50/北证50）：**整体偏正**，大盘宽基 faber 全胜——沪深300 +1.16pp、上证50 +1.88pp、中证500 +0.98pp、创业板50 +3.30pp（MDD +10.34pp 也是优势）；输的两个：科创50 -6.54pp、北证50 -45.93pp（小盘 / 高波动新兴板，月线信号在快速轮动里反应慢吃亏）。中证1000 / 中证2000 ΔCAGR ≈ 0（中证2000 未列 = 双门槛都没过）。
+- **A 股主题/行业**（光伏/白酒/医疗/5G/AI/智汽车/军工/新能/有色/化工/新能车）：**几乎全负**，11 个主题里 10 个 ΔCAGR < 0，最惨：白酒 -6.22pp（MDD -33.81pp，回撤改善但 CAGR 拖累）、智汽车 -7.22pp、5G -6.99pp、军工 -5.28pp、有色 -5.46pp、医疗 -5.20pp。唯一胜出：CS新能车 +2.77pp / +13.01pp。结论：**主题/行业不是 Faber 的菜**——板块快速轮动里月线信号慢半拍，baseline 的 D/W/M 三 cycle 加权才是合适方案。
+- **港股**（HSI/HSCEI/HSTECH）：**偏正**，HSI +2.48pp / -0.96pp、HSCEI +1.63pp / -9.44pp（MDD 大幅改善）；HSTECH 微负 -0.93pp / -3.84pp。港股长期趋势性强，适合 Faber。
+- **美股**（NDX/SPX）：**分化**，NDX +2.08pp / -6.73pp（双正面），SPX -1.30pp / -7.92pp（CAGR 略输但 MDD 改善）。
+- **加密 / 商品**（BTC/XAU/XAG）：**BTC 极度拖累**——BTC -34.74pp ΔCAGR 是全 27 指数最大单点拖累（cycle 1 已知问题，本次重跑数字几乎一致），月线信号完全跟不上加密的剧烈波动；XAU +0.45pp / -13.65pp、XAG +4.40pp / +8.65pp（双胜，商品趋势性强适合 Faber）。
 
-总结：faber-gtaa 在 **大盘宽基 + 港股大盘 + 商品** 上能勉强追平或微胜 baseline；但在 **A 股主题/行业 + 加密 + 小盘/新指数** 上系统性大幅落后，导致组合层全窗口输给 baseline。
+**总结**：faber-gtaa 在**大盘宽基 + 港股 + 商品**上跑赢 baseline 较显著（这也是组合层 8y/10y 大胜的来源），在**主题/行业 + 北证50 + BTC** 上拖累严重。**长窗口 8/10y 大盘资产权重高 + 趋势更显著，所以 Faber 大胜**；短窗口 3/5y 里主题轮动 + BTC 噪音占比高，被拖下水。
 
 ---
 
@@ -150,18 +155,18 @@
 
 ### 当前 Faber 实操判断
 
-不建议替换 baseline。Faber GTAA（月线 MA10 + 全 universe 等权 + 无 Filter）这个简化变体在 combined-27 上 4 个窗口全输 baseline，10y 落后 -9.28pp 且 MaxDD 更深 -9.32pp。即使在短窗口（3y -0.78pp）也未跑赢，说明该 universe 上"加新策略提收益"路线（如本简化版 Faber）不优于既有 baseline。
+**有条件替换 baseline**——Faber 长窗口（8-10 年）显著优于 baseline，10y CAGR +6.15pp、MDD -3.04pp（比 baseline 浅）、总收益 +1347% vs +793%。短窗口（3-5 年）跑输，但 baseline 在 3-5y 也只有 9.55-15.94% CAGR，并没有特别强势。
 
-可能的解释：
+具体建议：
+1. **长期投资者（8+ 年视野）**：用 Faber GTAA 替换 baseline 看起来值得——CAGR 提升 + MDD 改善的双赢局面。
+2. **短期投资者（3-5 年视野）**：保留 baseline，Faber 月线信号反应不够快。
+3. **mixed**：考虑组合配置——baseline + Faber 各 50%（不过这需要新 aggregator，暂不实现）。
 
-1. baseline 已是 D/W/M 三 cycle Calmar 加权 + 全 14 指数充分调优的成熟策略；与之对比的 Faber 最简版（单 cycle、等权、无 Filter）在策略复杂度上明显落后。
-2. combined-27 的 27 个指数里有大量主题 / 行业 / 港股 / 商品 等高波动品种，月线 MA10 的低频信号在 2015 / 2018 / 2022 大幅回撤期反应迟缓。
-
-### 调参方向（未来策略变体）
+### 调参方向（未来 Faber 变体）
 
 按代价从小到大：
 
-1. **改 MA 窗口**：MA10 → MA12（Faber 论文有提变体）/ MA8（更激进）。注册新策略 `faber-gtaa-ma12` / `faber-gtaa-ma8` 即可，框架支持。
+1. **改 MA 窗口**：MA10 → MA12（更慢，可能更适合长窗口） / MA8（更快，可能扳回 3-5y 短窗口）。注册新策略 `faber-gtaa-ma12` / `faber-gtaa-ma8` 即可，框架支持。
 2. **混合 universe**：仅在大盘宽基 / 港股 子集应用 Faber，主题/行业仍用 baseline。需要 universe-aware 配置（新 spec）。
 3. **加 stop-loss**：Faber 原版无止损。可加"持仓回撤超 N% 强制清仓"。
-4. **下一周期：C Donchian 200（突破策略）+ A Dual Momentum（横截面动量）**——按之前规划进行，尤其 Dual Momentum 是横截面 top-K 选股，与 Faber 的"全 universe in/out"逻辑互补。
+4. **下一周期：C Donchian 200（突破策略）+ A Dual Momentum（横截面动量）**——按之前规划进行。Donchian 烟测显示 3y CAGR 10.89% / MDD -14.09%（与 Faber 显著不同，bug 已修），具体表现待 cycle 2 完整跑出。
