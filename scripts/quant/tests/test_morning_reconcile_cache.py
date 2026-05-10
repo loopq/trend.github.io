@@ -1,6 +1,6 @@
 """C0：历史 K 增量拉取（修 P4 cache 从未被填的 hidden bug）。
 
-参考：docs/agents/plans/morning-reconcile-cache.md §C0 §7.2
+参考：agents/plans/morning-reconcile-cache.md §C0 §7.2
 """
 from __future__ import annotations
 

@@ -35,7 +35,7 @@ from scripts.backtest.v5_screener import screen_sector
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v7-mapping.md"
+OUTPUT = PROJECT_ROOT / "agents" / "results" / "v7-mapping.md"
 
 MIN_DATE = pd.Timestamp("2016-01-01")
 TOP_N_CANDIDATES = 5

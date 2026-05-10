@@ -25,7 +25,7 @@ from scripts.backtest.window_engine import (
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "conclusion.md"
+OUTPUT = PROJECT_ROOT / "agents" / "results" / "conclusion.md"
 
 WINDOWS = [3, 5, 8, 10]
 MIN_EVALUATION_START = pd.Timestamp("2016-01-01")

@@ -1,15 +1,15 @@
 """V9.2 详细报告：批量模式 + 单指数 CLI 模式。
 
 批量模式（无参）：
-    docs/agents/results/v9-summary.md    总览
-    docs/agents/results/v9-{code}.md     × 14
+    agents/results/v9-summary.md    总览
+    agents/results/v9-{code}.md     × 14
 
 单指数模式（v4.3 新增，用于 backtest.yml workflow）：
     --code/--name/--region/--output-dir
     fail-fast：任何步骤失败 exit 1
     输出 {code}.md（无 v9- 前缀）到指定目录
 
-设计参考：docs/agents/plans/quant-backtest-runner-plan.md
+设计参考：agents/plans/quant-backtest-runner-plan.md
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from scripts.backtest.v9_registry import build_v9_registry
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT_DIR = PROJECT_ROOT / "docs" / "agents" / "results"
+OUTPUT_DIR = PROJECT_ROOT / "agents" / "results"
 SUMMARY_OUTPUT = OUTPUT_DIR / "v9-summary.md"
 
 MIN_EVALUATION_START = pd.Timestamp("2016-01-01")
@@ -309,7 +309,7 @@ def main() -> int:
     parser.add_argument('--region', choices=['cn', 'us', 'hk', 'btc'],
                         help='单指数模式：地域')
     parser.add_argument('--output-dir', default=str(OUTPUT_DIR),
-                        help='输出目录（默认 docs/agents/results；新流程用 docs/quant/backtest）')
+                        help='输出目录（默认 agents/results；新流程用 docs/quant/backtest）')
     args = parser.parse_args()
 
     # 单指数模式

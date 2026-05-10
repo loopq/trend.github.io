@@ -33,7 +33,7 @@ from scripts.backtest.v5_screener import screen_sector
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-OUTPUT = PROJECT_ROOT / "docs" / "agents" / "results" / "v6-friction-result.md"
+OUTPUT = PROJECT_ROOT / "agents" / "results" / "v6-friction-result.md"
 
 WINDOWS = [3, 5]
 AS_OF = pd.Timestamp("2026-04-25")
