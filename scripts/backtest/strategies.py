@@ -46,22 +46,26 @@ class Bucket:
 
 
 @dataclass
-class Strategy:
+class BucketGroup:
     name: str
     buckets: List[Bucket]
 
 
-def d_strategy() -> Strategy:
-    return Strategy(name="D", buckets=[Bucket(timeframe=DAILY, capital=BUCKET_CAPITAL)])
+# 兼容 alias：旧名字保留指向新类，避免直接引用旧 Strategy 的代码立刻坏
+Strategy = BucketGroup
 
 
-def w_strategy() -> Strategy:
-    return Strategy(name="W", buckets=[Bucket(timeframe=WEEKLY, capital=BUCKET_CAPITAL)])
+def d_strategy() -> BucketGroup:
+    return BucketGroup(name="D", buckets=[Bucket(timeframe=DAILY, capital=BUCKET_CAPITAL)])
 
 
-def m_strategy() -> Strategy:
-    return Strategy(name="M", buckets=[Bucket(timeframe=MONTHLY, capital=BUCKET_CAPITAL)])
+def w_strategy() -> BucketGroup:
+    return BucketGroup(name="W", buckets=[Bucket(timeframe=WEEKLY, capital=BUCKET_CAPITAL)])
 
 
-def all_strategies() -> List[Strategy]:
+def m_strategy() -> BucketGroup:
+    return BucketGroup(name="M", buckets=[Bucket(timeframe=MONTHLY, capital=BUCKET_CAPITAL)])
+
+
+def all_strategies() -> List[BucketGroup]:
     return [d_strategy(), w_strategy(), m_strategy()]

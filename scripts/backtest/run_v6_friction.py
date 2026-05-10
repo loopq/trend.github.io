@@ -26,7 +26,7 @@ from scripts.backtest.data_loader import IndexData, load_index
 from scripts.backtest.engine import BacktestResult, run_strategy
 from scripts.backtest.reporter import compute_allocation
 from scripts.backtest.run_v5 import filter_tiny_candidates
-from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, Strategy, all_strategies
+from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, BucketGroup, all_strategies
 from scripts.backtest.v5_registry import build_v5_registry
 from scripts.backtest.v5_screener import screen_sector
 
@@ -122,7 +122,7 @@ def run_window_with_friction(
             active_strategies += 1
 
             bucket_cap = info["weight"] * capital_per_index  # 此本金档下分配到本 bucket
-            single = Strategy(
+            single = BucketGroup(
                 name=strat_name,
                 buckets=[Bucket(timeframe=_strategy_timeframe(strat_name), capital=bucket_cap)],
             )

@@ -12,7 +12,7 @@ import pandas as pd
 
 from scripts.backtest.data_loader import IndexData
 from scripts.backtest.signal import BUY, SELL, decide_action
-from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, BUCKET_CAPITAL, Strategy
+from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, BUCKET_CAPITAL, BucketGroup
 
 
 @dataclass
@@ -214,7 +214,7 @@ def _buy_and_hold_curve(data: IndexData, evaluation_start: pd.Timestamp,
     return (daily_eval["close"] * shares).rename("bh_equity")
 
 
-def run_strategy(data: IndexData, strategy: Strategy,
+def run_strategy(data: IndexData, strategy: BucketGroup,
                  min_evaluation_start: Optional[pd.Timestamp] = None,
                  index_category: str = "") -> BacktestResult:
     """V2：单周期独立策略。state=None 起步，第一根干净 K 线触发信号。
