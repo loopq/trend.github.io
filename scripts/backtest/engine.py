@@ -307,13 +307,11 @@ def run_strategy(data: IndexData, strategy: BucketGroup,
 from scripts.backtest.indicators import compute_ma, resample_weekly, resample_monthly
 from scripts.backtest.strategy.protocol import (
     FilterContext,
-    Signal as _StrategySignal,
     Strategy as _ComposedStrategy,
 )
 
 
 _TF_TO_CYCLE = {DAILY: "D", WEEKLY: "W", MONTHLY: "M"}
-_CYCLE_TO_TF = {v: k for k, v in _TF_TO_CYCLE.items()}
 
 
 def _build_filter_context(
@@ -326,12 +324,9 @@ def _build_filter_context(
     总开销可接受；先正确，再优化）。
     """
     today_close = float(daily.loc[today, "close"])
-    daily_until = daily.loc[:today].reset_index().rename(columns={daily.index.name or "index": "date"})
-    if "date" not in daily_until.columns:
-        # daily 的 index 名可能是 None，确保有 date 列
-        daily_until = daily.loc[:today].copy()
-        daily_until["date"] = daily_until.index
-        daily_until = daily_until.reset_index(drop=True)
+    daily_until = daily.loc[:today].copy()
+    daily_until["date"] = daily_until.index
+    daily_until = daily_until.reset_index(drop=True)
 
     weekly_until = resample_weekly(daily_until)
     monthly_until = resample_monthly(daily_until)
@@ -404,18 +399,18 @@ def run_with_strategy(
             if not all(f.allow(sig, ctx) for f in strategy.filters):
                 continue
             # 落 trade
-            if sig.action == "BUY":
+            if sig.action == BUY:
                 shares = bucket.buy_all(bar["close"])
-                trades.append(Trade(date=date, timeframe=tf, action="BUY",
+                trades.append(Trade(date=date, timeframe=tf, action=BUY,
                                     price=float(bar["close"]), shares=shares,
                                     cash_after=bucket.cash,
                                     bar_high=float(bar["high"]),
                                     bar_low=float(bar["low"]),
                                     bar_ma20=float(bar["ma20"])))
                 last_buy_by_bucket[id(bucket)] = (date, float(bar["close"]))
-            elif sig.action == "SELL":
+            elif sig.action == SELL:
                 shares = bucket.sell_all(bar["close"])
-                trades.append(Trade(date=date, timeframe=tf, action="SELL",
+                trades.append(Trade(date=date, timeframe=tf, action=SELL,
                                     price=float(bar["close"]), shares=shares,
                                     cash_after=bucket.cash,
                                     bar_high=float(bar["high"]),
