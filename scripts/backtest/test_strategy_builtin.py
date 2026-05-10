@@ -429,3 +429,24 @@ def test_donchian_200_registered():
     assert isinstance(s.decider, _DonchianCls)
     assert s.decider.entry_window == 10
     assert s.decider.exit_window == 5
+
+
+# ---------- Strategy.params field (cycle 3 prep) ----------
+
+def test_strategy_params_default_empty():
+    """现有策略未指定 params → 默认 {}，向后兼容。"""
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("v9-baseline")
+    assert s.params == {}
+
+def test_strategy_params_custom():
+    """Strategy(params={...}) 接受自定义。"""
+    from scripts.backtest.strategy.protocol import Strategy
+    from scripts.backtest.strategy.builtin import MA20CrossDecider
+    s = Strategy(
+        name="dummy",
+        decider=MA20CrossDecider(),
+        params={"lookback_months": 12, "topk": 5},
+    )
+    assert s.params == {"lookback_months": 12, "topk": 5}

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, Tuple, runtime_checkable
+from typing import Any, Dict, Optional, Protocol, Tuple, runtime_checkable
 
 import pandas as pd
 
@@ -59,3 +59,4 @@ class Strategy:
     filters: Tuple[Filter, ...] = field(default_factory=tuple)
     cycles: Tuple[str, ...] = ("D", "W", "M")
     aggregator: str = "cycle-calmar"   # "cycle-calmar"|"equal-weight"|"cross-sectional-topk"
+    params: Dict[str, Any] = field(default_factory=dict)   # 新增（aggregator 特定参数；frozen=True 不可变 Dict 用工厂保证 immutability 友好）
