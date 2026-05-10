@@ -59,3 +59,45 @@ class MA20CrossDecider:
             return Signal(action="SELL", cycle=cycle, price=float(bar["close"]),
                           bar_date=pd.Timestamp(bar.name) if bar.name is not None else pd.NaT)
         return None
+
+
+class BearTrendFilter:
+    """空头趋势过滤器：
+
+    仅作用于 scope 内 cycle 的 BUY 信号。条件：
+        month_close_spliced > month_ma5
+        AND ((not weekly_bear) OR (not monthly_bear))
+
+    SELL / scope 外的 cycle / 任意 M cycle BUY 始终放行。
+    """
+
+    name = "bear-trend-filter"
+
+    def __init__(
+        self,
+        scope: Tuple[str, ...] = ("D", "W"),
+        weekly_bear_N: int = 4,
+        weekly_bear_eps: float = 0.005,
+        monthly_bear_N: int = 3,
+        monthly_bear_eps: float = 0.005,
+    ) -> None:
+        self.scope = tuple(scope)
+        self.weekly_bear_N = weekly_bear_N
+        self.weekly_bear_eps = weekly_bear_eps
+        self.monthly_bear_N = monthly_bear_N
+        self.monthly_bear_eps = monthly_bear_eps
+
+    def allow(self, signal: Signal, ctx: FilterContext) -> bool:
+        if signal.action != "BUY":
+            return True
+        if signal.cycle not in self.scope:
+            return True
+        if ctx.month_ma5 is None or pd.isna(ctx.month_ma5):
+            return False  # MA5 未就绪 → 严格 suppress
+        cond_close = ctx.month_close_spliced > ctx.month_ma5
+        weekly_bear = is_bear(ctx.weekly_ma60_series,
+                              N=self.weekly_bear_N, eps=self.weekly_bear_eps)
+        monthly_bear = is_bear(ctx.monthly_ma20_series,
+                               N=self.monthly_bear_N, eps=self.monthly_bear_eps)
+        cond_trend = (not weekly_bear) or (not monthly_bear)
+        return cond_close and cond_trend
