@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="plan" content="./2026-05-10-donchian-200.md">
+<title>C Donchian 突破（月线 10/5）— Design</title>
+<style>
+:root {
+  --c-bg: #fafbfc;
+  --c-text: #1f2328;
+  --c-muted: #656d76;
+  --c-accent: #0969da;
+  --c-border: #d0d7de;
+  --c-code-bg: #f6f8fa;
+  --c-warn: #bf8700;
+  --c-warn-bg: #fff8c5;
+  --c-success: #1a7f37;
+  --c-success-bg: #dafbe1;
+  --c-danger: #d1242f;
+  --c-danger-bg: #ffebe9;
+  --c-info-bg: #ddf4ff;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--c-text);
+  background: var(--c-bg);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 40px 80px;
+}
+h1 { font-size: 26px; border-bottom: 2px solid var(--c-border); padding-bottom: 10px; margin-bottom: 8px; }
+h2 { font-size: 21px; margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--c-border); }
+h3 { font-size: 17px; color: var(--c-accent); margin-top: 28px; margin-bottom: 6px; }
+h4 { font-size: 14px; color: var(--c-muted); margin-top: 16px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+p { margin: 8px 0; }
+code { background: var(--c-code-bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, Consolas, monospace; }
+pre { background: var(--c-code-bg); padding: 14px 18px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; border: 1px solid var(--c-border); }
+pre code { background: none; padding: 0; font-size: inherit; }
+table { border-collapse: collapse; margin: 12px 0; font-size: 13.5px; width: 100%; }
+th, td { border: 1px solid var(--c-border); padding: 7px 11px; text-align: left; vertical-align: top; }
+th { background: var(--c-code-bg); font-weight: 600; }
+ul, ol { padding-left: 22px; }
+li { margin: 3px 0; }
+.meta { color: var(--c-muted); font-size: 13.5px; margin-top: 0; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; vertical-align: middle; }
+.tag-new { background: var(--c-success-bg); color: var(--c-success); }
+.tag-mod { background: var(--c-warn-bg); color: var(--c-warn); }
+.tag-keep { background: var(--c-info-bg); color: var(--c-accent); }
+.tag-gate { background: var(--c-danger-bg); color: var(--c-danger); }
+.callout { border-left: 4px solid var(--c-accent); background: var(--c-info-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+.callout-warn { border-left-color: var(--c-warn); background: var(--c-warn-bg); }
+.callout-danger { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.callout-success { border-left-color: var(--c-success); background: var(--c-success-bg); }
+.svg-container { text-align: center; margin: 18px 0; }
+.tree { font-family: "SF Mono", Menlo, Consolas, monospace; background: var(--c-code-bg); padding: 16px 20px; border-radius: 6px; font-size: 13px; line-height: 1.85; border: 1px solid var(--c-border); }
+.tree .new { color: var(--c-success); font-weight: 600; }
+.tree .mod { color: var(--c-warn); font-weight: 600; }
+.tree .keep { color: var(--c-muted); }
+nav.toc { background: var(--c-code-bg); padding: 14px 22px; border-radius: 6px; margin: 18px 0 24px; border: 1px solid var(--c-border); }
+nav.toc h4 { margin: 0 0 6px; color: var(--c-text); text-transform: none; letter-spacing: 0; font-size: 13px; }
+nav.toc ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+nav.toc li { margin: 2px 0; font-size: 13.5px; }
+nav.toc a { color: var(--c-accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+hr { border: none; border-top: 1px solid var(--c-border); margin: 24px 0; }
+@media (max-width: 720px) {
+  body { padding: 18px 16px 60px; font-size: 14.5px; }
+  nav.toc ul { columns: 1; }
+}
+</style>
+</head>
+<body>
+
+<h1>C Donchian 突破（月线 10/5）— Design</h1>
+<p class="meta">
+  <strong>日期</strong>: 2026-05-10 ·
+  <strong>策略路线</strong>: B → <strong>C</strong> → A 第二周期 ·
+  <strong>范围</strong>: 仅 <code>scripts/backtest/</code> ·
+  <strong>Plan</strong>: <a href="./2026-05-10-donchian-200.md">2026-05-10-donchian-200.md</a>
+</p>
+
+<nav class="toc">
+  <h4>目录</h4>
+  <ul>
+    <li><a href="#isolation">0. 隔离保证</a></li>
+    <li><a href="#bg">1. 背景与目标</a></li>
+    <li><a href="#decider">2. DonchianBreakoutDecider 规格</a></li>
+    <li><a href="#strategy">3. donchian-200 策略注册</a></li>
+    <li><a href="#flow">4. equal-weight 流程复用</a></li>
+    <li><a href="#test">5. 测试范围（10 个单测 + 1 注册）</a></li>
+    <li><a href="#acceptance">6. 验收标准</a></li>
+    <li><a href="#report">7. 报告内容（4 策略对比）</a></li>
+    <li><a href="#invariants">8. 关键不变量</a></li>
+    <li><a href="#risks">9. 风险与权衡</a></li>
+    <li><a href="#out-of-scope">10. 不在范围</a></li>
+  </ul>
+</nav>
+
+<!-- ============================================== -->
+<h2 id="isolation">0. 隔离保证</h2>
+
+<div class="callout-danger callout">
+<strong>所有改动对 v9-baseline / v9.3-bear / faber-gtaa / V5-V9 历史入口零行为变更。</strong> Cycle 1 已建立的硬门槛 5 条隔离断言在本周期 task 6 全量复跑——任何破坏现有数值的改动必须回退。
+</div>
+
+<p>禁触路径（git diff 必须为空）：</p>
+<ul>
+  <li><code>scripts/quant/</code> — 生产链路</li>
+  <li><code>scripts/main.py</code> — 生产入口</li>
+  <li><code>docs/</code> — 前端</li>
+</ul>
+
+<!-- ============================================== -->
+<h2 id="bg">1. 背景与目标</h2>
+
+<p>Cycle 1 落地了：</p>
+<ul>
+  <li><span class="tag tag-keep">已有</span> combined-27 universe（27 个唯一指数：A 股 19 + 港股 3 + 美股 2 + 加密 1 + 商品 2）</li>
+  <li><span class="tag tag-keep">已有</span> equal-weight aggregator（单 cycle / 每指数等权 / 不调 Calmar）</li>
+  <li><span class="tag tag-keep">已有</span> N≥2 策略 compare 报告</li>
+  <li><span class="tag tag-keep">已有</span> Faber GTAA（月线 MA10 趋势跟踪，cycle 1 实测 4 窗口全输 baseline）</li>
+</ul>
+
+<p><strong>Cycle 2 目标</strong>：在同一个 equal-weight 框架下落地 <strong>Donchian 通道突破</strong>策略，与 Faber 同 timeframe（月线）做"价格突破" vs "均值穿越"的对照实验。</p>
+
+<p>核心命题：</p>
+<ul>
+  <li>Faber 的 <code>close vs MA10</code> 是均值法——平滑、对噪声不敏感</li>
+  <li>Donchian 的 <code>close vs max/min</code> 是极值法——对突破更严格、入出场更慢</li>
+  <li>同 universe / 同 timeframe / 同 aggregator 下，二者孰优？</li>
+</ul>
+
+<p>本周期不做 dispatch / aggregator / portfolio 层任何改动——cycle 1 的框架已就绪，cycle 2 仅需新增一个 Decider + 注册一个策略名。</p>
+
+<!-- ============================================== -->
+<h2 id="decider">2. DonchianBreakoutDecider 规格</h2>
+
+<h3>2.1 算法</h3>
+
+<p>每根月线 K 线（cycle="M"）：</p>
+
+<ol>
+  <li>读 <code>bar.close</code>，若 NaN → 返回 None</li>
+  <li>从 per-cycle buffer 取过去 N 个月的 close 序列（不含当月）</li>
+  <li>若空仓且 buffer 长度 ≥ <code>entry_window</code>：
+    <ul>
+      <li><code>entry_high = max(buffer[-entry_window:])</code></li>
+      <li>若 <code>close > entry_high</code>（严格大于）→ <strong>BUY 信号</strong></li>
+    </ul>
+  </li>
+  <li>否则若持仓且 buffer 长度 ≥ <code>exit_window</code>：
+    <ul>
+      <li><code>exit_low = min(buffer[-exit_window:])</code></li>
+      <li>若 <code>close &lt; exit_low</code>（严格小于）→ <strong>SELL 信号</strong></li>
+    </ul>
+  </li>
+  <li>更新 buffer：append 当月 close；裁剪到最近 <code>max(entry_window, exit_window)</code> 个</li>
+  <li>返回信号（或 None）</li>
+</ol>
+
+<h3>2.2 与 Faber 的对照</h3>
+
+<table>
+  <tr><th>维度</th><th>Faber GTAA（cycle 1）</th><th>Donchian 200（cycle 2）</th></tr>
+  <tr><td>判别式</td><td>close &gt; MA10（10 月均值）</td><td>close &gt; max(过去 10 月 close)</td></tr>
+  <tr><td>出场条件</td><td>close ≤ MA10（同位均值）</td><td>close &lt; min(过去 5 月 close)</td></tr>
+  <tr><td>状态</td><td>UP/DOWN（每月 0/1 翻转）</td><td>HOLD/OUT（仅在突破/跌破时翻）</td></tr>
+  <tr><td>入场频率</td><td>较高（均值穿越易触发）</td><td>较低（必须创 N 月新高）</td></tr>
+  <tr><td>出场速度</td><td>较快（close ≤ MA 立即翻 DOWN）</td><td>较慢（必须破 N/2 月新低）</td></tr>
+  <tr><td>required_indicators</td><td><code>(("M", "ma10", 10),)</code></td><td><code>()</code> 自维护 buffer</td></tr>
+</table>
+
+<h3>2.3 默认参数</h3>
+
+<ul>
+  <li><code>entry_window = 10</code>（10 个月新高 ≈ 200 个交易日新高）</li>
+  <li><code>exit_window = 5</code>（5 个月新低，half-N，海龟系统经典出场）</li>
+</ul>
+
+<p>未来扫参：直接注册新策略名 <code>donchian-12-6</code> / <code>donchian-8-4</code> 等，框架支持。</p>
+
+<h3>2.4 状态隔离</h3>
+
+<p>Decider 实例内部用 <code>self._close_buffer_by_cycle: Dict[str, List[float]]</code> 按 cycle key 隔离 buffer。equal-weight 路径下每个指数都构造 fresh decider 实例（参考 cycle 1 <code>_run_equal_weight</code> 直接传 strategy；engine 内 cycles=("M",) 时只跑该 cycle），所以 buffer 不会跨指数串数据。</p>
+
+<!-- ============================================== -->
+<h2 id="strategy">3. donchian-200 策略注册</h2>
+
+<pre><code>@register("donchian-200")
+def _donchian_200() -&gt; Strategy:
+    return Strategy(
+        name="donchian-200",
+        decider=DonchianBreakoutDecider(entry_window=10, exit_window=5),
+        filters=(),
+        cycles=("M",),
+        aggregator="equal-weight",
+    )</code></pre>
+
+<p>命名说明："200" 指日线级别 ≈ 200 交易日（与海龟系统 1 / Donchian 200 文献命名一致）；月线实现用 10/5 是同 timeframe 等价。</p>
+
+<!-- ============================================== -->
+<h2 id="flow">4. equal-weight 流程复用</h2>
+
+<p>Cycle 1 已落地 <code>_run_equal_weight</code> + <code>run_portfolio_window_equal_weight</code>，本周期零改动。Donchian 走流程：</p>
+
+<ol>
+  <li><code>run.py --strategy donchian-200 --universe combined-27 --windows N</code></li>
+  <li><code>_run_one_strategy</code> dispatch → <code>strategy.aggregator == "equal-weight"</code> → <code>_run_equal_weight</code></li>
+  <li>每指数 fresh DonchianBreakoutDecider 实例，run_with_strategy 跑 monthly cycle 全历史</li>
+  <li><code>run_portfolio_window_equal_weight</code> 在 N 年窗口内重跑 + 等权聚合</li>
+  <li>WindowResult 出 CAGR / MDD</li>
+</ol>
+
+<p>因 <code>required_indicators=()</code>，<code>_ensure_indicators</code> 是 no-op，不会在 IndexData 上加任何列。</p>
+
+<!-- ============================================== -->
+<h2 id="test">5. 测试范围（10 个单测 + 1 注册）</h2>
+
+<table>
+  <tr><th>#</th><th>测试名</th><th>断言</th></tr>
+  <tr><td>1</td><td>test_buffer_warm_up_no_signal</td><td>buffer 长度 &lt; entry_window 时不产生 BUY</td></tr>
+  <tr><td>2</td><td>test_breakout_above_max_buys</td><td>buffer 满 + close &gt; 历史最高 + 空仓 → BUY</td></tr>
+  <tr><td>3</td><td>test_no_breakout_no_signal</td><td>buffer 满 + close ≤ 历史最高 + 空仓 → None</td></tr>
+  <tr><td>4</td><td>test_close_equals_max_no_breakout</td><td>close == max 严格不算突破（必须 &gt;）</td></tr>
+  <tr><td>5</td><td>test_breakdown_below_min_sells</td><td>持仓 + close &lt; 历史最低 → SELL</td></tr>
+  <tr><td>6</td><td>test_no_breakdown_no_signal</td><td>持仓 + close ≥ 历史最低 → None</td></tr>
+  <tr><td>7</td><td>test_close_equals_min_no_breakdown</td><td>close == min 严格不算跌破（必须 &lt;）</td></tr>
+  <tr><td>8</td><td>test_already_in_no_resignal</td><td>持仓 + close 又创新高 → None（不重复 BUY）</td></tr>
+  <tr><td>9</td><td>test_nan_close_returns_none</td><td>close NaN → None</td></tr>
+  <tr><td>10</td><td>test_required_indicators_empty</td><td><code>required_indicators == ()</code></td></tr>
+  <tr><td>11</td><td>test_donchian_200_registered</td><td>注册 + cycles=("M",) + aggregator="equal-weight"</td></tr>
+</table>
+
+<!-- ============================================== -->
+<h2 id="acceptance">6. 验收标准</h2>
+
+<h3>6.1 隔离断言（硬门槛，5 条全过才能进 task 5）</h3>
+
+<ol>
+  <li><code>git diff 1bb961c..HEAD -- scripts/quant/ scripts/main.py docs/</code> 输出为空（cycle 1 base SHA，本 cycle 同样基线）</li>
+  <li>pytest scripts/backtest/ ≥ 53 passed（cycle 1 实际 62，本 cycle 加 11 个 → 应 73）+ test_signal_manual <code>All tests passed.</code></li>
+  <li>v9-baseline on v9 universe 4 窗口数值字符级一致：3年 15.32%/-12.55%、5年 10.98%/-19.69%、8年 11.51%/-22.12%、10年 9.29%/-22.25%</li>
+  <li>v9-baseline + v9.3-bear on v9 universe compare 数值字符级一致（与 cycle 1 已确认）</li>
+  <li>v9-baseline + v9.3-bear on main-online universe compare 数值字符级一致</li>
+</ol>
+
+<h3>6.2 新功能验收</h3>
+
+<ol>
+  <li>11 个新单测全过</li>
+  <li><code>--list</code> 输出含 <code>donchian-200</code> 一行</li>
+  <li><code>--strategy donchian-200 --universe combined-27 --windows 3</code> 跑通：CAGR / MDD 数值合理（CAGR 通常 +5% ~ +20%，MDD 通常 -15% ~ -45%）</li>
+  <li>4 策略 compare（v9-baseline / v9.3-bear / faber-gtaa / donchian-200）on combined-27 报告生成成功</li>
+</ol>
+
+<!-- ============================================== -->
+<h2 id="report">7. 报告内容</h2>
+
+<p>生成 <code>agents/results/2026-05-10-compare-v9-baseline-vs-v9.3-bear-vs-faber-gtaa-vs-donchian-200.md</code>，包含：</p>
+
+<ol>
+  <li>一句话结论：donchian-200 vs baseline / vs faber 各 4 窗口 ΔCAGR / ΔMaxDD</li>
+  <li>组合层对比表（自动生成，4 策略 + 3 Δ 行 per 窗口 = 28 行）</li>
+  <li>"突破策略 vs 均值策略" 对照段（Faber vs Donchian 在 combined-27 上同 timeframe 表现差异）</li>
+  <li>分指数差异表（3 个 Δ 子表：bear / faber / donchian vs baseline）</li>
+  <li>分指数模式分析（按 universe 子集：A 股宽基/主题/港股/美股/加密商品）</li>
+  <li>后续方向（cycle 3 是 Dual Momentum；扫参方向）</li>
+</ol>
+
+<!-- ============================================== -->
+<h2 id="invariants">8. 关键不变量</h2>
+
+<ul>
+  <li><strong>状态机正确性</strong>：HOLD/OUT 状态必须严格响应 close 与 entry_high / exit_low 的关系——not loose threshold（用 <code>&gt;</code> 和 <code>&lt;</code>，不是 <code>&gt;=</code> 和 <code>&lt;=</code>）</li>
+  <li><strong>Buffer 时序</strong>：决策必须基于"过去 N 月 close"（不含当月），更新发生在决策之后——避免 look-ahead bias</li>
+  <li><strong>Per-cycle 隔离</strong>：buffer 按 cycle key 分桶；本策略只跑 M cycle，但 buffer 设计支持多 cycle（未来 D/W donchian 同框架可加）</li>
+  <li><strong>每指数 fresh decider</strong>：equal-weight 路径下，每指数 run_with_strategy 时直接传 strategy（cycles=("M",)），decider 内部 buffer 不会跨指数污染——这点 cycle 1 _run_equal_weight 已建立</li>
+</ul>
+
+<!-- ============================================== -->
+<h2 id="risks">9. 风险与权衡</h2>
+
+<table>
+  <tr><th>风险</th><th>缓解</th></tr>
+  <tr><td>Donchian 入场严格（必须创 N 月新高），bear market 全程不入场，CAGR 跑输 baseline</td><td>这是策略本身特性。报告中对比 faber 的"易入场易出场" vs donchian 的"难入场难出场"两种风格</td></tr>
+  <tr><td>buffer 在新指数（如北证50 2022 起步）冷启动期长达 10 个月，错过早期机会</td><td>预期行为；与 Faber MA10 在新指数上启动期失真同样问题</td></tr>
+  <tr><td>同时多个指数都"创 N 月新高"，equal-weight 等权后某些 universe 可能集中在 1-2 类指数（如某段牛市同时只有大盘 ETF 突破）</td><td>本策略不做横截面 top-K（那是 cycle 3 Dual Momentum 的事）；equal-weight 框架接受"同时多空仓位"作为正常状态</td></tr>
+  <tr><td>每指数 fresh decider buffer 在第一次 run_with_strategy 调用时全历史 warm up，第二次 run_portfolio_window_equal_weight 重跑窗口时又会重新 warm up</td><td>与 Faber 同问题；cycle 1 已验证 equal-weight 等权聚合的窗口重跑机制工作正确</td></tr>
+</table>
+
+<!-- ============================================== -->
+<h2 id="out-of-scope">10. 不在范围</h2>
+
+<ul>
+  <li>多参数扫描（MA8 / MA12 / 8/4 / 12/6 等变体）— 验证完 baseline 后用户决定要不要扫</li>
+  <li>位置规模管理（ATR-based sizing 等海龟扩展）— 留 cycle 5+</li>
+  <li>移动止损 / trailing stop — 留 cycle 5+</li>
+  <li>cycle 3 Dual Momentum（横截面 top-K）— 单独 plan</li>
+  <li>生产 <code>scripts/quant/</code> 集成 — 等本周期验证完毕用户决定</li>
+</ul>
+
+</body>
+</html>
