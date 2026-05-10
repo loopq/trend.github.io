@@ -11,5 +11,13 @@ from scripts.backtest.strategy.protocol import (
     Signal,
     Strategy,
 )
+from scripts.backtest.strategy.registry import (
+    register,
+    get,
+    list_all,
+)
 
-__all__ = ["Decider", "Filter", "FilterContext", "Signal", "Strategy"]
+__all__ = [
+    "Decider", "Filter", "FilterContext", "Signal", "Strategy",
+    "register", "get", "list_all",
+]
