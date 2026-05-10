@@ -204,3 +204,104 @@ def _max_drawdown(curve: pd.Series) -> float:
     running_max = curve.cummax()
     dd = (curve / running_max - 1) * 100
     return float(dd.min())
+
+
+def run_portfolio_window_equal_weight(
+    index_data: Dict[str, IndexData],
+    full_results: Dict[str, List[BacktestResult]],
+    window_years: int,
+    as_of: pd.Timestamp,
+    cycle: str,
+) -> WindowResult:
+    """等权聚合：每指数 INDEX_CAPITAL 起步，单 cycle，不用 Calmar 权重。
+
+    与 run_portfolio_window 的差别：
+    - 不调 compute_allocation；每指数 1 个 result（list 长度=1）
+    - 在 N 年窗口内用 single-cycle BucketGroup 重跑得到该指数贡献
+
+    Args:
+        index_data: code -> IndexData
+        full_results: code -> [BacktestResult]（长度 1，单 cycle 跑出）
+        window_years: 窗口年数
+        as_of: 评估日
+        cycle: "D" / "W" / "M" —— 决定窗口内重跑用哪个 timeframe
+    """
+    window_start = as_of - pd.DateOffset(years=window_years)
+
+    bucket_series: List[pd.Series] = []
+    per_index_list: List[IndexContribution] = []
+
+    for code, results in full_results.items():
+        if code not in index_data or not results:
+            continue
+        data = index_data[code]
+        first = results[0]
+
+        # 等权：每指数 INDEX_CAPITAL 起步，单 cycle 跑
+        single = BucketGroup(
+            name=cycle,
+            buckets=[Bucket(timeframe=_tf(cycle), capital=INDEX_CAPITAL)],
+        )
+
+        try:
+            br = run_strategy(
+                data, single,
+                min_evaluation_start=window_start,
+                index_category=first.index_category,
+            )
+            eq = br.equity_curve
+            actual = br.evaluation_start
+        except ValueError:
+            # 该 bucket 在窗口内无法启动（数据不足）→ 闲置现金
+            eq = pd.Series([INDEX_CAPITAL], index=[as_of])
+            actual = as_of
+
+        if eq.empty:
+            eq = pd.Series([INDEX_CAPITAL], index=[window_start])
+            actual = window_start
+
+        # 迟到部分：prepend window_start → INITIAL 条目
+        if actual > window_start + pd.Timedelta(days=1) and window_start not in eq.index:
+            eq = pd.concat([pd.Series({window_start: INDEX_CAPITAL}), eq]).sort_index()
+
+        index_final = float(eq.iloc[-1])
+        bucket_series.append(eq.rename(f"{code}_{cycle}"))
+
+        is_late = actual > window_start + pd.Timedelta(days=1)
+        per_index_list.append(IndexContribution(
+            code=code,
+            name=first.index_name,
+            category=first.index_category,
+            initial=INDEX_CAPITAL,
+            final=index_final,
+            return_pct=(index_final / INDEX_CAPITAL - 1) * 100,
+            actual_start=actual,
+            is_late=is_late,
+        ))
+
+    index_count = len(per_index_list)
+    initial_capital = index_count * INDEX_CAPITAL
+    final_value = sum(p.final for p in per_index_list)
+    total_return = (final_value / initial_capital - 1) * 100 if initial_capital > 0 else 0.0
+    years = (as_of - window_start).days / 365.25
+    cagr = (
+        ((final_value / initial_capital) ** (1 / years) - 1) * 100
+        if years > 0 and initial_capital > 0
+        else 0.0
+    )
+
+    portfolio_curve = _aggregate_curves(bucket_series, window_start, as_of)
+    max_dd = _max_drawdown(portfolio_curve)
+
+    return WindowResult(
+        window_years=window_years,
+        window_start=window_start,
+        as_of=as_of,
+        index_count=index_count,
+        initial_capital=initial_capital,
+        final_value=final_value,
+        total_return=total_return,
+        cagr=cagr,
+        max_drawdown=max_dd,
+        per_index=per_index_list,
+    )
