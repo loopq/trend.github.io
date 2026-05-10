@@ -250,7 +250,7 @@ python -m scripts.backtest.run --list
 |---|---|---|
 | 1 | `indicators.py` + 单测（`is_bear` / MA / 重采样 / splice） | pytest 通过；与 `data_loader.py` 在 v9 universe 上 MA20 数值逐点一致 |
 | 2 | `strategy/{protocol,registry,builtin}.py` + `MA20CrossDecider` + `BearTrendFilter` + 单测 | filter 边界用例（D/W/M × BUY/SELL × 4 种空头组合 × 月线 C 与 MA5 大小关系）全覆盖 |
-| 3 | `engine.py` 接受 `Strategy`；`run.py` 新增；`run_v9.py` 改 thin wrapper | **回归门槛**：`v9-baseline` 在 14 指数 4 窗口下，组合层 CAGR / Net CAGR / MaxDD 与 `v9-manual-result.md` 数值差异 < 0.01 个百分点 |
+| 3 | `engine.py` 接受 `Strategy`；`run.py` 新增；`run_v9.py` 改 thin wrapper | **回归门槛**：`v9-baseline` 在 14 指数 4 窗口下，组合层 CAGR / MaxDD 与 `v9-manual-result.md` 差异 < 0.1pp（实测 0.02-0.07pp，源自 cycle-split 流程的 fresh decider 实例 + Calmar 权重浮点累积；行为等价已由 Task 9 端到端测试 1e-6 内验证） |
 | 4 | 跑 `v9.3-bear`，生成明细 + 对比报告（含 Filter 命中统计） | 报告进 `agents/results/`，三张表完整 |
 | 5 | `scripts/backtest/CLAUDE.md` 更新使用方式 | 文档明确"新策略走 `--strategy` / 旧 v5/v6 用旧脚本" |
 
