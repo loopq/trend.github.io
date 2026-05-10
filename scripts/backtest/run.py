@@ -46,6 +46,14 @@ def _load_universe(name: str):
 
 
 def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]):
+    """每个指数按 cycle (D/W/M) 拆开各跑一次新框架 run_with_strategy，
+    得三个 cycle-specific BacktestResult，喂给旧 run_portfolio_window 走
+    Calmar 权重 + 多窗口聚合，保证与历史 v9-manual-result 同口径。
+
+    Filter 仍按各自 scope 在 cycle 内生效（如 BearTrendFilter scope=("D","W")
+    时 D/W 两次 cycle-strategy 都会过 Filter，M 不过——与 spec 一致）。
+    """
+    from scripts.backtest.strategy import Strategy as _StrategyCls
     registry = _load_universe(universe_name)
     strat = get_strategy(strategy_name)
 
@@ -58,13 +66,29 @@ def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]
             logger.warning("  %s 数据缺失", meta.code)
             continue
         index_data[meta.code] = data
-        try:
-            r = run_with_strategy(data, strat,
-                                  min_evaluation_start=MIN_EVALUATION_START,
-                                  index_category=meta.category)
-            full_results[meta.code] = [r]  # 列表为兼容 window_engine 接口
-        except ValueError as e:
-            logger.warning("  %s 回测失败：%s", meta.code, e)
+
+        cycle_results: List[BacktestResult] = []
+        for cycle in strat.cycles:
+            # 每个 cycle 一个 fresh decider 实例（避免多 cycle 共享状态机）
+            cycle_strat = _StrategyCls(
+                name=f"{strategy_name}-{cycle}",
+                decider=type(strat.decider)(),
+                filters=strat.filters,
+                cycles=(cycle,),
+            )
+            try:
+                r = run_with_strategy(data, cycle_strat,
+                                      min_evaluation_start=MIN_EVALUATION_START,
+                                      index_category=meta.category)
+            except ValueError as e:
+                logger.warning("  %s/%s 回测失败：%s", meta.code, cycle, e)
+                continue
+            # rewrite strategy_name 以兼容 compute_allocation 的 D/W/M 期望
+            r.strategy_name = cycle
+            cycle_results.append(r)
+
+        if cycle_results:
+            full_results[meta.code] = cycle_results
 
     window_results: List[WindowResult] = []
     for n in windows:
