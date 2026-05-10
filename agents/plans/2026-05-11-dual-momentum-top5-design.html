@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="plan" content="./2026-05-11-dual-momentum-top5.md">
+<title>A Dual Momentum top-5（横截面动量）— Design</title>
+<style>
+:root {
+  --c-bg: #fafbfc; --c-text: #1f2328; --c-muted: #656d76; --c-accent: #0969da;
+  --c-border: #d0d7de; --c-code-bg: #f6f8fa; --c-warn: #bf8700; --c-warn-bg: #fff8c5;
+  --c-success: #1a7f37; --c-success-bg: #dafbe1; --c-danger: #d1242f; --c-danger-bg: #ffebe9;
+  --c-info-bg: #ddf4ff;
+}
+* { box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 15px; line-height: 1.65; color: var(--c-text); background: var(--c-bg);
+  max-width: 1080px; margin: 0 auto; padding: 28px 40px 80px; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--c-border); padding-bottom: 10px; margin-bottom: 8px; }
+h2 { font-size: 21px; margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--c-border); }
+h3 { font-size: 17px; color: var(--c-accent); margin-top: 28px; margin-bottom: 6px; }
+h4 { font-size: 14px; color: var(--c-muted); margin-top: 16px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+code { background: var(--c-code-bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, monospace; }
+pre { background: var(--c-code-bg); padding: 14px 18px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; border: 1px solid var(--c-border); }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; margin: 12px 0; font-size: 13.5px; width: 100%; }
+th, td { border: 1px solid var(--c-border); padding: 7px 11px; text-align: left; vertical-align: top; }
+th { background: var(--c-code-bg); font-weight: 600; }
+ul, ol { padding-left: 22px; } li { margin: 3px 0; }
+.meta { color: var(--c-muted); font-size: 13.5px; margin-top: 0; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; vertical-align: middle; }
+.tag-new { background: var(--c-success-bg); color: var(--c-success); }
+.tag-mod { background: var(--c-warn-bg); color: var(--c-warn); }
+.tag-keep { background: var(--c-info-bg); color: var(--c-accent); }
+.callout { border-left: 4px solid var(--c-accent); background: var(--c-info-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+.callout-warn { border-left-color: var(--c-warn); background: var(--c-warn-bg); }
+.callout-danger { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.tree { font-family: "SF Mono", Menlo, monospace; background: var(--c-code-bg); padding: 16px 20px; border-radius: 6px; font-size: 13px; line-height: 1.85; border: 1px solid var(--c-border); }
+.tree .new { color: var(--c-success); font-weight: 600; }
+.tree .mod { color: var(--c-warn); font-weight: 600; }
+.tree .comment { color: var(--c-muted); }
+nav.toc { background: var(--c-code-bg); padding: 14px 22px; border-radius: 6px; margin: 18px 0 24px; border: 1px solid var(--c-border); }
+nav.toc h4 { margin: 0 0 6px; color: var(--c-text); text-transform: none; letter-spacing: 0; font-size: 13px; }
+nav.toc ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+nav.toc li { margin: 2px 0; font-size: 13.5px; }
+nav.toc a { color: var(--c-accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+@media (max-width: 720px) { body { padding: 18px 16px 60px; font-size: 14.5px; } nav.toc ul { columns: 1; } }
+</style>
+</head>
+<body>
+
+<h1>A Dual Momentum top-5（横截面动量）— Design</h1>
+<p class="meta">
+  <strong>日期</strong>: 2026-05-11 ·
+  <strong>策略路线</strong>: B → C → <strong>A</strong> 第三周期 ·
+  <strong>范围</strong>: 仅 <code>scripts/backtest/</code> ·
+  <strong>Plan</strong>: <a href="./2026-05-11-dual-momentum-top5.md">2026-05-11-dual-momentum-top5.md</a>
+</p>
+
+<nav class="toc">
+  <h4>目录</h4>
+  <ul>
+    <li><a href="#isolation">0. 隔离保证</a></li>
+    <li><a href="#bg">1. 背景与目标</a></li>
+    <li><a href="#algo">2. Dual Momentum 算法</a></li>
+    <li><a href="#arch">3. 架构改动（含 dispatch / params / NoOp Decider）</a></li>
+    <li><a href="#cross-sectional">4. 横截面 vs 等权（与 cycle 1/2 对比）</a></li>
+    <li><a href="#aggregator">5. _run_cross_sectional_topk 流程</a></li>
+    <li><a href="#window">6. run_portfolio_window_cross_sectional_topk 设计</a></li>
+    <li><a href="#compare-report">7. compare_report 兼容</a></li>
+    <li><a href="#test">8. 测试范围</a></li>
+    <li><a href="#acceptance">9. 验收标准</a></li>
+    <li><a href="#report">10. 报告内容（5 策略对比）</a></li>
+    <li><a href="#invariants">11. 关键不变量</a></li>
+    <li><a href="#risks">12. 风险与权衡</a></li>
+    <li><a href="#out-of-scope">13. 不在范围</a></li>
+  </ul>
+</nav>
+
+<h2 id="isolation">0. 隔离保证</h2>
+
+<div class="callout-danger callout">
+<strong>所有改动对 v9-baseline / v9.3-bear / faber-gtaa / donchian-200 / V5-V9 历史入口零行为变更。</strong> Cycle 1+2 已建立的硬门槛 5 条隔离断言在本周期 task 5 全量复跑——任何破坏现有数值的改动必须回退。Base SHA 仍是 <code>1bb961c</code>。
+</div>
+
+<p>禁触：<code>scripts/quant/</code>、<code>scripts/main.py</code>、<code>docs/</code>。</p>
+
+<h2 id="bg">1. 背景与目标</h2>
+
+<p>Cycle 1 / 2 落地的两个 V10 Decider 策略（faber-gtaa / donchian-200）都是<strong>每指数独立 in/out</strong>的逻辑——每个指数自己的状态机决定自己持不持仓。组合层是简单等权（INDEX_CAPITAL 起步 × 27 个指数 = 270k）。</p>
+
+<p>Dual Momentum（Antonacci 2014）是<strong>横截面 top-K</strong>选股逻辑——每月 universe scan 全部 27 个指数，按 lookback 期收益排序，挑 top-5 等权持有，下月 rebalance。这与 in/out 逻辑完全不同：</p>
+
+<ul>
+  <li>in/out：决策粒度 = per-index per-bar（27 个独立判断）</li>
+  <li>cross-sectional：决策粒度 = portfolio per-rebalance（1 个 universe-wide 判断）</li>
+</ul>
+
+<p><strong>Cycle 3 目标</strong>：在 V10 框架下落地 cross-sectional-topk aggregator + Dual Momentum top-5 策略，与 cycle 1 / 2 的两个 in/out 策略形成"决策粒度对照实验"。最终 5 策略对比报告。</p>
+
+<h2 id="algo">2. Dual Momentum 算法</h2>
+
+<p>每月 rebalance（月线 close 时点）：</p>
+
+<ol>
+  <li>对 universe 中每个指数 i 算 <strong>lookback 期收益</strong>：
+    <code>r_i = close_i[t] / close_i[t-L] - 1</code>
+    （L = 12 月，从论文）
+  </li>
+  <li><strong>绝对动量过滤</strong>：仅保留 r_i ≥ <code>abs_threshold</code>（默认 0%）的指数。低于阈值的视为"无趋势"，不持仓。</li>
+  <li><strong>相对动量排序</strong>：在合格指数中按 r_i 降序排，取 top-K（K=5）。</li>
+  <li><strong>等权持有</strong>：当前资金平均分给 top-K 持仓直到下月 rebalance。</li>
+  <li>不合格 → 不换债券/现金（简化），持仓资金 idle 在 cash 池（不产生收益）。</li>
+</ol>
+
+<p>Antonacci 论文用 K=1 但 universe 仅 4 个 ETF。本设计 universe 27 个，K=5 提供合理分散度。</p>
+
+<h2 id="arch">3. 架构改动</h2>
+
+<h3>3.1 文件结构</h3>
+
+<div class="tree">
+scripts/backtest/<br>
+├── strategy/<br>
+│   ├── protocol.py    <span class="mod">[mod]</span> Strategy 加 <code>params: Dict[str, Any]</code> 字段<br>
+│   └── builtin.py     <span class="mod">[mod]</span> 末尾追加 <code>DualMomentumNoOpDecider</code> 类 + <code>@register("dual-momentum-top5")</code> 工厂<br>
+├── window_engine.py   <span class="mod">[mod]</span> 追加 <code>run_portfolio_window_cross_sectional_topk</code> 函数<br>
+├── run.py             <span class="mod">[mod]</span> dispatch 启用 + <code>_run_cross_sectional_topk</code> 实现替换 stub<br>
+├── compare_report.py  <span class="mod">[mod]</span> <code>write_compare_report</code> 兼容空 per-index full_results<br>
+├── cross_sectional.py <span class="new">[new]</span> 横截面动量算法独立模块（lookback / filter / topk / schedule）<br>
+└── test_cross_sectional.py <span class="new">[new]</span> 横截面算法单测<br>
+</div>
+
+<h3>3.2 Strategy.params 字段</h3>
+
+<pre><code>@dataclass(frozen=True)
+class Strategy:
+    name: str
+    decider: Decider
+    filters: Tuple[Filter, ...] = field(default_factory=tuple)
+    cycles: Tuple[str, ...] = ("D", "W", "M")
+    aggregator: str = "cycle-calmar"
+    params: Dict[str, Any] = field(default_factory=dict)   # 新增（向后兼容）</code></pre>
+
+<p>用 <code>params</code> 字段塞策略特定参数（lookback_months / topk / abs_threshold），避免给 Strategy 加越来越多的字段。</p>
+
+<h3>3.3 dispatch 启用</h3>
+
+<p>Cycle 1 T4 在 <code>_run_one_strategy</code> 留了 stub：</p>
+
+<pre><code>elif strat.aggregator == "cross-sectional-topk":
+    raise NotImplementedError("cross-sectional-topk 留给 A 周期实施（Dual Momentum）")</code></pre>
+
+<p>Cycle 3 替换为：</p>
+
+<pre><code>elif strat.aggregator == "cross-sectional-topk":
+    return _run_cross_sectional_topk(strat, registry, windows)</code></pre>
+
+<h3>3.4 NoOp Decider（占位）</h3>
+
+<p>cross-sectional 路径不走 per-bar decide 逻辑，但 Strategy Protocol 要求 <code>decider: Decider</code>。用 <code>DualMomentumNoOpDecider</code> 占位：</p>
+
+<pre><code>class DualMomentumNoOpDecider:
+    """cross-sectional 策略占位 Decider。decide 永远返回 None。
+
+    cross-sectional 决策走 _run_cross_sectional_topk 的 universe-wide scan，
+    不调用 decide(*, cycle, bar, position_shares)。本类仅满足 Protocol 契约。
+    """
+    name = "dual-momentum-noop"
+    required_indicators: Tuple[Tuple[str, str, int], ...] = ()
+
+    def decide(self, *, cycle, bar, position_shares):
+        return None</code></pre>
+
+<h2 id="cross-sectional">4. 横截面 vs 等权对比</h2>
+
+<table>
+  <tr><th>维度</th><th>equal-weight（cycle 1+2）</th><th>cross-sectional-topk（cycle 3）</th></tr>
+  <tr><td>决策粒度</td><td>per-index per-bar</td><td>portfolio per-rebalance</td></tr>
+  <tr><td>资金分配</td><td>每指数 INDEX_CAPITAL 固定</td><td>top-K 等分总资金，rebalance 时重新分配</td></tr>
+  <tr><td>持仓数量</td><td>0 ~ 27（独立决定）</td><td>0 ~ K（K=5，universe-wide 最大）</td></tr>
+  <tr><td>Decider 用途</td><td>核心 BUY/SELL 信号</td><td>NoOp 占位</td></tr>
+  <tr><td>指数被持仓时</td><td>该指数自己的资金</td><td>共享资金池的 1/K 份</td></tr>
+  <tr><td>per-index BacktestResult</td><td>每指数 1 个</td><td>无（compare_report 跳过）</td></tr>
+</table>
+
+<h2 id="aggregator">5. _run_cross_sectional_topk 流程</h2>
+
+<ol>
+  <li>校验 <code>strategy.cycles == ("M",)</code>（cross-sectional 仅月度 rebalance）</li>
+  <li>从 <code>strategy.params</code> 读 lookback_months / topk / abs_threshold</li>
+  <li>load 所有指数 monthly close 序列</li>
+  <li>调 <code>cross_sectional.build_holdings_schedule(monthly_close_by_code, lookback, topk, abs_threshold)</code> 返回 <code>Dict[Timestamp, Set[code]]</code>（每月 rebalance 时的 holdings 集合）</li>
+  <li>对每个窗口 N 调 <code>run_portfolio_window_cross_sectional_topk</code> 算 portfolio equity_curve + WindowResult</li>
+  <li>返回 <code>(strategy, registry, index_data, full_results={}, window_results)</code>——<strong>full_results 为空 dict</strong>，告知 compare_report"该策略无 per-index 数据"</li>
+</ol>
+
+<h2 id="window">6. run_portfolio_window_cross_sectional_topk 设计</h2>
+
+<ol>
+  <li>窗口起点 = as_of − N 年</li>
+  <li>初始资金 = TOTAL_CAPITAL（= 27 × INDEX_CAPITAL = 270k，与 equal-weight 等价）</li>
+  <li>从 holdings_schedule 取窗口内的 rebalance dates</li>
+  <li>对每个月 rebalance：
+    <ul>
+      <li>当前总资金 = 上月末资金（from equity_curve）</li>
+      <li>本月 holdings = schedule[date]</li>
+      <li>分给 holdings 后，下月按各持仓的 close 涨跌算月末资金</li>
+      <li>portfolio_return_t = mean of holdings_{t-1} returns from close[t-1] to close[t]</li>
+    </ul>
+  </li>
+  <li>累积 equity_curve（月度 series）→ 算 CAGR + MDD</li>
+  <li>WindowResult 的 per_index = []（横截面无 per-index 概念）</li>
+</ol>
+
+<h2 id="compare-report">7. compare_report 兼容</h2>
+
+<p><code>write_compare_report</code> 在生成分指数差异表时，目前迭代 <code>registry</code> 取 <code>other_full[meta.code]</code>。如果 <code>other_full</code> 为空 dict（cross-sectional 策略），diff 列表为空。</p>
+
+<p><strong>兼容方案</strong>：<code>render_per_index_diff_table</code> 现有"无显著差异指数"提示扩展为"该策略走横截面，不可逐指数对比"提示。判定：<code>if not other_full: return "（该策略走横截面 top-K，无 per-index 持仓数据，不可逐指数对比 baseline）"</code>。</p>
+
+<h2 id="test">8. 测试范围</h2>
+
+<table>
+  <tr><th>#</th><th>测试名</th><th>目标</th></tr>
+  <tr><td>1</td><td>test_strategy_params_default_empty</td><td>Strategy.params 默认 = <code>{}</code> 不影响现有策略</td></tr>
+  <tr><td>2</td><td>test_strategy_params_custom</td><td>Strategy(params={...}) 接受自定义 dict</td></tr>
+  <tr><td>3</td><td>test_compute_lookback_returns</td><td>toy 月线序列计算 lookback 期收益正确</td></tr>
+  <tr><td>4</td><td>test_compute_lookback_insufficient_data</td><td>数据 &lt; lookback+1 月的指数返回 None</td></tr>
+  <tr><td>5</td><td>test_filter_qualifying_above_threshold</td><td>abs_threshold 过滤逻辑（&lt; threshold 排除、≥ 保留）</td></tr>
+  <tr><td>6</td><td>test_select_topk_by_return</td><td>按 return 降序取 top-K</td></tr>
+  <tr><td>7</td><td>test_select_topk_fewer_than_k</td><td>合格指数 &lt; K 时返回所有合格</td></tr>
+  <tr><td>8</td><td>test_build_holdings_schedule_empty_no_qualifying</td><td>所有指数都不合格 → schedule 该月 = 空 set</td></tr>
+  <tr><td>9</td><td>test_portfolio_equity_no_holdings_flat</td><td>持仓为空的月 equity 不变</td></tr>
+  <tr><td>10</td><td>test_portfolio_equity_with_holdings_compound</td><td>有 holdings 月按 mean(returns) 累积</td></tr>
+  <tr><td>11</td><td>test_dual_momentum_top5_registered</td><td>注册 + cycles=("M",) + aggregator + params</td></tr>
+  <tr><td>12</td><td>test_compare_report_skips_cross_sectional_per_index</td><td>compare_report 对空 full_results 显示提示而非崩溃</td></tr>
+  <tr><td>13</td><td>test_dispatch_routes_to_cross_sectional</td><td>dispatch 路由 cross-sectional-topk → _run_cross_sectional_topk</td></tr>
+</table>
+
+<h2 id="acceptance">9. 验收标准</h2>
+
+<h3>9.1 隔离断言（硬门槛）</h3>
+
+<ol>
+  <li><code>git diff 1bb961c..HEAD -- scripts/quant/ scripts/main.py docs/</code> 输出为空</li>
+  <li>pytest scripts/backtest 全过（cycle 2 后 75 个 + cycle 3 加 13 个 = ~88 个，零失败）+ test_signal_manual <code>All tests passed.</code></li>
+  <li>v9-baseline on v9 universe 4 窗口数值字符级一致：3年 15.32%/-12.55%、5年 10.98%/-19.69%、8年 11.51%/-22.12%、10年 9.29%/-22.25%</li>
+  <li>v9-baseline + v9.3-bear on v9 universe compare 数值字符级一致</li>
+  <li>v9-baseline + v9.3-bear on main-online universe compare 数值字符级一致</li>
+</ol>
+
+<h3>9.2 新功能验收</h3>
+
+<ol>
+  <li>13 个新单测全过</li>
+  <li><code>--list</code> 输出含 <code>dual-momentum-top5</code> 一行</li>
+  <li><code>--strategy dual-momentum-top5 --universe combined-27 --windows 3</code> 跑通：CAGR / MDD 数值合理</li>
+  <li>5 策略 compare（baseline / bear / faber / donchian / dual-momentum）on combined-27 报告生成成功；分指数差异表对 dual-momentum 显示"横截面"提示</li>
+</ol>
+
+<h2 id="report">10. 报告内容</h2>
+
+<p>生成 <code>agents/results/2026-05-11-compare-...-vs-dual-momentum-top5.md</code>，包含：</p>
+
+<ol>
+  <li>一句话结论：dual-momentum vs 各 4 策略 4 窗口 ΔCAGR / ΔMaxDD</li>
+  <li>组合层对比表（自动生成，5 策略 + 4 Δ 行 per 窗口 = 36 行）</li>
+  <li>"决策粒度对照"段：per-index in/out（faber/donchian） vs portfolio top-K（dual-momentum）的胜负画像</li>
+  <li>分指数差异表：bear / faber / donchian 各一份；dual-momentum 跳过（"横截面"提示）</li>
+  <li>分指数模式分析（适用于 in/out 三策略，dual-momentum 仅有组合层数据）</li>
+  <li>持仓时序观察：dual-momentum 在主要 bull/bear 阶段 holdings 变化（看 schedule 抽样）</li>
+  <li>后续方向：cycle 4 候选（混合 universe / 多窗口 lookback / 加现金对冲）</li>
+</ol>
+
+<h2 id="invariants">11. 关键不变量</h2>
+
+<ul>
+  <li><strong>Look-ahead 严禁</strong>：lookback return 必须用 close[t] vs close[t-L]，t 是当前 rebalance 月；t+1 月的 portfolio_return 用 t 月末的 holdings × (close[t+1] / close[t] - 1)</li>
+  <li><strong>资金守恒</strong>：所有月 portfolio equity 之和应等于初始资金 × 累积 portfolio return；不能凭空产生或丢失资金</li>
+  <li><strong>持仓数 ≤ K</strong>：select_topk 严格保证 |holdings| ≤ K</li>
+  <li><strong>合格性早过滤</strong>：abs_threshold 在排序前过滤；若所有指数都 &lt; threshold，holdings = 空 set，该月 equity 不变（cash idle）</li>
+  <li><strong>per-cycle 独立</strong>：本策略仅跑 M cycle，cycles=("M",) 强制约束</li>
+</ul>
+
+<h2 id="risks">12. 风险与权衡</h2>
+
+<table>
+  <tr><th>风险</th><th>缓解</th></tr>
+  <tr><td>cross-sectional 路径不复用 V10 Decider 框架，引入新 code path</td><td>新模块 <code>cross_sectional.py</code> 独立 + 单测覆盖核心逻辑；run.py / window_engine.py 改动最小</td></tr>
+  <tr><td>Strategy.params 用 <code>Dict[str, Any]</code>，类型弱、易写错 key</td><td>cross_sectional.py 入口处显式从 params 读字段、给默认值；测试覆盖默认 + 自定义</td></tr>
+  <tr><td>compare_report 对横截面策略的分指数表语义不同（in/out 是 per-index 持仓表现，cross-sectional 该指数仅在被选中期持有）</td><td>跳过 cross-sectional 的分指数表，加文字说明；不强行编造 per-index 数据</td></tr>
+  <tr><td>K=5 在 27 universe 上是否合理（≈ 18.5%）需实测验证</td><td>注册新策略名 <code>dual-momentum-top3</code> / <code>dual-momentum-top7</code> 即可扫参，框架天然支持</td></tr>
+  <tr><td>不合格时 cash idle，bear market 全程 0 收益（not even 债券对冲）</td><td>设计选择（保持简洁）；后续可扩展 fallback_to_cash → fallback_to_bond，但需要新数据源</td></tr>
+</table>
+
+<h2 id="out-of-scope">13. 不在范围</h2>
+
+<ul>
+  <li>多参数扫描（K=3/7、lookback 6/9/12/24 月等变体）— 验证完 baseline 后用户决定要不要扫</li>
+  <li>fallback to bond/T-bill — 简化为 cash idle</li>
+  <li>动态 K 调整（如根据 volatility regime 改变 K）— 留 cycle 5+</li>
+  <li>position sizing（按 volatility 加权而非等权）— 留 cycle 5+</li>
+  <li>cycle 4+ 混合 universe / 组合策略 — 单独 plan</li>
+  <li>生产 <code>scripts/quant/</code> 集成 — 等本周期验证完毕用户决定</li>
+</ul>
+
+</body>
+</html>
