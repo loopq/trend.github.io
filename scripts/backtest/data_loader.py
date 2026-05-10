@@ -34,28 +34,19 @@ class IndexData:
     monthly: pd.DataFrame  # bar_date(index), open, high, low, close, ma20
 
 
-def _resample_ohlc(df: pd.DataFrame, freq: str) -> pd.DataFrame:
-    """按 PeriodIndex(freq) 分组重采样，bar_date = 组内最大交易日（§5.2）。
+from scripts.backtest.indicators import (
+    _resample_ohlc as _ohlc_resample,
+    compute_ma,
+)
 
-    freq: 'W-FRI' 或 'M'
-    """
-    period = pd.PeriodIndex(df["date"], freq=freq)
-    grouped = df.groupby(period)
-    resampled = grouped.agg(
-        bar_date=("date", "max"),
-        open=("open", "first"),
-        high=("high", "max"),
-        low=("low", "min"),
-        close=("close", "last"),
-    )
-    resampled = resampled.set_index("bar_date").sort_index()
-    return resampled
+
+def _resample_ohlc(df: pd.DataFrame, freq: str) -> pd.DataFrame:
+    return _ohlc_resample(df, freq)
 
 
 def _attach_ma20(df: pd.DataFrame) -> pd.DataFrame:
-    """在 close 列上计算 20 期 MA，首 19 行 NaN。"""
     df = df.copy()
-    df["ma20"] = df["close"].rolling(20).mean()
+    df["ma20"] = compute_ma(df["close"], window=20)
     return df
 
 
