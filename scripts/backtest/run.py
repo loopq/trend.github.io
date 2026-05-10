@@ -116,17 +116,14 @@ def _load_universe(name: str):
     return UNIVERSES[name]()
 
 
-def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]):
-    """每个指数按 cycle (D/W/M) 拆开各跑一次新框架 run_with_strategy，
-    得三个 cycle-specific BacktestResult，喂给旧 run_portfolio_window 走
-    Calmar 权重 + 多窗口聚合，保证与历史 v9-manual-result 同口径。
-
-    Filter 仍按各自 scope 在 cycle 内生效（如 BearTrendFilter scope=("D","W")
-    时 D/W 两次 cycle-strategy 都会过 Filter，M 不过——与 spec 一致）。
+def _run_cycle_calmar(strategy, registry, windows: List[int]):
+    """cycle-calmar 路径（v9-baseline / v9.3-bear 用）：
+    每指数 D/W/M 三 cycle 拆开跑 → Calmar 权重切 → 多窗口聚合。
+    剥离自原 _run_one_strategy 函数体，逻辑零改动。
     """
     from scripts.backtest.strategy import Strategy as _StrategyCls
-    registry = _load_universe(universe_name)
-    strat = get_strategy(strategy_name)
+    strat = strategy
+    strategy_name = strat.name
 
     logger.info("加载 %d 个指数数据 ...", len(registry))
     index_data: Dict[str, IndexData] = {}
@@ -146,6 +143,7 @@ def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]
                 decider=type(strat.decider)(),
                 filters=strat.filters,
                 cycles=(cycle,),
+                aggregator=strat.aggregator,
             )
             try:
                 r = run_with_strategy(data, cycle_strat,
@@ -168,6 +166,26 @@ def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]
         window_results.append(wr)
 
     return strat, registry, index_data, full_results, window_results
+
+
+def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]):
+    """Dispatch 路由：按 strategy.aggregator 走不同流程。"""
+    strat = get_strategy(strategy_name)
+    registry = _load_universe(universe_name)
+
+    if strat.aggregator == "cycle-calmar":
+        return _run_cycle_calmar(strat, registry, windows)
+    elif strat.aggregator == "equal-weight":
+        return _run_equal_weight(strat, registry, windows)
+    elif strat.aggregator == "cross-sectional-topk":
+        raise NotImplementedError("cross-sectional-topk 留给 A 周期实施（Dual Momentum）")
+    else:
+        raise ValueError(f"unknown aggregator: {strat.aggregator!r}")
+
+
+def _run_equal_weight(strategy, registry, windows: List[int]):
+    """stub，Task 5 实现。"""
+    raise NotImplementedError("Task 5 will implement this")
 
 
 def main() -> int:
