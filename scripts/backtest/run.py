@@ -24,8 +24,10 @@ from scripts.backtest.engine import BacktestResult, run_with_strategy
 from scripts.backtest.strategy import get as get_strategy, list_all
 from scripts.backtest.v9_registry import build_v9_registry
 from scripts.backtest.window_engine import (
+    INDEX_CAPITAL,
     WindowResult,
     run_portfolio_window,
+    run_portfolio_window_equal_weight,   # 新增（Task 6 实现）
 )
 
 logger = logging.getLogger(__name__)
@@ -184,8 +186,48 @@ def _run_one_strategy(strategy_name: str, universe_name: str, windows: List[int]
 
 
 def _run_equal_weight(strategy, registry, windows: List[int]):
-    """stub，Task 5 实现。"""
-    raise NotImplementedError("Task 5 will implement this")
+    """equal-weight 路径（Faber GTAA / Donchian 用）：
+    单 cycle、每指数 INDEX_CAPITAL 等权满仓 in/out、不用 Calmar 权重。
+
+    要求 strategy.cycles 长度 = 1。
+    """
+    if len(strategy.cycles) != 1:
+        raise ValueError(
+            f"equal-weight aggregator requires single cycle, got {strategy.cycles}"
+        )
+    cycle = strategy.cycles[0]
+    strategy_name = strategy.name
+
+    logger.info("加载 %d 个指数数据 ...", len(registry))
+    index_data: Dict[str, IndexData] = {}
+    full_results: Dict[str, List[BacktestResult]] = {}
+    for meta in registry:
+        data = load_index(meta.code, meta.source, meta.name)
+        if data is None or data.daily.empty:
+            logger.warning("  %s 数据缺失", meta.code)
+            continue
+        index_data[meta.code] = data
+        try:
+            r = run_with_strategy(
+                data, strategy,    # cycles=(cycle,) 时 engine 内只跑该 cycle
+                min_evaluation_start=MIN_EVALUATION_START,
+                index_category=meta.category,
+            )
+            # 注意：equal-weight **不**走 compute_allocation，所以不 rewrite r.strategy_name。
+            # r.strategy_name 保持 = strategy.name（如 "faber-gtaa"），报告里直接显示策略名。
+            full_results[meta.code] = [r]
+        except ValueError as e:
+            logger.warning("  %s 回测失败：%s", meta.code, e)
+
+    window_results: List[WindowResult] = []
+    for n in windows:
+        wr = run_portfolio_window_equal_weight(
+            index_data, full_results, n, AS_OF, cycle=cycle,
+        )
+        logger.info("  %d 年 总 CAGR %.2f%% / MDD %.2f%%", n, wr.cagr, wr.max_drawdown)
+        window_results.append(wr)
+
+    return strategy, registry, index_data, full_results, window_results
 
 
 def main() -> int:
