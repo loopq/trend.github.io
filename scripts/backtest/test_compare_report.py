@@ -60,3 +60,25 @@ def test_filter_hit_table_lists_per_index_stats():
     assert "光伏产业" in md
     assert "25.0" in md
     assert "-3.5" in md
+
+
+def test_portfolio_table_n3_strategies():
+    """3 策略对比，第一个作 base，输出 3 行策略 + 2 行 Δ per 窗口。"""
+    a_results = [_make_window_result(3, 14.81, -25.0, 50.0)]
+    b_results = [_make_window_result(3, 16.50, -22.0, 60.0)]
+    c_results = [_make_window_result(3, 12.00, -20.0, 40.0)]
+    md = render_portfolio_table([
+        ("v9-baseline", a_results),
+        ("v9.3-bear", b_results),
+        ("faber-gtaa", c_results),
+    ])
+    # 三策略名都在
+    assert "v9-baseline" in md
+    assert "v9.3-bear" in md
+    assert "faber-gtaa" in md
+    # 两个 Δ 行（每个非 base 策略对 base 一个 Δ）
+    assert md.count("Δ") == 2
+    # bear vs baseline 的 ΔCAGR = +1.69pp
+    assert "+1.69" in md
+    # faber vs baseline 的 ΔCAGR = -2.81pp
+    assert "-2.81" in md

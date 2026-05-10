@@ -259,12 +259,11 @@ def main() -> int:
 
     if args.compare:
         names = [n.strip() for n in args.compare.split(",") if n.strip()]
-        if len(names) != 2:
-            raise SystemExit("--compare 需要恰好两个策略名（逗号分隔）")
+        if len(names) < 2:
+            raise SystemExit("--compare 需要至少两个策略名（逗号分隔）")
         results_by_strategy = {}
         for n in names:
             results_by_strategy[n] = _run_one_strategy(n, args.universe, windows)
-        # 报告生成由 Task 12 实现的 compare_report.write_compare_report 处理
         from scripts.backtest.compare_report import write_compare_report
         write_compare_report(results_by_strategy, windows, RESULTS_DIR)
         return 0
