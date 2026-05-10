@@ -329,6 +329,7 @@ git commit -m "[backtest] data_loader 内部 MA/重采样切到 indicators（行
 **Files:**
 - Modify: `scripts/backtest/strategies.py`
 - Modify: `scripts/backtest/engine.py`
+- Modify: `scripts/backtest/window_engine.py`（**反思补登记**：原清单只列 `run_*.py`，但 `window_engine.py` 也 import 并实例化 `Strategy`，需一并更新）
 - Modify: `scripts/backtest/run_backtest.py`
 - Modify: `scripts/backtest/run_v5.py`
 - Modify: `scripts/backtest/run_v6.py`

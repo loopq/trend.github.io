@@ -17,7 +17,7 @@ import pandas as pd
 from scripts.backtest.data_loader import IndexData
 from scripts.backtest.engine import BacktestResult, run_strategy
 from scripts.backtest.reporter import compute_allocation
-from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, Strategy
+from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, BucketGroup
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ def run_portfolio_window(
             active_strategies += 1
 
             bucket_cap = info["amount"]
-            single = Strategy(
+            single = BucketGroup(
                 name=strat_name,
                 buckets=[Bucket(timeframe=_tf(strat_name), capital=bucket_cap)],
             )

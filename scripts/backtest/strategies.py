@@ -1,4 +1,4 @@
-"""策略定义：D/W/M 三种单周期独立策略（V2）。"""
+"""D/W/M 三种单周期 BucketGroup 容器与 factory（V2，兼容旧 Strategy alias）。"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -51,7 +51,9 @@ class BucketGroup:
     buckets: List[Bucket]
 
 
-# 兼容 alias：旧名字保留指向新类，避免直接引用旧 Strategy 的代码立刻坏
+# 兼容 alias：旧名字保留指向新类，避免直接引用旧 Strategy 的代码立刻坏。
+# TODO(T14): 新框架（scripts/backtest/strategy/）稳定后删除此 alias，避免与
+#            scripts.backtest.strategy.Strategy（新概念，Decider+Filter 组合体）命名碰撞。
 Strategy = BucketGroup
 
 
