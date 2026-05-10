@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="plan" content="./2026-05-10-faber-gtaa-and-equal-weight-aggregator.md">
+<title>共享前置 + B Faber GTAA — Design</title>
+<style>
+:root {
+  --c-bg: #fafbfc;
+  --c-text: #1f2328;
+  --c-muted: #656d76;
+  --c-accent: #0969da;
+  --c-border: #d0d7de;
+  --c-code-bg: #f6f8fa;
+  --c-warn: #bf8700;
+  --c-warn-bg: #fff8c5;
+  --c-success: #1a7f37;
+  --c-success-bg: #dafbe1;
+  --c-danger: #d1242f;
+  --c-danger-bg: #ffebe9;
+  --c-info-bg: #ddf4ff;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--c-text);
+  background: var(--c-bg);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 40px 80px;
+}
+h1 { font-size: 26px; border-bottom: 2px solid var(--c-border); padding-bottom: 10px; margin-bottom: 8px; }
+h2 { font-size: 21px; margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--c-border); }
+h3 { font-size: 17px; color: var(--c-accent); margin-top: 28px; margin-bottom: 6px; }
+h4 { font-size: 14px; color: var(--c-muted); margin-top: 16px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+p { margin: 8px 0; }
+code { background: var(--c-code-bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, Consolas, monospace; }
+pre { background: var(--c-code-bg); padding: 14px 18px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; border: 1px solid var(--c-border); }
+pre code { background: none; padding: 0; font-size: inherit; }
+table { border-collapse: collapse; margin: 12px 0; font-size: 13.5px; width: 100%; }
+th, td { border: 1px solid var(--c-border); padding: 7px 11px; text-align: left; vertical-align: top; }
+th { background: var(--c-code-bg); font-weight: 600; }
+ul, ol { padding-left: 22px; }
+li { margin: 3px 0; }
+.meta { color: var(--c-muted); font-size: 13.5px; margin-top: 0; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 500; vertical-align: middle; }
+.tag-new { background: var(--c-success-bg); color: var(--c-success); }
+.tag-mod { background: var(--c-warn-bg); color: var(--c-warn); }
+.tag-keep { background: var(--c-info-bg); color: var(--c-accent); }
+.tag-gate { background: var(--c-danger-bg); color: var(--c-danger); }
+.callout { border-left: 4px solid var(--c-accent); background: var(--c-info-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+.callout-warn { border-left-color: var(--c-warn); background: var(--c-warn-bg); }
+.callout-danger { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.callout-success { border-left-color: var(--c-success); background: var(--c-success-bg); }
+.svg-container { text-align: center; margin: 18px 0; }
+.tree { font-family: "SF Mono", Menlo, Consolas, monospace; background: var(--c-code-bg); padding: 16px 20px; border-radius: 6px; font-size: 13px; line-height: 1.85; border: 1px solid var(--c-border); }
+.tree .new { color: var(--c-success); font-weight: 600; }
+.tree .mod { color: var(--c-warn); font-weight: 600; }
+.tree .keep { color: var(--c-muted); }
+.tree .comment { color: var(--c-muted); }
+nav.toc { background: var(--c-code-bg); padding: 14px 22px; border-radius: 6px; margin: 18px 0 24px; border: 1px solid var(--c-border); }
+nav.toc h4 { margin: 0 0 6px; color: var(--c-text); text-transform: none; letter-spacing: 0; font-size: 13px; }
+nav.toc ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+nav.toc li { margin: 2px 0; font-size: 13.5px; }
+nav.toc a { color: var(--c-accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 14px; font-size: 13.5px; margin: 8px 0; }
+.kv dt { color: var(--c-muted); font-weight: 500; }
+.kv dd { margin: 0; }
+.k-comment { color: #6e7781; }
+.k-key { color: #cf222e; }
+.k-str { color: #0a3069; }
+.k-num { color: #0550ae; }
+.k-fn { color: #8250df; }
+hr { border: none; border-top: 1px solid var(--c-border); margin: 24px 0; }
+@media (max-width: 720px) {
+  body { padding: 18px 16px 60px; font-size: 14.5px; }
+  nav.toc ul { columns: 1; }
+}
+</style>
+</head>
+<body>
+
+<h1>共享前置 + B Faber GTAA — Design</h1>
+<p class="meta">
+  <strong>日期</strong>: 2026-05-10 ·
+  <strong>策略路线</strong>: B → C → A 第一周期 ·
+  <strong>范围</strong>: 仅 <code>scripts/backtest/</code> ·
+  <strong>Plan</strong>: <a href="./2026-05-10-faber-gtaa-and-equal-weight-aggregator.md">2026-05-10-faber-gtaa-and-equal-weight-aggregator.md</a> <span class="meta">（writing-plans 阶段生成）</span>
+</p>
+
+<nav class="toc">
+  <h4>目录</h4>
+  <ul>
+    <li><a href="#isolation">0. 隔离保证（最高优先级）</a></li>
+    <li><a href="#bg">1. 背景与目标</a></li>
+    <li><a href="#universe">2. Universe combined-27</a></li>
+    <li><a href="#aggregator">3. 框架改动：aggregator 字段</a></li>
+    <li><a href="#dispatch">4. run.py dispatch</a></li>
+    <li><a href="#equal-weight">5. equal-weight 流程</a></li>
+    <li><a href="#faber">6. B Faber GTAA 策略</a></li>
+    <li><a href="#report">7. 报告改造（N 策略对比）</a></li>
+    <li><a href="#acceptance">8. 验收标准</a></li>
+    <li><a href="#test">9. 测试范围</a></li>
+    <li><a href="#report-content">10. 报告内容（B 周期完成后）</a></li>
+    <li><a href="#invariants">11. 关键不变量</a></li>
+    <li><a href="#risks">12. 风险与权衡</a></li>
+    <li><a href="#out-of-scope">13. 不在范围</a></li>
+  </ul>
+</nav>
+
+<!-- ============================================== -->
+<h2 id="isolation">0. 隔离保证（最高优先级）</h2>
+
+<div class="callout-danger callout">
+<strong>所有改动对 v9-baseline / v9.3-bear / V5-V9 历史入口零行为变更。</strong> 这是本周期最高优先级铁律——任何破坏现有 MA20 那套数值的改动都必须回退。
+</div>
+
+<table>
+<thead><tr><th>项</th><th>具体保证</th></tr></thead>
+<tbody>
+<tr><td><code>Strategy</code> dataclass</td><td>新字段加在末尾且有默认值。<code>Strategy(name=..., decider=..., filters=...)</code> 旧调用保持等价</td></tr>
+<tr><td><code>run.py:_run_one_strategy</code></td><td><code>aggregator == "cycle-calmar"</code> 分支保持现有逻辑一字不变（剥离成 <code>_run_cycle_calmar</code> 私有函数）</td></tr>
+<tr><td><code>engine.run_with_strategy / run_strategy</code></td><td>不动；新逻辑放新函数 <code>run_equal_weight</code></td></tr>
+<tr><td><code>compare_report</code></td><td>render 函数在 N=2 输入下输出与现有等价</td></tr>
+<tr><td>测试套件</td><td>跑完后 <code>pytest scripts/backtest/</code> 整套（含 v9-baseline / v9.3-bear 数值断言）必须 zero regression</td></tr>
+</tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="bg">1. 背景与目标</h2>
+
+<p>v9.3-bear 实测全输基础策略：v9 universe −1.3~−3.1pp、main-online −0.6~−2.0pp。"加 filter 减信号" 方向反——少赚多于少赔。用户优先级：<strong>收益第一，回撤次之</strong>。</p>
+
+<p>新方向：<strong>加策略提收益</strong>，规划三条已有论文/实盘背书的路线（B → C → A 顺序）：</p>
+
+<table>
+<thead><tr><th>策略</th><th>核心思路（一句话）</th><th>实施代价</th></tr></thead>
+<tbody>
+<tr><td><strong>B Faber GTAA</strong></td><td>每月 close > MA10 持有，否则空仓（27 指数等权）</td><td>低（~30 行 Decider）</td></tr>
+<tr><td><strong>C Donchian 200</strong></td><td>close 突破 200 日 high → BUY，跌破 200 日 low → SELL（27 指数等权）</td><td>低（~50 行 Decider）</td></tr>
+<tr><td><strong>A Dual Momentum</strong></td><td>每月 27 指数按 12M 收益排名，绝对动量过滤后选 Top 5 等权</td><td>中（新 aggregator + 新 Decider 接口）</td></tr>
+</tbody>
+</table>
+
+<p>本 spec 覆盖<strong>第一周期</strong>：共享前置（universe + Strategy aggregator 字段 + equal-weight 流程 + 报告改造）+ B Faber GTAA。</p>
+
+<!-- ============================================== -->
+<h2 id="universe">2. Universe <code>combined-27</code></h2>
+
+<p>合并 v9 universe（14 主题/行业）+ main-online universe（16 宽基/海外/商品），去重 3 个（创业板50 / 科创50 / 中证2000），共 <strong>27 个唯一指数</strong>。</p>
+
+<table>
+<thead><tr><th>类别</th><th>数量</th><th>代码</th></tr></thead>
+<tbody>
+<tr><td>A 股宽基</td><td>8</td><td>000300、000016、000905、000852、000688、932000、399673、899050</td></tr>
+<tr><td>A 股主题</td><td>9</td><td>931151、399997、399989、931079、399808、931071、930721、399967、399976</td></tr>
+<tr><td>A 股行业</td><td>2</td><td>000819、000813</td></tr>
+<tr><td>港股</td><td>3</td><td>HSI、HSCEI、HSTECH</td></tr>
+<tr><td>海外宽基</td><td>2</td><td>NDX、SPX</td></tr>
+<tr><td>加密</td><td>1</td><td>BTC</td></tr>
+<tr><td>商品</td><td>2</td><td>XAU、XAG</td></tr>
+</tbody>
+</table>
+
+<p>注册命名 <code>combined-27</code>，与现有 <code>v9</code> / <code>main-online</code> universe 并列存在。在 <code>run.py</code> 加 <code>UNIVERSES["combined-27"] = _build_combined_27_universe</code>。</p>
+
+<!-- ============================================== -->
+<h2 id="aggregator">3. 框架改动：<code>Strategy.aggregator</code> 字段</h2>
+
+<div class="svg-container">
+<svg viewBox="0 0 820 380" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto;">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#656d76"/>
+    </marker>
+  </defs>
+
+  <!-- CLI 层 -->
+  <rect x="290" y="20" width="240" height="50" rx="8" fill="#fff8c5" stroke="#bf8700" stroke-width="1.5"/>
+  <text x="410" y="45" font-size="13" font-weight="600" text-anchor="middle" fill="#bf8700">run.py CLI</text>
+  <text x="410" y="60" font-size="11" text-anchor="middle" fill="#656d76">--strategy NAME --universe NAME</text>
+
+  <line x1="410" y1="70" x2="410" y2="100" stroke="#656d76" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- _run_one_strategy 路由 -->
+  <rect x="240" y="105" width="340" height="60" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="410" y="130" font-size="14" font-weight="600" text-anchor="middle" fill="#0969da">_run_one_strategy</text>
+  <text x="410" y="150" font-size="11" text-anchor="middle" fill="#656d76">读 strategy.aggregator → dispatch</text>
+
+  <!-- 三条路 -->
+  <line x1="320" y1="165" x2="160" y2="200" stroke="#656d76" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="410" y1="165" x2="410" y2="200" stroke="#1a7f37" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="500" y1="165" x2="660" y2="200" stroke="#d1242f" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrow)"/>
+
+  <!-- 现有路径 cycle-calmar -->
+  <rect x="20" y="205" width="280" height="80" rx="8" fill="white" stroke="#0969da" stroke-width="1.5"/>
+  <text x="160" y="225" font-size="13" font-weight="600" text-anchor="middle" fill="#0969da">"cycle-calmar"（现有 / 默认）</text>
+  <text x="160" y="245" font-size="11" text-anchor="middle" fill="#656d76">_run_cycle_calmar（剥离自现有逻辑）</text>
+  <text x="160" y="262" font-size="11" text-anchor="middle" fill="#656d76">每指数 D/W/M 拆开 → Calmar 切权重</text>
+  <text x="160" y="278" font-size="11" text-anchor="middle" fill="#656d76">→ run_portfolio_window</text>
+
+  <!-- 新增 equal-weight -->
+  <rect x="305" y="205" width="220" height="80" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <text x="415" y="225" font-size="13" font-weight="600" text-anchor="middle" fill="#1a7f37">"equal-weight"（新增）</text>
+  <text x="415" y="245" font-size="11" text-anchor="middle" fill="#656d76">_run_equal_weight</text>
+  <text x="415" y="262" font-size="11" text-anchor="middle" fill="#656d76">单 cycle + 27 指数 1/N 等权</text>
+  <text x="415" y="278" font-size="11" text-anchor="middle" fill="#656d76">→ run_portfolio_window_equal_weight</text>
+
+  <!-- 占位 cross-sectional -->
+  <rect x="540" y="205" width="260" height="80" rx="8" fill="#ffebe9" stroke="#d1242f" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="670" y="225" font-size="13" font-weight="600" text-anchor="middle" fill="#d1242f">"cross-sectional-topk"</text>
+  <text x="670" y="245" font-size="11" text-anchor="middle" fill="#656d76">A 周期实施（本周期不做）</text>
+  <text x="670" y="262" font-size="11" text-anchor="middle" fill="#656d76">每月 27 指数排名选 Top 5</text>
+  <text x="670" y="278" font-size="11" text-anchor="middle" fill="#656d76">→ run_cross_sectional_topk（待建）</text>
+
+  <!-- 三条路对应的策略 -->
+  <line x1="160" y1="285" x2="160" y2="310" stroke="#656d76" stroke-width="1" marker-end="url(#arrow)"/>
+  <rect x="20" y="315" width="280" height="50" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="160" y="335" font-size="12" text-anchor="middle" font-weight="600">v9-baseline · v9.3-bear</text>
+  <text x="160" y="352" font-size="10.5" text-anchor="middle" fill="#656d76">MA20CrossDecider · BearTrendFilter</text>
+
+  <line x1="415" y1="285" x2="415" y2="310" stroke="#656d76" stroke-width="1" marker-end="url(#arrow)"/>
+  <rect x="305" y="315" width="220" height="50" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="415" y="335" font-size="12" text-anchor="middle" font-weight="600">faber-gtaa（本周期）</text>
+  <text x="415" y="352" font-size="10.5" text-anchor="middle" fill="#656d76">FaberMonthlyMaDecider</text>
+
+  <line x1="670" y1="285" x2="670" y2="310" stroke="#656d76" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+  <rect x="540" y="315" width="260" height="50" rx="6" fill="#f6f8fa" stroke="#d0d7de" stroke-dasharray="3,3"/>
+  <text x="670" y="335" font-size="12" text-anchor="middle" font-weight="600" fill="#656d76">dual-momentum（A 周期）</text>
+  <text x="670" y="352" font-size="10.5" text-anchor="middle" fill="#656d76">MomentumRankDecider</text>
+</svg>
+</div>
+
+<p>三个 aggregator 值定义：</p>
+
+<table>
+<thead><tr><th>aggregator</th><th>用户</th><th>组合层逻辑</th></tr></thead>
+<tbody>
+<tr><td><code>"cycle-calmar"</code><br/><span class="tag tag-keep">现有 / 默认</span></td><td>v9-baseline、v9.3-bear</td><td>每指数 D/W/M 三 cycle 拆开跑 → Calmar 权重切 → 多窗口聚合</td></tr>
+<tr><td><code>"equal-weight"</code><br/><span class="tag tag-new">本周期新增</span></td><td>faber-gtaa（本）、donchian（C 周期）</td><td>单 cycle、每指数 1/N 资金、Decider 信号决定该指数 in/out</td></tr>
+<tr><td><code>"cross-sectional-topk"</code><br/><span class="tag tag-gate">A 周期</span></td><td>dual-momentum</td><td>月度对所有指数排名 → 选 Top K 等权 → 月度 rebalance</td></tr>
+</tbody>
+</table>
+
+<h4>Strategy dataclass 改动</h4>
+<pre><code><span class="k-comment"># scripts/backtest/strategy/protocol.py</span>
+<span class="k-fn">@dataclass</span>(frozen=<span class="k-key">True</span>)
+<span class="k-key">class</span> <span class="k-fn">Strategy</span>:
+    name: <span class="k-key">str</span>
+    decider: Decider
+    filters: <span class="k-key">Tuple</span>[Filter, ...] = field(default_factory=<span class="k-key">tuple</span>)
+    cycles: <span class="k-key">Tuple</span>[<span class="k-key">str</span>, ...] = (<span class="k-str">"D"</span>, <span class="k-str">"W"</span>, <span class="k-str">"M"</span>)
+    aggregator: <span class="k-key">str</span> = <span class="k-str">"cycle-calmar"</span>   <span class="k-comment"># 新字段，默认=现有行为</span></code></pre>
+
+<!-- ============================================== -->
+<h2 id="dispatch">4. <code>run.py:_run_one_strategy</code> Dispatch</h2>
+
+<pre><code><span class="k-key">def</span> <span class="k-fn">_run_one_strategy</span>(strategy_name, universe_name, windows):
+    strat = get_strategy(strategy_name)
+    registry = _load_universe(universe_name)
+
+    <span class="k-key">if</span> strat.aggregator == <span class="k-str">"cycle-calmar"</span>:
+        <span class="k-key">return</span> <span class="k-fn">_run_cycle_calmar</span>(strat, registry, windows)   <span class="k-comment"># 现有逻辑搬过来</span>
+    <span class="k-key">elif</span> strat.aggregator == <span class="k-str">"equal-weight"</span>:
+        <span class="k-key">return</span> <span class="k-fn">_run_equal_weight</span>(strat, registry, windows)   <span class="k-comment"># 新逻辑</span>
+    <span class="k-key">elif</span> strat.aggregator == <span class="k-str">"cross-sectional-topk"</span>:
+        <span class="k-key">raise</span> NotImplementedError(<span class="k-str">"Task A 周期实施"</span>)
+    <span class="k-key">else</span>:
+        <span class="k-key">raise</span> ValueError(<span class="k-key">f</span><span class="k-str">"unknown aggregator: {strat.aggregator!r}"</span>)</code></pre>
+
+<p><code>_run_cycle_calmar</code> 是把现有 <code>_run_one_strategy</code> 函数体（cycle-split + Calmar 流程）原样剥离成的私有函数，<strong>逻辑零改动</strong>。</p>
+
+<!-- ============================================== -->
+<h2 id="equal-weight">5. equal-weight 流程</h2>
+
+<p><strong>模型</strong>：N 个指数等权，单 cycle，每个指数独立按 Decider 信号 BUY/SELL；不用 Calmar 权重；每指数固定占 <code>INITIAL_CAPITAL / N</code> 资金。</p>
+
+<pre><code><span class="k-key">def</span> <span class="k-fn">_run_equal_weight</span>(strategy, registry, windows):
+    <span class="k-comment">"""单 cycle + 等权聚合：
+
+    - 假设 strategy.cycles 长度 = 1（如 ("M",) for Faber，("D",) for Donchian）
+    - 每指数 INITIAL_CAPITAL / N 资金，单 cycle 跑 Decider
+    - 信号：UP→BUY 满仓；DOWN→SELL 现金；else 维持
+    - 多窗口聚合：N 年窗口内重跑（用 window_start 作为 min_evaluation_start）
+    """</span>
+    <span class="k-key">if</span> len(strategy.cycles) != <span class="k-num">1</span>:
+        <span class="k-key">raise</span> ValueError(<span class="k-key">f</span><span class="k-str">"equal-weight requires single cycle, got {strategy.cycles}"</span>)
+    cycle = strategy.cycles[<span class="k-num">0</span>]
+
+    <span class="k-comment"># 1. 加载所有指数 + 跑 full-history 单 cycle 得每指数 BacktestResult</span>
+    index_data = {}
+    full_results = {}
+    <span class="k-key">for</span> meta <span class="k-key">in</span> registry:
+        data = <span class="k-fn">load_index</span>(meta.code, meta.source, meta.name)
+        <span class="k-key">if</span> data <span class="k-key">is None or</span> data.daily.empty:
+            <span class="k-key">continue</span>
+        index_data[meta.code] = data
+        <span class="k-key">try</span>:
+            r = engine.<span class="k-fn">run_with_strategy</span>(
+                data, strategy,                    <span class="k-comment"># cycles=("M",) 时 engine 内只跑 M cycle</span>
+                min_evaluation_start=MIN_EVALUATION_START,
+                index_category=meta.category,
+            )
+            <span class="k-comment"># 注意：equal-weight **不**走 compute_allocation，所以不 rewrite r.strategy_name。</span>
+            <span class="k-comment"># r.strategy_name 保持 = strategy.name，报告里直接显示策略名。</span>
+            full_results[meta.code] = [r]
+        <span class="k-key">except</span> ValueError <span class="k-key">as</span> e:
+            logger.warning(<span class="k-str">"%s 回测失败：%s"</span>, meta.code, e)
+
+    <span class="k-comment"># 2. 多窗口聚合：等权（不用 Calmar）</span>
+    window_results = []
+    <span class="k-key">for</span> n <span class="k-key">in</span> windows:
+        wr = <span class="k-fn">run_portfolio_window_equal_weight</span>(index_data, full_results, n, AS_OF)
+        logger.info(<span class="k-str">"  %d 年 总 CAGR %.2f%% / MDD %.2f%%"</span>, n, wr.cagr, wr.max_drawdown)
+        window_results.append(wr)
+
+    <span class="k-key">return</span> strategy, registry, index_data, full_results, window_results</code></pre>
+
+<div class="callout">
+<strong>关键复用点</strong>：<code>engine.run_with_strategy</code> 已支持 <code>strategy.cycles=("M",)</code> 时只跑 M cycle 的语义（Task 9 现成行为），<strong>不需要改 engine</strong>。equal-weight 流程的核心新逻辑在 portfolio 聚合层。
+</div>
+
+<h4>新增 <code>window_engine.run_portfolio_window_equal_weight</code></h4>
+<p>与 <code>run_portfolio_window</code> 同接口（同入参、同返回 <code>WindowResult</code>），但不调 <code>compute_allocation</code>，直接每指数 <code>INDEX_CAPITAL</code> 起步，复用 <code>run_strategy</code> 在窗口内跑该 cycle 的 BucketGroup。</p>
+
+<!-- ============================================== -->
+<h2 id="faber">6. B Faber GTAA 策略</h2>
+
+<h3>6.1 <code>FaberMonthlyMaDecider</code></h3>
+
+<dl class="kv">
+  <dt>职责</dt><dd>Faber 2007 月线 MA10 趋势跟踪</dd>
+  <dt>新建</dt><dd><code>scripts/backtest/strategy/builtin.py</code> 末尾追加</dd>
+  <dt>Protocol</dt><dd>遵守现有 <code>Decider</code>（<code>decide(*, cycle, bar, position_shares) -> Signal | None</code>）</dd>
+  <dt>关键差异</dt><dd>用 <code>close</code> 直接比 MA，<strong>不用</strong> low/high "干净 K 线"语义</dd>
+</dl>
+
+<h4>规则</h4>
+<ul>
+  <li><code>close > MA{window}</code> → 状态切 UP；UP 翻转 + 空仓 → BUY</li>
+  <li><code>close ≤ MA{window}</code> → 状态切 DOWN；DOWN 翻转 + 持仓 → SELL</li>
+  <li>MA NaN → None（数据不足）</li>
+</ul>
+
+<h4>实现</h4>
+<pre><code><span class="k-key">class</span> <span class="k-fn">FaberMonthlyMaDecider</span>:
+    name = <span class="k-str">"faber-monthly-ma"</span>
+    required_indicators: <span class="k-key">Tuple</span>[<span class="k-key">Tuple</span>[<span class="k-key">str</span>, <span class="k-key">str</span>, <span class="k-key">int</span>], ...] = ((<span class="k-str">"M"</span>, <span class="k-str">"ma10"</span>, <span class="k-num">10</span>),)
+
+    <span class="k-key">def</span> <span class="k-fn">__init__</span>(self, window: <span class="k-key">int</span> = <span class="k-num">10</span>):
+        self.window = window
+        self._state_by_cycle: <span class="k-key">Dict</span>[<span class="k-key">str</span>, <span class="k-key">Optional</span>[<span class="k-key">str</span>]] = {}
+
+    <span class="k-key">def</span> <span class="k-fn">decide</span>(self, *, cycle, bar, position_shares):
+        ma_col = <span class="k-key">f</span><span class="k-str">"ma{self.window}"</span>
+        ma = bar.get(ma_col)
+        close = bar.get(<span class="k-str">"close"</span>)
+        <span class="k-key">if</span> pd.isna(ma) <span class="k-key">or</span> pd.isna(close):
+            <span class="k-key">return None</span>
+        new_dir = <span class="k-str">"UP"</span> <span class="k-key">if</span> close > ma <span class="k-key">else</span> <span class="k-str">"DOWN"</span>
+        prev = self._state_by_cycle.get(cycle)
+        <span class="k-key">if</span> new_dir == prev:
+            <span class="k-key">return None</span>
+        self._state_by_cycle[cycle] = new_dir
+        <span class="k-key">if</span> new_dir == <span class="k-str">"UP"</span> <span class="k-key">and</span> position_shares == <span class="k-num">0</span>:
+            <span class="k-key">return</span> Signal(action=BUY, cycle=cycle, price=<span class="k-key">float</span>(close),
+                          bar_date=pd.Timestamp(bar.name) <span class="k-key">if</span> bar.name <span class="k-key">is not None else</span> pd.NaT)
+        <span class="k-key">if</span> new_dir == <span class="k-str">"DOWN"</span> <span class="k-key">and</span> position_shares > <span class="k-num">0</span>:
+            <span class="k-key">return</span> Signal(action=SELL, cycle=cycle, price=<span class="k-key">float</span>(close),
+                          bar_date=pd.Timestamp(bar.name) <span class="k-key">if</span> bar.name <span class="k-key">is not None else</span> pd.NaT)
+        <span class="k-key">return None</span></code></pre>
+
+<h3>6.2 注册</h3>
+
+<pre><code><span class="k-fn">@register</span>(<span class="k-str">"faber-gtaa"</span>)
+<span class="k-key">def</span> <span class="k-fn">_faber_gtaa</span>() -&gt; Strategy:
+    <span class="k-key">return</span> Strategy(
+        name=<span class="k-str">"faber-gtaa"</span>,
+        decider=<span class="k-fn">FaberMonthlyMaDecider</span>(window=<span class="k-num">10</span>),
+        filters=(),
+        cycles=(<span class="k-str">"M"</span>,),
+        aggregator=<span class="k-str">"equal-weight"</span>,
+    )</code></pre>
+
+<h3>6.3 月线 MA10 数据准备</h3>
+
+<p><code>data_loader._attach_ma20</code> 当前只算 MA20。Faber 需要 MA10。引入 <strong>Decider 暴露 <code>required_indicators</code> 协议</strong>，engine 入口处按需补算。</p>
+
+<pre><code><span class="k-comment"># protocol.py: Decider Protocol 加默认值</span>
+<span class="k-fn">@runtime_checkable</span>
+<span class="k-key">class</span> <span class="k-fn">Decider</span>(Protocol):
+    name: <span class="k-key">str</span>
+    required_indicators: <span class="k-key">Tuple</span>[<span class="k-key">Tuple</span>[<span class="k-key">str</span>, <span class="k-key">str</span>, <span class="k-key">int</span>], ...] = ()  <span class="k-comment"># (cycle, col_name, window) 列表</span>
+    <span class="k-key">def</span> <span class="k-fn">decide</span>(self, *, cycle, bar, position_shares) -&gt; <span class="k-key">Optional</span>[Signal]: ...
+
+<span class="k-comment"># engine.py 新增 helper</span>
+<span class="k-key">def</span> <span class="k-fn">_ensure_indicators</span>(data: IndexData, requirements) -&gt; <span class="k-key">None</span>:
+    <span class="k-key">for</span> cycle, col_name, window <span class="k-key">in</span> requirements:
+        target_df = {<span class="k-str">"D"</span>: data.daily, <span class="k-str">"W"</span>: data.weekly, <span class="k-str">"M"</span>: data.monthly}[cycle]
+        <span class="k-key">if</span> col_name <span class="k-key">in</span> target_df.columns:
+            <span class="k-key">continue</span>
+        target_df[col_name] = <span class="k-fn">compute_ma</span>(target_df[<span class="k-str">"close"</span>], window=window)
+
+<span class="k-comment"># run_with_strategy 入口处调一次</span>
+<span class="k-fn">_ensure_indicators</span>(data, getattr(strategy.decider, <span class="k-str">"required_indicators"</span>, ()))</code></pre>
+
+<div class="callout-success callout">
+<strong>向后兼容关键</strong>：<code>getattr(..., default=())</code> 保证 <code>MA20CrossDecider</code> / <code>BearTrendFilter</code> 即使没暴露这个属性也不报错。<code>MA20CrossDecider</code> 依赖的 <code>ma20</code> 列已由 <code>data_loader._attach_ma20</code> 预算好，旧路径行为零变化。
+</div>
+
+<h3>6.4 测试 case（最少）</h3>
+
+<table>
+<thead><tr><th>测试名</th><th>输入</th><th>期望</th></tr></thead>
+<tbody>
+<tr><td><code>close_above_ma_no_pos_buy</code></td><td>close=110, ma=100, pos=0</td><td>BUY signal</td></tr>
+<tr><td><code>close_below_ma_with_pos_sell</code></td><td>close=90, ma=100, pos=1, prev_state=UP</td><td>SELL signal</td></tr>
+<tr><td><code>same_dir_no_resignal</code></td><td>第一根 BUY 后第二根 close 仍 > ma</td><td>None</td></tr>
+<tr><td><code>ma_nan_returns_none</code></td><td>ma=NaN（数据不足）</td><td>None</td></tr>
+<tr><td><code>close_equals_ma_treated_as_down</code></td><td>close=100, ma=100, pos=1, prev=UP</td><td>SELL（边界严格 &gt; 才算 UP）</td></tr>
+<tr><td><code>required_indicators_attr</code></td><td>读 <code>FaberMonthlyMaDecider().required_indicators</code></td><td><code>(("M","ma10",10),)</code></td></tr>
+<tr><td><code>faber_gtaa_registered</code></td><td><code>get("faber-gtaa")</code></td><td>name=&quot;faber-gtaa&quot; / cycles=(&quot;M&quot;,) / aggregator=&quot;equal-weight&quot;</td></tr>
+</tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="report">7. 报告改造（N 策略对比）</h2>
+
+<p><code>compare_report.py</code> 当前只支持 2 策略，改成支持 <strong>N≥2</strong>，第一个作为对照基线。</p>
+
+<h4>render_portfolio_table 新签名</h4>
+<pre><code><span class="k-key">def</span> <span class="k-fn">render_portfolio_table</span>(strategies: <span class="k-key">Sequence</span>[<span class="k-key">Tuple</span>[<span class="k-key">str</span>, <span class="k-key">list</span>]]) -&gt; <span class="k-key">str</span>:
+    <span class="k-comment">"""N 策略对比，每窗口 N + (N-1) 行：N 个策略 + N-1 个 Δ（每个非 base 策略对 base 的差）"""</span>
+    <span class="k-key">if</span> len(strategies) &lt; <span class="k-num">2</span>:
+        <span class="k-key">raise</span> ValueError(<span class="k-str">"portfolio table requires ≥ 2 strategies"</span>)
+    base_name, base_windows = strategies[<span class="k-num">0</span>]
+    ...</code></pre>
+
+<h4>报告输出格式（N=3 示例）</h4>
+<pre><code>| 时间窗 | 策略                          | 总 CAGR | 最大回撤 | 总收益 |
+|---|---|---|---|---|
+| 3 年   | v9-baseline                   | 15.32%  | -12.55%  | +53.37% |
+| 3 年   | v9.3-bear                     | 13.28%  | -12.43%  | +45.39% |
+| 3 年   | faber-gtaa                    | ?       | ?        | ?       |
+| 3 年   | Δ (v9.3-bear − v9-baseline)   | -2.03pp | +0.12pp  | -7.98pp |
+| 3 年   | Δ (faber-gtaa − v9-baseline)  | ?       | ?        | ?       |
+| 5 年   | ...                           |         |          |         |</code></pre>
+
+<h4>CLI 改动</h4>
+<p><code>--compare A,B,C,D</code> 接受任意多策略名，按顺序传入，第一个作为基线。</p>
+<p>报告文件命名：<code>{date}-compare-{base}-vs-{rest_joined_by_dash}.md</code>，如 <code>2026-05-10-compare-v9-baseline-vs-v9.3-bear-faber-gtaa.md</code>。</p>
+
+<!-- ============================================== -->
+<h2 id="acceptance">8. 验收标准</h2>
+
+<h3>8.1 隔离不变量（最关键）</h3>
+
+<table>
+<thead><tr><th>断言</th><th>方法</th></tr></thead>
+<tbody>
+<tr><td>scripts/quant/ + main.py + docs/ 零修改</td><td><code>git diff db1dc13..HEAD -- scripts/quant/ scripts/main.py docs/</code> = 空</td></tr>
+<tr><td>backtest pytest 全过</td><td><code>pytest scripts/backtest/test_*.py</code> 含原 44 个 + 新增 ~12 个</td></tr>
+<tr><td>v9-baseline 在 v9 universe 数值不变</td><td>跑 <code>--strategy v9-baseline --universe v9 --windows 3,5,8,10</code>，与 <code>v9universe</code> 报告第三章逐字一致</td></tr>
+<tr><td>v9.3-bear 在 v9 universe 数值不变</td><td>跑 <code>--compare v9-baseline,v9.3-bear --universe v9</code>，组合层数值与 v9universe 报告逐字一致</td></tr>
+<tr><td>v9.3-bear 在 main-online 数值不变</td><td>跑 <code>--compare v9-baseline,v9.3-bear --universe main-online</code>，与 mainonline 报告第三章逐字一致</td></tr>
+</tbody>
+</table>
+
+<h3>8.2 新功能验收</h3>
+
+<table>
+<thead><tr><th>断言</th><th>方法</th></tr></thead>
+<tbody>
+<tr><td>列表含 faber-gtaa</td><td><code>python -m scripts.backtest.run --list</code> 输出含 <code>faber-gtaa</code> 一行</td></tr>
+<tr><td>单策略跑通</td><td><code>--strategy faber-gtaa --universe combined-27 --windows 3,5,8,10</code> 退出 0，4 个窗口数据合理（CAGR ≥ 0、MaxDD ≤ 0）</td></tr>
+<tr><td>三策略对比报告</td><td><code>--compare v9-baseline,v9.3-bear,faber-gtaa --universe combined-27 --windows 3,5,8,10</code>，组合层 N=3 行 + 2 个 Δ 行齐全</td></tr>
+<tr><td>报告输出路径</td><td><code>agents/results/2026-05-10-compare-v9-baseline-vs-v9.3-bear-faber-gtaa.md</code></td></tr>
+</tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="test">9. 测试范围</h2>
+
+<pre><code>pytest scripts/backtest/test_indicators.py \
+       scripts/backtest/test_strategy_registry.py \
+       scripts/backtest/test_strategy_builtin.py \
+       scripts/backtest/test_strategy_engine.py \
+       scripts/backtest/test_compare_report.py</code></pre>
+
+<p>预期数：现有 44 个 + 新增约 12 个 ≈ 56 个，全 PASS。</p>
+
+<!-- ============================================== -->
+<h2 id="report-content">10. 报告内容（B Faber 周期完成后）</h2>
+
+<p>报告文件：<code>agents/results/2026-05-10-compare-v9-baseline-vs-v9.3-bear-faber-gtaa.md</code></p>
+
+<p>需含：</p>
+<ol>
+  <li><strong>简介</strong>：universe = combined-27，时间窗 3/5/8/10</li>
+  <li><strong>三策略组合层对比表</strong>（baseline / bear / faber 三行 + Δ bear、Δ faber 两行 per 窗口）</li>
+  <li><strong>分指数差异表</strong>：Δ faber − baseline，列 |ΔCAGR|≥1pp 或 |ΔMaxDD|≥2pp 的指数</li>
+  <li><strong>Filter 命中</strong>：N/A（faber 无 filter）</li>
+  <li><strong>中文解读</strong>：
+    <ul>
+      <li>一句话结论（faber 是赢还是输）</li>
+      <li>与 bear 对比（这次"提收益"路线 vs 之前"加 filter"路线效果对比）</li>
+      <li>适合什么 universe 子集</li>
+      <li>后续可调方向</li>
+    </ul>
+  </li>
+</ol>
+
+<!-- ============================================== -->
+<h2 id="invariants">11. 关键不变量</h2>
+
+<ul>
+  <li><code>scripts/quant/</code> 任何文件本周期不修改</li>
+  <li><code>scripts/backtest/{indicators,strategies,signal,data_loader,engine,window_engine}.py</code> 在 cycle-calmar 路径上行为零变化</li>
+  <li><code>Strategy(name=..., decider=..., filters=..., cycles=...)</code> 旧调用形式仍 work（aggregator 默认 cycle-calmar）</li>
+  <li>v9-baseline / v9.3-bear 在 v9 universe / main-online universe 上的数值与现有报告逐字一致</li>
+</ul>
+
+<!-- ============================================== -->
+<h2 id="risks">12. 风险与权衡</h2>
+
+<table>
+<thead><tr><th>风险</th><th>对策</th></tr></thead>
+<tbody>
+<tr><td><code>Strategy.aggregator</code> 字段加在末尾 + 默认值；若未来重构改字段顺序会破坏</td><td>所有 <code>Strategy(...)</code> 构造保持 keyword 形式，positional 严禁</td></tr>
+<tr><td><code>required_indicators</code> 协议是非强制属性（可选 attr）</td><td>用 <code>getattr(..., default=())</code> 兜底，新 Decider 都该暴露此属性，code review 把关</td></tr>
+<tr><td><code>combined-27</code> 含数据源差异大的标的（A 股 vs BTC vs XAG）：跨日历对齐问题</td><td>组合层用日 K 对齐（每个交易日各自独立汇总），跨指数日历差异由 daily.index 自然吸收</td></tr>
+<tr><td>性能放大：27 指数 × full history 比 v9 14 / main-online 16 更长</td><td>已通过 <code>f9a0421</code> Lazy ctx 优化（84x 提速）；27 指数下预估 30-60 秒可完成 compare</td></tr>
+</tbody>
+</table>
+
+<!-- ============================================== -->
+<h2 id="out-of-scope">13. 不在范围</h2>
+
+<ul>
+  <li><strong>C Donchian 200</strong> 实施（下一周期）</li>
+  <li><strong>A Dual Momentum + cross-sectional-topk aggregator</strong>（下下周期）</li>
+  <li>v9.3-bear 参数变体调优（已证明方向反，弃）</li>
+  <li>生产 <code>scripts/quant/</code> 任何修改</li>
+  <li>前端 <code>docs/</code> 任何修改</li>
+</ul>
+
+</body>
+</html>
