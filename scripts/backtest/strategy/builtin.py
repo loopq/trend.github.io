@@ -101,3 +101,21 @@ class BearTrendFilter:
                                N=self.monthly_bear_N, eps=self.monthly_bear_eps)
         cond_trend = (not weekly_bear) or (not monthly_bear)
         return cond_close and cond_trend
+
+
+@register("v9-baseline")
+def _v9_baseline() -> Strategy:
+    return Strategy(
+        name="v9-baseline",
+        decider=MA20CrossDecider(),
+        filters=(),
+    )
+
+
+@register("v9.3-bear")
+def _v9_3_bear() -> Strategy:
+    return Strategy(
+        name="v9.3-bear",
+        decider=MA20CrossDecider(),
+        filters=(BearTrendFilter(scope=("D", "W")),),
+    )

@@ -201,3 +201,34 @@ class TestBearTrendFilter:
         # W 不在 scope，不该 block
         assert f.allow(_buy("W"), ctx) is True
         assert f.allow(_buy("D"), ctx) is False
+
+
+# ---------- 内置策略注册 ----------
+
+def _reload_builtin():
+    """强制重新执行 builtin 模块顶层 @register，避免 registry fixture
+    清空 _FACTORIES 之后下次 import_module 拿到空的注册表。"""
+    from scripts.backtest.strategy.registry import _reset_for_test
+    import importlib
+    import scripts.backtest.strategy.builtin as _b
+    _reset_for_test()
+    importlib.reload(_b)
+
+
+def test_v9_baseline_registered():
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("v9-baseline")
+    assert s.name == "v9-baseline"
+    assert s.filters == ()
+    assert s.cycles == ("D", "W", "M")
+
+
+def test_v9_3_bear_registered():
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("v9.3-bear")
+    assert s.name == "v9.3-bear"
+    assert len(s.filters) == 1
+    assert s.filters[0].name == "bear-trend-filter"
+    assert s.cycles == ("D", "W", "M")
