@@ -223,6 +223,7 @@ def _run_equal_weight(strategy, registry, windows: List[int]):
     for n in windows:
         wr = run_portfolio_window_equal_weight(
             index_data, full_results, n, AS_OF, cycle=cycle,
+            strategy=strategy,   # 新增：传 V10 strategy 给窗口聚合用真实 Decider
         )
         logger.info("  %d 年 总 CAGR %.2f%% / MDD %.2f%%", n, wr.cagr, wr.max_drawdown)
         window_results.append(wr)

@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import copy
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -15,9 +16,10 @@ from typing import Dict, List, Optional
 import pandas as pd
 
 from scripts.backtest.data_loader import IndexData
-from scripts.backtest.engine import BacktestResult, run_strategy
+from scripts.backtest.engine import BacktestResult, run_strategy, run_with_strategy
 from scripts.backtest.reporter import compute_allocation
 from scripts.backtest.strategies import DAILY, MONTHLY, WEEKLY, Bucket, BucketGroup
+from scripts.backtest.strategy.protocol import Strategy as _Strategy
 
 logger = logging.getLogger(__name__)
 
@@ -206,18 +208,38 @@ def _max_drawdown(curve: pd.Series) -> float:
     return float(dd.min())
 
 
+def _fresh_strategy(strategy: _Strategy) -> _Strategy:
+    """复制 strategy + 清空 decider 已知 state 字段，准备窗口重跑。
+
+    避免：(1) 跨窗口 buffer 污染（窗口 N 跑完后 buffer 满，窗口 N+1 重跑会带着旧 state）；
+          (2) 跨指数 buffer 污染（同 strategy 实例在不同指数间共享 decider 内部 dict）。
+
+    清空已知 state 字段名约定（按现有 Decider 实现）：
+    - _state_by_cycle: MA20CrossDecider, FaberMonthlyMaDecider 等用
+    - _close_buffer_by_cycle: DonchianBreakoutDecider 用
+
+    未来加新 state 字段名要更新本 helper（视作 known minor coupling）。
+    """
+    fresh = copy.deepcopy(strategy)
+    for attr in ("_state_by_cycle", "_close_buffer_by_cycle"):
+        if hasattr(fresh.decider, attr):
+            getattr(fresh.decider, attr).clear()
+    return fresh
+
+
 def run_portfolio_window_equal_weight(
     index_data: Dict[str, IndexData],
     full_results: Dict[str, List[BacktestResult]],
     window_years: int,
     as_of: pd.Timestamp,
     cycle: str,
+    strategy: _Strategy,   # 新增：V10 Strategy 对象，窗口重跑用真实 Decider
 ) -> WindowResult:
     """等权聚合：每指数 INDEX_CAPITAL 起步，单 cycle，不用 Calmar 权重。
 
     与 run_portfolio_window 的差别：
     - 不调 compute_allocation；每指数 1 个 result（list 长度=1）
-    - 在 N 年窗口内用 single-cycle BucketGroup 重跑得到该指数贡献
+    - 在 N 年窗口内用真实 V10 Strategy（fresh decider）重跑得到该指数贡献
 
     Args:
         index_data: code -> IndexData
@@ -225,6 +247,7 @@ def run_portfolio_window_equal_weight(
         window_years: 窗口年数
         as_of: 评估日
         cycle: "D" / "W" / "M" —— 决定窗口内重跑用哪个 timeframe
+        strategy: V10 Strategy 对象，每指数构造 fresh 实例（避免 buffer 跨指数污染）
     """
     window_start = as_of - pd.DateOffset(years=window_years)
 
@@ -237,22 +260,19 @@ def run_portfolio_window_equal_weight(
         data = index_data[code]
         first = results[0]
 
-        # 等权：每指数 INDEX_CAPITAL 起步，单 cycle 跑
-        single = BucketGroup(
-            name=cycle,
-            buckets=[Bucket(timeframe=_tf(cycle), capital=INDEX_CAPITAL)],
-        )
+        # 每指数 fresh strategy（fresh decider，state 清空）
+        per_index_strategy = _fresh_strategy(strategy)
 
         try:
-            br = run_strategy(
-                data, single,
+            br = run_with_strategy(
+                data, per_index_strategy,
                 min_evaluation_start=window_start,
                 index_category=first.index_category,
             )
             eq = br.equity_curve
             actual = br.evaluation_start
         except ValueError:
-            # 该 bucket 在窗口内无法启动（数据不足）→ 闲置现金
+            # 该 strategy 在窗口内无法启动（数据不足）→ 闲置现金
             eq = pd.Series([INDEX_CAPITAL], index=[as_of])
             actual = as_of
 
