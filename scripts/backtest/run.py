@@ -105,10 +105,21 @@ def _build_combined_27_universe():
     ]
 
 
+def _build_combined_24_universe():
+    """combined-27 去除 3 个噪声指数 = 24 个：
+    - 北证50（2022 才上线，月线策略冷启动期严重失真）
+    - 比特币（月线粒度对加密太粗，CAGR/MDD 都是单点拖累）
+    - 国企指数 HSCEI（与恒生指数 HSI 重叠度高，去掉简化港股暴露）
+    """
+    excluded = {"899050", "BTC", "HSCEI"}
+    return [m for m in _build_combined_27_universe() if m.code not in excluded]
+
+
 UNIVERSES = {
     "v9": build_v9_registry,
     "main-online": _build_main_online_universe,
     "combined-27": _build_combined_27_universe,
+    "combined-24": _build_combined_24_universe,
 }
 
 
