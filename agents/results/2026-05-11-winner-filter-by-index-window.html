@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Winner 筛选 V2 — per-index 3 in/out + dual-momentum portfolio 对照</title>
+<title>Winner 筛选 V3 — 4 策略 per-index winner（含 dual-momentum 补齐）</title>
 <style>:root {
   --c-bg: #fafbfc; --c-text: #1f2328; --c-muted: #656d76; --c-accent: #0969da;
   --c-border: #d0d7de; --c-code-bg: #f6f8fa; --c-warn: #bf8700; --c-warn-bg: #fff8c5;
@@ -33,7 +33,6 @@ table tbody tr:hover { background: var(--c-info-bg); }
 .tag-big { background: var(--c-success-bg); color: var(--c-success); font-weight: 600; }
 .tag-mid { background: var(--c-info-bg); color: var(--c-accent); }
 .tag-small { background: var(--c-code-bg); color: var(--c-muted); }
-.tag-virtual { background: #f3d9fa; color: #862e9c; font-weight: 600; }
 .callout { border-left: 4px solid var(--c-accent); background: var(--c-info-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
 .callout-warn { border-left-color: var(--c-warn); background: var(--c-warn-bg); }
 .callout-success { border-left-color: var(--c-success); background: var(--c-success-bg); }
@@ -51,15 +50,13 @@ nav.toc a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
-<h1>Winner 筛选 V2 — 每指数 × 窗口最佳策略</h1>
-<p class="meta"><strong>生成日</strong>: 2026-05-11 · <strong>数据源</strong>: 5 策略详细对比 on combined-24 · <strong>per-index 筛选范围</strong>: 3 个 in/out 策略（v9-baseline / faber-gtaa / donchian-200）；剔除 v9.3-bear（六重确认无效） · <strong>dual-momentum-top5</strong>: 横截面策略，仅在 portfolio 层对照（无 per-index 数据）</p>
+<h1>Winner 筛选 V3 — 4 策略 × 24 指数 × 4 窗口</h1>
+<p class="meta"><strong>生成日</strong>: 2026-05-11 · <strong>4 策略</strong>: v9-baseline / faber-gtaa / donchian-200 / dual-momentum-top5 · <strong>剔除</strong>: v9.3-bear（六重确认无效） · <strong>Universe</strong>: combined-24</p>
 <div class="callout-warn callout">
-<strong>📌 关于 dual-momentum-top5 为何不在 per-index 筛选中</strong><br>
-dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指数中选 5 个赢家共同持仓，
-不在每个指数独立做 in/out 决策。所以它没有"沪深300 上 dual-momentum CAGR" 这种 per-index 数据。
-本报告把它放在 <a href="#portfolio-vs">第六段「Portfolio 对照」</a>：
-比较 dual-momentum 的组合 CAGR 与"如果每指数都用 in/out winner 策略"的虚拟最优组合，
-回答"横截面 alpha 能不能 beat per-index 自由选择"这个核心问题。
+<strong>📌 dual-momentum-top5 per-index 数据补齐方法</strong><br>
+dual-momentum 是横截面策略，原本无 per-index 数据。本报告给它定义独立 per-index 视角：
+"如果只跟随 dual-momentum 选股时机持有该指数（被选中的月份按 close 涨跌；未被选中的月份 cash idle），起始 INDEX_CAPITAL"。
+这样它与其他 3 策略 per-index 维度对齐，能直接参与 winner 筛选。
 </div>
 <nav class="toc"><h4>目录</h4><ul>
 <li><a href="#summary">一、筛选概览（lead 分级）</a></li>
@@ -67,15 +64,14 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <li><a href="#mid-lead">三、🥈 中等领先（2-5pp）</a></li>
 <li><a href="#strategy-summary">四、策略 winner 次数统计</a></li>
 <li><a href="#strategy-style">五、策略风格倾向</a></li>
-<li><a href="#portfolio-vs">六、Portfolio 对照（含 dual-momentum）</a></li>
-<li><a href="#index-best">七、每指数最佳策略推荐</a></li>
-<li><a href="#full-table">八、全 96 完整 winner 表</a></li>
-<li><a href="#insights">九、关键洞察 + 实操建议</a></li>
+<li><a href="#index-best">六、每指数最佳策略推荐</a></li>
+<li><a href="#full-table">七、全 (指数 × 窗口) 完整 winner 表</a></li>
+<li><a href="#insights">八、关键洞察 + 实操建议</a></li>
+<li><a href="#portfolio-vs">九、Portfolio 对照（dual 真正发光）</a></li>
 </ul></nav>
 <h2 id="summary">一、筛选概览</h2>
-<div class="callout"><strong>共 92 个 (指数 × 窗口) 数据点</strong>（24 指数 × 4 窗口 = 96，部分缺失）：<br>• <span class="tag tag-big">🏆 大幅领先 ΔCAGR ≥ 5pp</span> 15 个（16%）— winner 远超第 2 名，强推切换<br>• <span class="tag tag-mid">🥈 中等领先 2-5pp</span> 22 个（24%）— winner 有明显优势，看 ΔMDD 决定<br>• <span class="tag tag-small">📉 差距小 &lt; 2pp</span> 55 个（60%）— 策略选择影响小<br></div>
+<div class="callout"><strong>共 92 个 (指数 × 窗口) 数据点</strong>（24 指数 × 4 窗口 ≈ 96）：<br>• <span class="tag tag-big">🏆 大幅领先 ≥ 5pp</span> 15 个（16%）<br>• <span class="tag tag-mid">🥈 中等领先 2-5pp</span> 20 个（22%）<br>• <span class="tag tag-small">📉 差距小 &lt; 2pp</span> 57 个（62%）</div>
 <h2 id="big-lead">二、🏆 大幅领先（ΔCAGR ≥ 5pp）</h2>
-<p>共 <strong>15 个</strong> (指数 × 窗口) 组合下 winner 策略 CAGR 远超第 2 名 ≥ 5pp。</p>
 <table><thead><tr><th>子集</th><th>指数</th><th>窗口</th><th>Winner</th><th>Winner CAGR</th><th>Winner MDD</th><th>2nd 策略</th><th>2nd CAGR</th><th>ΔCAGR</th><th>ΔMDD</th></tr></thead><tbody>
 <tr><td>A股主题</td><td><strong>CS智汽车</strong> (930721)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+16.31%</span></td><td><span class="neg">-17.42%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+2.37%</span></td><td><strong><span class="pos">+13.94pp</span></strong></td><td><span class="pos">+5.82pp</span></td></tr>
 <tr><td>A股主题</td><td><strong>CS智汽车</strong> (930721)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.47%</span></td><td><span class="neg">-26.22%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="zero">-0.00%</span></td><td><strong><span class="pos">+12.47pp</span></strong></td><td><span class="neg">-2.98pp</span></td></tr>
@@ -94,7 +90,6 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <tr><td>A股主题</td><td><strong>中证医疗</strong> (399989)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.87%</span></td><td><span class="neg">-39.01%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+2.86%</span></td><td><strong><span class="pos">+5.01pp</span></strong></td><td><span class="pos">+4.72pp</span></td></tr>
 </tbody></table>
 <h2 id="mid-lead">三、🥈 中等领先（2-5pp）</h2>
-<p>共 <strong>22 个</strong> (指数 × 窗口) 组合下 winner 小幅领先 2-5pp。需权衡 ΔMDD。</p>
 <table><thead><tr><th>子集</th><th>指数</th><th>窗口</th><th>Winner</th><th>Winner CAGR</th><th>Winner MDD</th><th>2nd 策略</th><th>2nd CAGR</th><th>ΔCAGR</th><th>ΔMDD</th></tr></thead><tbody>
 <tr><td>美股</td><td><strong>纳指100</strong> (NDX)</td><td>5 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+13.80%</span></td><td><span class="neg">-15.51%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+8.89%</span></td><td><span class="pos">+4.91pp</span></td><td><span class="neg">-1.68pp</span></td></tr>
 <tr><td>A股主题</td><td><strong>5G通信</strong> (931079)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+15.49%</span></td><td><span class="neg">-32.78%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.59%</span></td><td><span class="pos">+4.90pp</span></td><td><span class="pos">+10.34pp</span></td></tr>
@@ -109,22 +104,20 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <tr><td>A股行业</td><td><strong>有色金属</strong> (000819)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+24.46%</span></td><td><span class="neg">-28.95%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+20.38%</span></td><td><span class="pos">+4.08pp</span></td><td><span class="neg">-5.00pp</span></td></tr>
 <tr><td>A股宽基</td><td><strong>中证2000</strong> (932000)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.44%</span></td><td><span class="neg">-14.38%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+8.38%</span></td><td><span class="pos">+4.06pp</span></td><td><span class="pos">+14.68pp</span></td></tr>
 <tr><td>A股行业</td><td><strong>细分化工</strong> (000813)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.71%</span></td><td><span class="neg">-32.65%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+6.87%</span></td><td><span class="pos">+3.84pp</span></td><td><span class="neg">-1.92pp</span></td></tr>
-<tr><td>A股主题</td><td><strong>中证医疗</strong> (399989)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.59%</span></td><td><span class="neg">-16.07%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="neg">-2.94%</span></td><td><span class="pos">+3.53pp</span></td><td><span class="pos">+0.27pp</span></td></tr>
 <tr><td>A股行业</td><td><strong>细分化工</strong> (000813)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.99%</span></td><td><span class="neg">-32.61%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+4.54%</span></td><td><span class="pos">+3.45pp</span></td><td><span class="pos">+9.39pp</span></td></tr>
 <tr><td>A股宽基</td><td><strong>创业板50</strong> (399673)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+19.94%</span></td><td><span class="neg">-20.92%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+17.25%</span></td><td><span class="pos">+2.69pp</span></td><td><span class="pos">+10.30pp</span></td></tr>
 <tr><td>A股行业</td><td><strong>细分化工</strong> (000813)</td><td>5 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.92%</span></td><td><span class="neg">-37.06%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.38%</span></td><td><span class="pos">+2.54pp</span></td><td><span class="neg">-18.13pp</span></td></tr>
-<tr><td>A股主题</td><td><strong>中证医疗</strong> (399989)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="neg">-1.78%</span></td><td><span class="neg">-16.34%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="neg">-4.29%</span></td><td><span class="pos">+2.51pp</span></td><td><span class="pos">+21.10pp</span></td></tr>
 <tr><td>A股宽基</td><td><strong>中证500</strong> (000905)</td><td>8 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.12%</span></td><td><span class="neg">-20.80%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+4.85%</span></td><td><span class="pos">+2.27pp</span></td><td><span class="pos">+6.65pp</span></td></tr>
 <tr><td>A股主题</td><td><strong>人工智能</strong> (931071)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.31%</span></td><td><span class="neg">-33.34%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.16%</span></td><td><span class="pos">+2.15pp</span></td><td><span class="pos">+5.25pp</span></td></tr>
 <tr><td>A股主题</td><td><strong>CS新能车</strong> (399976)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+18.66%</span></td><td><span class="neg">-19.28%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+16.65%</span></td><td><span class="pos">+2.01pp</span></td><td><span class="zero">0.00pp</span></td></tr>
 <tr><td>A股宽基</td><td><strong>中证500</strong> (000905)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+5.08%</span></td><td><span class="neg">-20.80%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+3.07%</span></td><td><span class="pos">+2.01pp</span></td><td><span class="pos">+6.65pp</span></td></tr>
 </tbody></table>
 <h2 id="strategy-summary">四、策略 winner 次数统计</h2>
-<p>仅含 3 个 in/out 策略（dual-momentum 横截面无 per-index 数据，单独在第六段对照）。</p>
-<table><thead><tr><th>策略</th><th>🏆 大幅领先（≥5pp）</th><th>🥈 中等领先（2-5pp）</th><th>📉 小幅领先（&lt;2pp）</th><th>合计 winner</th><th>占比</th></tr></thead><tbody>
-<tr><td><span class="tag tag-baseline">v9-baseline</span></td><td>12</td><td>12</td><td>34</td><td><strong>58</strong></td><td>63.0%</td></tr>
+<table><thead><tr><th>策略</th><th>🏆 大幅（≥5pp）</th><th>🥈 中等（2-5pp）</th><th>📉 小幅（&lt;2pp）</th><th>合计 winner</th><th>占比</th></tr></thead><tbody>
+<tr><td><span class="tag tag-baseline">v9-baseline</span></td><td>12</td><td>11</td><td>35</td><td><strong>58</strong></td><td>63.0%</td></tr>
 <tr><td><span class="tag tag-faber">faber-gtaa</span></td><td>1</td><td>2</td><td>11</td><td><strong>14</strong></td><td>15.2%</td></tr>
-<tr><td><span class="tag tag-donchian">donchian-200</span></td><td>2</td><td>8</td><td>10</td><td><strong>20</strong></td><td>21.7%</td></tr>
+<tr><td><span class="tag tag-donchian">donchian-200</span></td><td>2</td><td>7</td><td>10</td><td><strong>19</strong></td><td>20.7%</td></tr>
+<tr><td><span class="tag tag-dual">dual-momentum-top5</span></td><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td><td>1.1%</td></tr>
 </tbody></table>
 <h2 id="strategy-style">五、策略风格倾向</h2>
 <h3>按 universe 子集（仅含 ≥ 2pp 领先组合）</h3>
@@ -138,12 +131,12 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <th>合计</th></tr></thead><tbody>
 <tr><td><span class="tag tag-baseline">v9-baseline</span></td>
 <td>3</td>
-<td>19</td>
+<td>18</td>
 <td>2</td>
 <td>-</td>
 <td>-</td>
 <td>-</td>
-<td><strong>24</strong></td></tr>
+<td><strong>23</strong></td></tr>
 <tr><td><span class="tag tag-faber">faber-gtaa</span></td>
 <td>-</td>
 <td>-</td>
@@ -154,12 +147,20 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <td><strong>3</strong></td></tr>
 <tr><td><span class="tag tag-donchian">donchian-200</span></td>
 <td>2</td>
-<td>4</td>
+<td>3</td>
 <td>2</td>
 <td>-</td>
 <td>-</td>
 <td>2</td>
-<td><strong>10</strong></td></tr>
+<td><strong>9</strong></td></tr>
+<tr><td><span class="tag tag-dual">dual-momentum-top5</span></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td><strong>0</strong></td></tr>
 </tbody></table>
 <h3>按窗口（仅含 ≥ 2pp 领先组合）</h3>
 <table><thead><tr><th>策略</th>
@@ -169,11 +170,11 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <th>10 年</th>
 <th>合计</th></tr></thead><tbody>
 <tr><td><span class="tag tag-baseline">v9-baseline</span></td>
-<td>6</td>
+<td>5</td>
 <td>5</td>
 <td>6</td>
 <td>7</td>
-<td><strong>24</strong></td></tr>
+<td><strong>23</strong></td></tr>
 <tr><td><span class="tag tag-faber">faber-gtaa</span></td>
 <td>1</td>
 <td>2</td>
@@ -182,77 +183,36 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <td><strong>3</strong></td></tr>
 <tr><td><span class="tag tag-donchian">donchian-200</span></td>
 <td>3</td>
-<td>2</td>
+<td>1</td>
 <td>3</td>
 <td>2</td>
-<td><strong>10</strong></td></tr>
+<td><strong>9</strong></td></tr>
+<tr><td><span class="tag tag-dual">dual-momentum-top5</span></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td><strong>0</strong></td></tr>
 </tbody></table>
-<h2 id="portfolio-vs">六、Portfolio 对照（含 dual-momentum-top5）</h2>
-<p>核心问题：<strong>横截面 alpha (dual-momentum) 能不能 beat per-index 自由选择 (virtual best mix)？</strong></p>
-<p><strong>列说明</strong>：</p>
-<ul>
-<li><strong>v9-baseline / faber-gtaa / donchian-200 / dual-momentum-top5</strong>：4 策略的实际 portfolio 层 CAGR / MDD / 总收益（来自 5 策略详细报告组合层）</li>
-<li><strong>🟣 virtual best mix（虚拟最优组合）</strong>：假设你能事后精准选每指数最佳的 in/out 策略，24 指数等权组合的 portfolio CAGR/总收益。<strong>注意：这是"事后选最佳"上限，不可实操，仅作参考</strong>。</li>
-</ul>
-<table><thead><tr><th>窗口</th>
-<th>v9-baseline</th>
-<th>faber-gtaa</th>
-<th>donchian-200</th>
-<th>dual-momentum-top5</th>
-<th>🟣 virtual best mix</th></tr></thead><tbody>
-<tr><td><strong>3 年</strong></td>
-<td>CAGR <span class="pos">+14.89%</span> / MDD <span class="neg">-11.42%</span> / 总 <span class="pos">+51.67%</span></td>
-<td>CAGR <span class="pos">+12.11%</span> / MDD <span class="neg">-13.62%</span> / 总 <span class="pos">+40.92%</span></td>
-<td>CAGR <span class="pos">+11.91%</span> / MDD <span class="neg">-14.72%</span> / 总 <span class="pos">+40.18%</span></td>
-<td>CAGR <span class="pos">+25.66%</span> / MDD <span class="neg">-13.37%</span> / 总 <span class="pos">+98.44%</span></td>
-<td>CAGR <span class="pos">+16.84%</span> / 总 <span class="pos">+59.51%</span> <small>(23指数)</small></td></tr>
-<tr><td><strong>5 年</strong></td>
-<td>CAGR <span class="pos">+9.49%</span> / MDD <span class="neg">-14.06%</span> / 总 <span class="pos">+57.31%</span></td>
-<td>CAGR <span class="pos">+5.74%</span> / MDD <span class="neg">-21.71%</span> / 总 <span class="pos">+32.16%</span></td>
-<td>CAGR <span class="pos">+6.83%</span> / MDD <span class="neg">-14.47%</span> / 总 <span class="pos">+39.13%</span></td>
-<td>CAGR <span class="pos">+9.27%</span> / MDD <span class="neg">-42.32%</span> / 总 <span class="pos">+55.74%</span></td>
-<td>CAGR <span class="pos">+10.87%</span> / 总 <span class="pos">+67.55%</span> <small>(23指数)</small></td></tr>
-<tr><td><strong>8 年</strong></td>
-<td>CAGR <span class="pos">+9.99%</span> / MDD <span class="neg">-15.62%</span> / 总 <span class="pos">+114.16%</span></td>
-<td>CAGR <span class="pos">+8.19%</span> / MDD <span class="neg">-23.91%</span> / 总 <span class="pos">+87.70%</span></td>
-<td>CAGR <span class="pos">+8.86%</span> / MDD <span class="neg">-17.35%</span> / 总 <span class="pos">+97.21%</span></td>
-<td>CAGR <span class="pos">+10.15%</span> / MDD <span class="neg">-42.32%</span> / 总 <span class="pos">+116.69%</span></td>
-<td>CAGR <span class="pos">+11.61%</span> / 总 <span class="pos">+140.74%</span> <small>(23指数)</small></td></tr>
-<tr><td><strong>10 年</strong></td>
-<td>CAGR <span class="pos">+8.36%</span> / MDD <span class="neg">-15.25%</span> / 总 <span class="pos">+123.25%</span></td>
-<td>CAGR <span class="pos">+6.67%</span> / MDD <span class="neg">-23.30%</span> / 总 <span class="pos">+90.67%</span></td>
-<td>CAGR <span class="pos">+6.79%</span> / MDD <span class="neg">-16.03%</span> / 总 <span class="pos">+92.95%</span></td>
-<td>CAGR <span class="pos">+9.28%</span> / MDD <span class="neg">-42.32%</span> / 总 <span class="pos">+142.92%</span></td>
-<td>CAGR <span class="pos">+9.41%</span> / 总 <span class="pos">+145.74%</span> <small>(23指数)</small></td></tr>
-</tbody></table>
-<h3>🚀 dual-momentum-top5 vs 🟣 virtual best mix</h3>
-<p>dual-momentum 是真实可操作策略；virtual best mix 是事后最优上限。两者差距决定了"放弃 per-index 自由选择改用横截面策略"是否值得。</p>
-<table><thead><tr><th>窗口</th><th>dual-momentum CAGR</th><th>virtual best CAGR</th><th>ΔCAGR (dual − virtual)</th><th>解读</th></tr></thead><tbody>
-<tr><td><strong>3 年</strong></td><td><span class="pos">+25.66%</span></td><td><span class="pos">+16.84%</span></td><td><strong><span class="pos">+8.82pp</span></strong></td><td>🚀 dual-momentum 比 per-index 最优还高 → 横截面 alpha 真实</td></tr>
-<tr><td><strong>5 年</strong></td><td><span class="pos">+9.27%</span></td><td><span class="pos">+10.87%</span></td><td><strong><span class="neg">-1.60pp</span></strong></td><td>≈ 接近持平 → dual-momentum 已捕捉到 per-index 最优</td></tr>
-<tr><td><strong>8 年</strong></td><td><span class="pos">+10.15%</span></td><td><span class="pos">+11.61%</span></td><td><strong><span class="neg">-1.46pp</span></strong></td><td>≈ 接近持平 → dual-momentum 已捕捉到 per-index 最优</td></tr>
-<tr><td><strong>10 年</strong></td><td><span class="pos">+9.28%</span></td><td><span class="pos">+9.41%</span></td><td><strong><span class="neg">-0.13pp</span></strong></td><td>≈ 接近持平 → dual-momentum 已捕捉到 per-index 最优</td></tr>
-</tbody></table>
-<h2 id="index-best">七、每指数最佳策略推荐（综合 4 窗口）</h2>
-<p>对每个指数：列出 4 窗口下哪个 in/out 策略最常 winner（≥ 2pp 领先才算）。"全 baseline" 表示 4 窗口都用 baseline 最稳。</p>
+<h2 id="index-best">六、每指数最佳策略推荐（综合 4 窗口）</h2>
 <table><thead><tr><th>子集</th><th>指数</th>
 <th>3 年 Winner</th>
 <th>5 年 Winner</th>
 <th>8 年 Winner</th>
 <th>10 年 Winner</th>
 <th>主要风格</th></tr></thead><tbody>
-<tr><td>A股宽基</td><td><strong>上证50</strong>(000016)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.8pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+2.0pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.9pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td><span class="zero">无策略明显胜出（差距 &lt; 2pp）→ baseline 即可</span></td></tr>
+<tr><td>A股宽基</td><td><strong>上证50</strong>(000016)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.8pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+0.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.9pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td><span class="zero">无策略明显胜出 → baseline 即可</span></td></tr>
 <tr><td>A股宽基</td><td><strong>沪深300</strong>(000300)</td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+5.1pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.4pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.4pp</small></td><td>混合：<span class="tag tag-baseline">v9-baseline</span></td></tr>
-<tr><td>A股宽基</td><td><strong>科创50</strong>(000688)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.4pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.3pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td><span class="zero">无策略明显胜出（差距 &lt; 2pp）→ baseline 即可</span></td></tr>
-<tr><td>A股宽基</td><td><strong>中证1000</strong>(000852)</td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+0.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+0.7pp</small></td><td><span class="zero">无策略明显胜出（差距 &lt; 2pp）→ baseline 即可</span></td></tr>
+<tr><td>A股宽基</td><td><strong>科创50</strong>(000688)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.4pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.3pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td><span class="zero">无策略明显胜出 → baseline 即可</span></td></tr>
+<tr><td>A股宽基</td><td><strong>中证1000</strong>(000852)</td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+0.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+0.7pp</small></td><td><span class="zero">无策略明显胜出 → baseline 即可</span></td></tr>
 <tr><td>A股宽基</td><td><strong>中证500</strong>(000905)</td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.1pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.3pp</small></td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+2.3pp</small></td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+2.0pp</small></td><td><span class="tag tag-donchian">donchian-200</span> × 2 窗口</td></tr>
 <tr><td>A股宽基</td><td><strong>创业板50</strong>(399673)</td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+2.7pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+0.0pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.0pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.8pp</small></td><td>混合：<span class="tag tag-baseline">v9-baseline</span></td></tr>
 <tr><td>A股宽基</td><td><strong>中证2000</strong>(932000)</td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.1pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.1pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.1pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.2pp</small></td><td>混合：<span class="tag tag-baseline">v9-baseline</span></td></tr>
-<tr><td>A股主题</td><td><strong>中证新能</strong>(399808)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.7pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.7pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.1pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td><span class="zero">无策略明显胜出（差距 &lt; 2pp）→ baseline 即可</span></td></tr>
+<tr><td>A股主题</td><td><strong>中证新能</strong>(399808)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.7pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.7pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.1pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.5pp</small></td><td><span class="zero">无策略明显胜出 → baseline 即可</span></td></tr>
 <tr><td>A股主题</td><td><strong>中证军工</strong>(399967)</td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.7pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.2pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+6.0pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.7pp</small></td><td><span class="tag tag-baseline">v9-baseline</span> × 2 窗口</td></tr>
 <tr><td>A股主题</td><td><strong>CS新能车</strong>(399976)</td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+2.0pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.0pp</small></td><td>🏆 <span class="tag tag-donchian">donchian-200</span> <small>+5.2pp</small></td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+4.3pp</small></td><td><span class="tag tag-donchian">donchian-200</span> × 3 窗口</td></tr>
-<tr><td>A股主题</td><td><strong>中证医疗</strong>(399989)</td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+3.5pp</small></td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+2.5pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+5.2pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+5.0pp</small></td><td><span class="tag tag-baseline">v9-baseline</span> × 3 窗口</td></tr>
-<tr><td>A股主题</td><td><strong>中证白酒</strong>(399997)</td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.1pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.7pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.5pp</small></td><td><span class="tag tag-baseline">v9-baseline</span> × 2 窗口</td></tr>
+<tr><td>A股主题</td><td><strong>中证医疗</strong>(399989)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.6pp</small></td><td>≈ <span class="tag tag-dual">dual-momentum-top5</span> <small>+1.8pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+5.2pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+5.0pp</small></td><td><span class="tag tag-baseline">v9-baseline</span> × 2 窗口</td></tr>
+<tr><td>A股主题</td><td><strong>中证白酒</strong>(399997)</td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+0.0pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.7pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.5pp</small></td><td><span class="tag tag-baseline">v9-baseline</span> × 2 窗口</td></tr>
 <tr><td>A股主题</td><td><strong>CS智汽车</strong>(930721)</td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+13.9pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+12.5pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+8.7pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+6.3pp</small></td><td>全程 <span class="tag tag-baseline">v9-baseline</span></td></tr>
 <tr><td>A股主题</td><td><strong>人工智能</strong>(931071)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.1pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.5pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+0.7pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+2.1pp</small></td><td><span class="tag tag-baseline">v9-baseline</span> × 2 窗口</td></tr>
 <tr><td>A股主题</td><td><strong>5G通信</strong>(931079)</td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+11.6pp</small></td><td>🏆 <span class="tag tag-baseline">v9-baseline</span> <small>+12.0pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.9pp</small></td><td>🥈 <span class="tag tag-baseline">v9-baseline</span> <small>+4.4pp</small></td><td>全程 <span class="tag tag-baseline">v9-baseline</span></td></tr>
@@ -261,11 +221,11 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <tr><td>A股行业</td><td><strong>有色金属</strong>(000819)</td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+4.1pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+0.3pp</small></td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+4.7pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.0pp</small></td><td><span class="tag tag-donchian">donchian-200</span> × 2 窗口</td></tr>
 <tr><td>港股</td><td><strong>恒生科技</strong>(HSTECH)</td><td>🏆 <span class="tag tag-faber">faber-gtaa</span> <small>+5.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.2pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.1pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.1pp</small></td><td>混合：<span class="tag tag-faber">faber-gtaa</span></td></tr>
 <tr><td>美股</td><td><strong>纳指100</strong>(NDX)</td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+0.1pp</small></td><td>🥈 <span class="tag tag-faber">faber-gtaa</span> <small>+4.9pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.0pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+0.9pp</small></td><td>混合：<span class="tag tag-faber">faber-gtaa</span></td></tr>
-<tr><td>美股</td><td><strong>标普500</strong>(SPX)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.6pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.2pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.8pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.6pp</small></td><td><span class="zero">无策略明显胜出（差距 &lt; 2pp）→ baseline 即可</span></td></tr>
+<tr><td>美股</td><td><strong>标普500</strong>(SPX)</td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.6pp</small></td><td>≈ <span class="tag tag-donchian">donchian-200</span> <small>+1.2pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.8pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.6pp</small></td><td><span class="zero">无策略明显胜出 → baseline 即可</span></td></tr>
 <tr><td>商品</td><td><strong>白银现价</strong>(XAG)</td><td>🏆 <span class="tag tag-donchian">donchian-200</span> <small>+7.8pp</small></td><td>🥈 <span class="tag tag-donchian">donchian-200</span> <small>+4.6pp</small></td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.4pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+0.3pp</small></td><td><span class="tag tag-donchian">donchian-200</span> × 2 窗口</td></tr>
-<tr><td>商品</td><td><strong>黄金现价</strong>(XAU)</td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.9pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.6pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.0pp</small></td><td><span class="zero">无策略明显胜出（差距 &lt; 2pp）→ baseline 即可</span></td></tr>
+<tr><td>商品</td><td><strong>黄金现价</strong>(XAU)</td><td>≈ <span class="tag tag-faber">faber-gtaa</span> <small>+1.9pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.5pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.6pp</small></td><td>≈ <span class="tag tag-baseline">v9-baseline</span> <small>+1.0pp</small></td><td><span class="zero">无策略明显胜出 → baseline 即可</span></td></tr>
 </tbody></table>
-<h2 id="full-table">八、全 (指数 × 窗口) 完整 winner 表</h2>
+<h2 id="full-table">七、全 (指数 × 窗口) 完整 winner 表</h2>
 <table><thead><tr><th>排序</th><th>子集</th><th>指数</th><th>窗口</th><th>Winner</th><th>Winner CAGR</th><th>2nd</th><th>2nd CAGR</th><th>ΔCAGR</th><th>分级</th></tr></thead><tbody>
 <tr><td>1</td><td>A股主题</td><td>CS智汽车(930721)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+16.31%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+2.37%</span></td><td><span class="pos">+13.94pp</span></td><td><span class="tag tag-big">🏆 大幅</span></td></tr>
 <tr><td>2</td><td>A股主题</td><td>CS智汽车(930721)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.47%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="zero">-0.00%</span></td><td><span class="pos">+12.47pp</span></td><td><span class="tag tag-big">🏆 大幅</span></td></tr>
@@ -295,89 +255,83 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <tr><td>26</td><td>A股行业</td><td>有色金属(000819)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+24.46%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+20.38%</span></td><td><span class="pos">+4.08pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
 <tr><td>27</td><td>A股宽基</td><td>中证2000(932000)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.44%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+8.38%</span></td><td><span class="pos">+4.06pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
 <tr><td>28</td><td>A股行业</td><td>细分化工(000813)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.71%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+6.87%</span></td><td><span class="pos">+3.84pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>29</td><td>A股主题</td><td>中证医疗(399989)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.59%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="neg">-2.94%</span></td><td><span class="pos">+3.53pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>30</td><td>A股行业</td><td>细分化工(000813)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.99%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+4.54%</span></td><td><span class="pos">+3.45pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>31</td><td>A股宽基</td><td>创业板50(399673)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+19.94%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+17.25%</span></td><td><span class="pos">+2.69pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>32</td><td>A股行业</td><td>细分化工(000813)</td><td>5 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.92%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.38%</span></td><td><span class="pos">+2.54pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>33</td><td>A股主题</td><td>中证医疗(399989)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="neg">-1.78%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="neg">-4.29%</span></td><td><span class="pos">+2.51pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>34</td><td>A股宽基</td><td>中证500(000905)</td><td>8 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.12%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+4.85%</span></td><td><span class="pos">+2.27pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>35</td><td>A股主题</td><td>人工智能(931071)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.31%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.16%</span></td><td><span class="pos">+2.15pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>36</td><td>A股主题</td><td>CS新能车(399976)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+18.66%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+16.65%</span></td><td><span class="pos">+2.01pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>37</td><td>A股宽基</td><td>中证500(000905)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+5.08%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+3.07%</span></td><td><span class="pos">+2.01pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
-<tr><td>38</td><td>A股宽基</td><td>上证50(000016)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+0.51%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="neg">-1.46%</span></td><td><span class="pos">+1.97pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>39</td><td>商品</td><td>黄金现价(XAU)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+30.16%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+28.23%</span></td><td><span class="pos">+1.93pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>40</td><td>A股主题</td><td>光伏产业(931151)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.43%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+6.55%</span></td><td><span class="pos">+1.88pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>41</td><td>美股</td><td>标普500(SPX)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+9.39%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.58%</span></td><td><span class="pos">+1.81pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>42</td><td>A股主题</td><td>中证新能(399808)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.80%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.09%</span></td><td><span class="pos">+1.71pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>43</td><td>A股主题</td><td>中证军工(399967)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+11.94%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.26%</span></td><td><span class="pos">+1.68pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>44</td><td>美股</td><td>标普500(SPX)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+9.02%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+7.38%</span></td><td><span class="pos">+1.64pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>45</td><td>美股</td><td>标普500(SPX)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.54%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.92%</span></td><td><span class="pos">+1.62pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>46</td><td>商品</td><td>黄金现价(XAU)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+13.90%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+12.29%</span></td><td><span class="pos">+1.61pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>47</td><td>A股宽基</td><td>科创50(000688)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.40%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+12.92%</span></td><td><span class="pos">+1.48pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>48</td><td>商品</td><td>黄金现价(XAU)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+16.49%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.02%</span></td><td><span class="pos">+1.47pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>49</td><td>A股宽基</td><td>沪深300(000300)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.32%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+1.87%</span></td><td><span class="pos">+1.45pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>50</td><td>A股宽基</td><td>沪深300(000300)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+2.95%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+1.51%</span></td><td><span class="pos">+1.44pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>51</td><td>商品</td><td>白银现价(XAG)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+14.97%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+13.59%</span></td><td><span class="pos">+1.38pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>52</td><td>A股宽基</td><td>中证500(000905)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.51%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.23%</span></td><td><span class="pos">+1.28pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>53</td><td>A股主题</td><td>中证军工(399967)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.25%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.00%</span></td><td><span class="pos">+1.25pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>54</td><td>A股宽基</td><td>中证2000(932000)</td><td>10 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.19%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.97%</span></td><td><span class="pos">+1.22pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>55</td><td>美股</td><td>标普500(SPX)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.21%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.05%</span></td><td><span class="pos">+1.16pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>56</td><td>A股主题</td><td>中证白酒(399997)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="zero">0.00%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="neg">-1.12%</span></td><td><span class="pos">+1.12pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>57</td><td>A股主题</td><td>中证新能(399808)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.93%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+13.82%</span></td><td><span class="pos">+1.11pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>58</td><td>A股宽基</td><td>中证500(000905)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+12.82%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.73%</span></td><td><span class="pos">+1.09pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>59</td><td>A股宽基</td><td>中证2000(932000)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.70%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.62%</span></td><td><span class="pos">+1.08pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>60</td><td>A股宽基</td><td>中证2000(932000)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.14%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.09%</span></td><td><span class="pos">+1.05pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>61</td><td>A股主题</td><td>CS新能车(399976)</td><td>5 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+11.86%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.81%</span></td><td><span class="pos">+1.05pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>62</td><td>商品</td><td>黄金现价(XAU)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.62%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+9.58%</span></td><td><span class="pos">+1.04pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>63</td><td>A股宽基</td><td>创业板50(399673)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+16.66%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+15.65%</span></td><td><span class="pos">+1.01pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>64</td><td>美股</td><td>纳指100(NDX)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.52%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.51%</span></td><td><span class="pos">+1.01pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>65</td><td>A股行业</td><td>有色金属(000819)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+11.03%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.06%</span></td><td><span class="pos">+0.97pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>66</td><td>A股宽基</td><td>上证50(000016)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.15%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+0.22%</span></td><td><span class="pos">+0.93pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>67</td><td>美股</td><td>纳指100(NDX)</td><td>10 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.77%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.84%</span></td><td><span class="pos">+0.93pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>68</td><td>A股宽基</td><td>上证50(000016)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.66%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+0.85%</span></td><td><span class="pos">+0.81pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>69</td><td>A股宽基</td><td>创业板50(399673)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.42%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.63%</span></td><td><span class="pos">+0.79pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>70</td><td>A股主题</td><td>中证新能(399808)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.20%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+11.48%</span></td><td><span class="pos">+0.72pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>71</td><td>A股宽基</td><td>中证1000(000852)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.42%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+2.71%</span></td><td><span class="pos">+0.71pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>72</td><td>A股主题</td><td>人工智能(931071)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+9.94%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+9.29%</span></td><td><span class="pos">+0.65pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>73</td><td>A股宽基</td><td>中证1000(000852)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.85%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+6.31%</span></td><td><span class="pos">+0.54pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>74</td><td>A股宽基</td><td>上证50(000016)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+2.70%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+2.18%</span></td><td><span class="pos">+0.52pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>75</td><td>A股主题</td><td>中证新能(399808)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.94%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.44%</span></td><td><span class="pos">+0.50pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>76</td><td>A股宽基</td><td>沪深300(000300)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.98%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+0.49%</span></td><td><span class="pos">+0.49pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>77</td><td>A股行业</td><td>细分化工(000813)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+9.75%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+9.27%</span></td><td><span class="pos">+0.48pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>78</td><td>A股宽基</td><td>中证1000(000852)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+11.90%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.43%</span></td><td><span class="pos">+0.47pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>79</td><td>A股宽基</td><td>科创50(000688)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.00%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.57%</span></td><td><span class="pos">+0.43pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>80</td><td>A股主题</td><td>光伏产业(931151)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.65%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.23%</span></td><td><span class="pos">+0.42pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>81</td><td>A股行业</td><td>有色金属(000819)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+14.03%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+13.74%</span></td><td><span class="pos">+0.29pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>82</td><td>商品</td><td>白银现价(XAG)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.92%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.63%</span></td><td><span class="pos">+0.29pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>83</td><td>A股宽基</td><td>科创50(000688)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+4.93%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+4.66%</span></td><td><span class="pos">+0.27pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>84</td><td>A股主题</td><td>中证白酒(399997)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.25%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="zero">0.00%</span></td><td><span class="pos">+0.25pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>85</td><td>A股宽基</td><td>中证1000(000852)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+4.54%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+4.29%</span></td><td><span class="pos">+0.25pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>86</td><td>A股宽基</td><td>科创50(000688)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.92%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.72%</span></td><td><span class="pos">+0.20pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>87</td><td>港股</td><td>恒生科技(HSTECH)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.16%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+2.98%</span></td><td><span class="pos">+0.18pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>88</td><td>美股</td><td>纳指100(NDX)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+17.42%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+17.30%</span></td><td><span class="pos">+0.12pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>89</td><td>港股</td><td>恒生科技(HSTECH)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.96%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+1.85%</span></td><td><span class="pos">+0.11pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>90</td><td>港股</td><td>恒生科技(HSTECH)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.57%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+1.48%</span></td><td><span class="pos">+0.09pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>91</td><td>A股主题</td><td>人工智能(931071)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+23.18%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+23.09%</span></td><td><span class="pos">+0.09pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
-<tr><td>92</td><td>A股宽基</td><td>创业板50(399673)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+8.12%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.07%</span></td><td><span class="zero">0.05pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>29</td><td>A股行业</td><td>细分化工(000813)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.99%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+4.54%</span></td><td><span class="pos">+3.45pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>30</td><td>A股宽基</td><td>创业板50(399673)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+19.94%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+17.25%</span></td><td><span class="pos">+2.69pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>31</td><td>A股行业</td><td>细分化工(000813)</td><td>5 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.92%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.38%</span></td><td><span class="pos">+2.54pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>32</td><td>A股宽基</td><td>中证500(000905)</td><td>8 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.12%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+4.85%</span></td><td><span class="pos">+2.27pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>33</td><td>A股主题</td><td>人工智能(931071)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+7.31%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.16%</span></td><td><span class="pos">+2.15pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>34</td><td>A股主题</td><td>CS新能车(399976)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+18.66%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+16.65%</span></td><td><span class="pos">+2.01pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>35</td><td>A股宽基</td><td>中证500(000905)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+5.08%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+3.07%</span></td><td><span class="pos">+2.01pp</span></td><td><span class="tag tag-mid">🥈 中等</span></td></tr>
+<tr><td>36</td><td>商品</td><td>黄金现价(XAU)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+30.16%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+28.23%</span></td><td><span class="pos">+1.93pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>37</td><td>A股主题</td><td>光伏产业(931151)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.43%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+6.55%</span></td><td><span class="pos">+1.88pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>38</td><td>美股</td><td>标普500(SPX)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+9.39%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.58%</span></td><td><span class="pos">+1.81pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>39</td><td>A股主题</td><td>中证医疗(399989)</td><td>5 年</td><td><span class="tag tag-dual">dual-momentum-top5</span></td><td><span class="zero">0.00%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="neg">-1.78%</span></td><td><span class="pos">+1.78pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>40</td><td>A股主题</td><td>中证新能(399808)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.80%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.09%</span></td><td><span class="pos">+1.71pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>41</td><td>A股主题</td><td>中证军工(399967)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+11.94%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.26%</span></td><td><span class="pos">+1.68pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>42</td><td>美股</td><td>标普500(SPX)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+9.02%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+7.38%</span></td><td><span class="pos">+1.64pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>43</td><td>美股</td><td>标普500(SPX)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.54%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.92%</span></td><td><span class="pos">+1.62pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>44</td><td>商品</td><td>黄金现价(XAU)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+13.90%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+12.29%</span></td><td><span class="pos">+1.61pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>45</td><td>A股宽基</td><td>科创50(000688)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.40%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+12.92%</span></td><td><span class="pos">+1.48pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>46</td><td>商品</td><td>黄金现价(XAU)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+16.49%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.02%</span></td><td><span class="pos">+1.47pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>47</td><td>A股宽基</td><td>沪深300(000300)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.32%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+1.87%</span></td><td><span class="pos">+1.45pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>48</td><td>A股宽基</td><td>沪深300(000300)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+2.95%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+1.51%</span></td><td><span class="pos">+1.44pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>49</td><td>商品</td><td>白银现价(XAG)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+14.97%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+13.59%</span></td><td><span class="pos">+1.38pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>50</td><td>A股宽基</td><td>中证500(000905)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.51%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.23%</span></td><td><span class="pos">+1.28pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>51</td><td>A股主题</td><td>中证军工(399967)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.25%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.00%</span></td><td><span class="pos">+1.25pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>52</td><td>A股宽基</td><td>中证2000(932000)</td><td>10 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.19%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.97%</span></td><td><span class="pos">+1.22pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>53</td><td>美股</td><td>标普500(SPX)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.21%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.05%</span></td><td><span class="pos">+1.16pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>54</td><td>A股主题</td><td>中证新能(399808)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.93%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+13.82%</span></td><td><span class="pos">+1.11pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>55</td><td>A股宽基</td><td>中证500(000905)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+12.82%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.73%</span></td><td><span class="pos">+1.09pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>56</td><td>A股宽基</td><td>中证2000(932000)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.70%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+5.62%</span></td><td><span class="pos">+1.08pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>57</td><td>A股宽基</td><td>中证2000(932000)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.14%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.09%</span></td><td><span class="pos">+1.05pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>58</td><td>A股主题</td><td>CS新能车(399976)</td><td>5 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+11.86%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.81%</span></td><td><span class="pos">+1.05pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>59</td><td>商品</td><td>黄金现价(XAU)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.62%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+9.58%</span></td><td><span class="pos">+1.04pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>60</td><td>A股宽基</td><td>创业板50(399673)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+16.66%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+15.65%</span></td><td><span class="pos">+1.01pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>61</td><td>美股</td><td>纳指100(NDX)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.52%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.51%</span></td><td><span class="pos">+1.01pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>62</td><td>A股行业</td><td>有色金属(000819)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+11.03%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.06%</span></td><td><span class="pos">+0.97pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>63</td><td>A股宽基</td><td>上证50(000016)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.15%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+0.22%</span></td><td><span class="pos">+0.93pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>64</td><td>美股</td><td>纳指100(NDX)</td><td>10 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+15.77%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+14.84%</span></td><td><span class="pos">+0.93pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>65</td><td>A股宽基</td><td>上证50(000016)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.66%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+0.85%</span></td><td><span class="pos">+0.81pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>66</td><td>A股宽基</td><td>创业板50(399673)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.42%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.63%</span></td><td><span class="pos">+0.79pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>67</td><td>A股主题</td><td>中证新能(399808)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+12.20%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+11.48%</span></td><td><span class="pos">+0.72pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>68</td><td>A股宽基</td><td>中证1000(000852)</td><td>10 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.42%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+2.71%</span></td><td><span class="pos">+0.71pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>69</td><td>A股主题</td><td>人工智能(931071)</td><td>8 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+9.94%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+9.29%</span></td><td><span class="pos">+0.65pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>70</td><td>A股主题</td><td>中证医疗(399989)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.59%</span></td><td><span class="tag tag-dual">dual-momentum-top5</span></td><td><span class="zero">0.00%</span></td><td><span class="pos">+0.59pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>71</td><td>A股宽基</td><td>中证1000(000852)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+6.85%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+6.31%</span></td><td><span class="pos">+0.54pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>72</td><td>A股宽基</td><td>上证50(000016)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+2.70%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+2.18%</span></td><td><span class="pos">+0.52pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>73</td><td>A股宽基</td><td>上证50(000016)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+0.51%</span></td><td><span class="tag tag-dual">dual-momentum-top5</span></td><td><span class="zero">0.00%</span></td><td><span class="pos">+0.51pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>74</td><td>A股主题</td><td>中证新能(399808)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.94%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.44%</span></td><td><span class="pos">+0.50pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>75</td><td>A股宽基</td><td>沪深300(000300)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.98%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+0.49%</span></td><td><span class="pos">+0.49pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>76</td><td>A股行业</td><td>细分化工(000813)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+9.75%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+9.27%</span></td><td><span class="pos">+0.48pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>77</td><td>A股宽基</td><td>中证1000(000852)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+11.90%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+11.43%</span></td><td><span class="pos">+0.47pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>78</td><td>A股宽基</td><td>科创50(000688)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.00%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+7.57%</span></td><td><span class="pos">+0.43pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>79</td><td>A股主题</td><td>光伏产业(931151)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.65%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+10.23%</span></td><td><span class="pos">+0.42pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>80</td><td>A股行业</td><td>有色金属(000819)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+14.03%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+13.74%</span></td><td><span class="pos">+0.29pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>81</td><td>商品</td><td>白银现价(XAG)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+10.92%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+10.63%</span></td><td><span class="pos">+0.29pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>82</td><td>A股宽基</td><td>科创50(000688)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+4.93%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+4.66%</span></td><td><span class="pos">+0.27pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>83</td><td>A股主题</td><td>中证白酒(399997)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+0.25%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="zero">0.00%</span></td><td><span class="pos">+0.25pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>84</td><td>A股宽基</td><td>中证1000(000852)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+4.54%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+4.29%</span></td><td><span class="pos">+0.25pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>85</td><td>A股宽基</td><td>科创50(000688)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.92%</span></td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+3.72%</span></td><td><span class="pos">+0.20pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>86</td><td>港股</td><td>恒生科技(HSTECH)</td><td>5 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+3.16%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+2.98%</span></td><td><span class="pos">+0.18pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>87</td><td>美股</td><td>纳指100(NDX)</td><td>3 年</td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+17.42%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+17.30%</span></td><td><span class="pos">+0.12pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>88</td><td>港股</td><td>恒生科技(HSTECH)</td><td>8 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.96%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+1.85%</span></td><td><span class="pos">+0.11pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>89</td><td>港股</td><td>恒生科技(HSTECH)</td><td>10 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+1.57%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+1.48%</span></td><td><span class="pos">+0.09pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>90</td><td>A股主题</td><td>人工智能(931071)</td><td>3 年</td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+23.18%</span></td><td><span class="tag tag-faber">faber-gtaa</span></td><td><span class="pos">+23.09%</span></td><td><span class="pos">+0.09pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>91</td><td>A股宽基</td><td>创业板50(399673)</td><td>5 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="pos">+8.12%</span></td><td><span class="tag tag-baseline">v9-baseline</span></td><td><span class="pos">+8.07%</span></td><td><span class="zero">0.05pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
+<tr><td>92</td><td>A股主题</td><td>中证白酒(399997)</td><td>3 年</td><td><span class="tag tag-donchian">donchian-200</span></td><td><span class="zero">0.00%</span></td><td><span class="tag tag-dual">dual-momentum-top5</span></td><td><span class="zero">0.00%</span></td><td><span class="zero">0.00pp</span></td><td><span class="tag tag-small">📉 差距小</span></td></tr>
 </tbody></table>
-<h2 id="insights">九、关键洞察 + 实操建议</h2>
-<h3>核心结论（per-index in/out 维度）</h3>
+<h2 id="insights">八、关键洞察 + 实操建议</h2>
+<h3>核心结论</h3>
 <ol>
-<li><strong>37 / 92 = 40% 的数据点有可优化空间</strong>（≥ 2pp 领先），剩余 55 个组合策略选择影响不大 → baseline 即可。</li>
-<li><strong>winner 次数排名</strong>：<span class="tag tag-baseline">v9-baseline</span> (24) → <span class="tag tag-donchian">donchian-200</span> (10) → <span class="tag tag-faber">faber-gtaa</span> (3)（仅含 ≥ 2pp 领先组合，3 in/out）。</li>
+<li><strong>35 / 92 = 38% 的数据点有可优化空间</strong>（≥ 2pp 领先）。</li>
+<li><strong>winner 次数排名</strong>：<span class="tag tag-baseline">v9-baseline</span> (23) → <span class="tag tag-donchian">donchian-200</span> (9) → <span class="tag tag-faber">faber-gtaa</span> (3) → <span class="tag tag-dual">dual-momentum-top5</span> (0)</li>
 <li><strong>各策略风格倾向</strong>：<ul>
-<li><span class="tag tag-baseline">v9-baseline</span>：最强子集 A股主题 (19)、A股宽基 (3)、A股行业 (2)</li>
+<li><span class="tag tag-baseline">v9-baseline</span>：最强子集 A股主题 (18)、A股宽基 (3)、A股行业 (2)</li>
 <li><span class="tag tag-faber">faber-gtaa</span>：最强子集 A股行业 (1)、港股 (1)、美股 (1)</li>
-<li><span class="tag tag-donchian">donchian-200</span>：最强子集 A股主题 (4)、A股宽基 (2)、A股行业 (2)</li>
+<li><span class="tag tag-donchian">donchian-200</span>：最强子集 A股主题 (3)、A股宽基 (2)、A股行业 (2)</li>
+<li><span class="tag tag-dual">dual-momentum-top5</span>：4 窗口都没明显胜出</li>
 </ul></li>
 </ol>
-<h3>🚀 dual-momentum vs virtual best mix 关键发现</h3>
-<ul>
-<li>3 年：dual-momentum +8.82pp ≥ virtual best → <strong>横截面 alpha 真实存在</strong>，比 per-index 最优还赚</li>
-<li>5 年：dual-momentum -1.60pp ≈ virtual best → <strong>已捕捉到 per-index 最优</strong>，可放心使用</li>
-<li>8 年：dual-momentum -1.46pp ≈ virtual best → <strong>已捕捉到 per-index 最优</strong>，可放心使用</li>
-<li>10 年：dual-momentum -0.13pp ≈ virtual best → <strong>已捕捉到 per-index 最优</strong>，可放心使用</li>
-</ul>
 <h3>🏆 最值得记住的 winner 组合</h3>
 <ol>
 <li><strong>CS智汽车</strong>(930721) 3 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+16.31%</span> / MDD <span class="neg">-17.42%</span>，<strong>领先 donchian-200（<span class="pos">+2.37%</span>）<span class="pos">+13.94pp</span></strong></li>
@@ -390,20 +344,69 @@ dual-momentum 是<strong>横截面 top-K</strong>策略——每月在 24 个指
 <li><strong>CS智汽车</strong>(930721) 10 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+7.69%</span> / MDD <span class="neg">-30.10%</span>，<strong>领先 faber-gtaa（<span class="pos">+1.40%</span>）<span class="pos">+6.29pp</span></strong></li>
 <li><strong>中证军工</strong>(399967) 8 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+9.33%</span> / MDD <span class="neg">-27.95%</span>，<strong>领先 donchian-200（<span class="pos">+3.38%</span>）<span class="pos">+5.95pp</span></strong></li>
 <li><strong>光伏产业</strong>(931151) 3 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+11.22%</span> / MDD <span class="neg">-17.11%</span>，<strong>领先 faber-gtaa（<span class="pos">+5.53%</span>）<span class="pos">+5.69pp</span></strong></li>
-<li><strong>恒生科技</strong>(HSTECH) 3 年 → 用 <span class="tag tag-faber">faber-gtaa</span> CAGR <span class="pos">+10.35%</span> / MDD <span class="neg">-27.91%</span>，<strong>领先 v9-baseline（<span class="pos">+4.89%</span>）<span class="pos">+5.46pp</span></strong></li>
-<li><strong>CS新能车</strong>(399976) 8 年 → 用 <span class="tag tag-donchian">donchian-200</span> CAGR <span class="pos">+24.24%</span> / MDD <span class="neg">-32.97%</span>，<strong>领先 faber-gtaa（<span class="pos">+19.05%</span>）<span class="pos">+5.19pp</span></strong></li>
-<li><strong>中证医疗</strong>(399989) 8 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+8.91%</span> / MDD <span class="neg">-38.70%</span>，<strong>领先 donchian-200（<span class="pos">+3.75%</span>）<span class="pos">+5.16pp</span></strong></li>
-<li><strong>沪深300</strong>(000300) 3 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+5.88%</span> / MDD <span class="neg">-12.94%</span>，<strong>领先 donchian-200（<span class="pos">+0.82%</span>）<span class="pos">+5.06pp</span></strong></li>
-<li><strong>中证医疗</strong>(399989) 10 年 → 用 <span class="tag tag-baseline">v9-baseline</span> CAGR <span class="pos">+7.87%</span> / MDD <span class="neg">-39.01%</span>，<strong>领先 faber-gtaa（<span class="pos">+2.86%</span>）<span class="pos">+5.01pp</span></strong></li>
 </ol>
 <h3>实操建议</h3>
 <div class="callout-success callout">
 <strong>分级使用策略</strong>：
 <ul>
-<li>📌 <strong>大幅领先组合（🏆）</strong>：放心切换到 winner 策略</li>
+<li>📌 <strong>大幅领先组合（🏆）</strong>：直接切到 winner 策略</li>
 <li>📌 <strong>中等领先组合（🥈）</strong>：看 ΔMDD 决定切换</li>
-<li>📌 <strong>差距小组合（📉，70+ 个）</strong>：保留 baseline 即可</li>
-<li>📌 <strong>组合层 dual-momentum</strong>：参考第六段 portfolio 对照</li>
+<li>📌 <strong>差距小组合（📉）</strong>：保留 baseline 即可</li>
+</ul>
+</div>
+<h2 id="portfolio-vs">九、Portfolio 层对照（dual-momentum 真正发光的地方）</h2>
+<div class="callout-warn callout">
+<strong>⚠️ 重要：dual-momentum 在 per-index 维度下"看起来全输"是误读</strong><br>
+dual-momentum 是<strong>集中持仓 top-5 等分总资金</strong>的策略——单指数被选中时占总资金 1/5 份。
+但 per-index 视角是"INDEX_CAPITAL 独立持有该指数"——dual-momentum 在没选中的月份 = cash idle = 0% CAGR，
+所以 per-index 维度下它从不是 winner。<br>
+<strong>dual-momentum 的真正 alpha 在 portfolio 层</strong>——下面对比 4 策略 portfolio CAGR 和"事后最优 per-index 组合 (virtual best mix)"。
+</div>
+<h3>4 策略 Portfolio 层 CAGR/MDD/总收益（vs virtual best mix）</h3>
+<table><thead><tr><th>窗口</th>
+<th>v9-baseline</th>
+<th>faber-gtaa</th>
+<th>donchian-200</th>
+<th>dual-momentum-top5</th>
+<th>🟣 virtual best mix（事后上限）</th></tr></thead><tbody>
+<tr><td><strong>3 年</strong></td>
+<td>CAGR <span class="pos">+14.89%</span><br>MDD <span class="neg">-11.42%</span><br>总 <span class="pos">+51.67%</span></td>
+<td>CAGR <span class="pos">+12.11%</span><br>MDD <span class="neg">-13.62%</span><br>总 <span class="pos">+40.92%</span></td>
+<td>CAGR <span class="pos">+11.91%</span><br>MDD <span class="neg">-14.72%</span><br>总 <span class="pos">+40.18%</span></td>
+<td>CAGR <span class="pos">+25.66%</span><br>MDD <span class="neg">-13.37%</span><br>总 <span class="pos">+98.44%</span></td>
+<td>CAGR <span class="pos">+16.84%</span><br>总 <span class="pos">+59.51%</span><br><small>(23指数)</small></td></tr>
+<tr><td><strong>5 年</strong></td>
+<td>CAGR <span class="pos">+9.49%</span><br>MDD <span class="neg">-14.06%</span><br>总 <span class="pos">+57.31%</span></td>
+<td>CAGR <span class="pos">+5.74%</span><br>MDD <span class="neg">-21.71%</span><br>总 <span class="pos">+32.16%</span></td>
+<td>CAGR <span class="pos">+6.83%</span><br>MDD <span class="neg">-14.47%</span><br>总 <span class="pos">+39.13%</span></td>
+<td>CAGR <span class="pos">+9.27%</span><br>MDD <span class="neg">-42.32%</span><br>总 <span class="pos">+55.74%</span></td>
+<td>CAGR <span class="pos">+10.87%</span><br>总 <span class="pos">+67.55%</span><br><small>(23指数)</small></td></tr>
+<tr><td><strong>8 年</strong></td>
+<td>CAGR <span class="pos">+9.99%</span><br>MDD <span class="neg">-15.62%</span><br>总 <span class="pos">+114.16%</span></td>
+<td>CAGR <span class="pos">+8.19%</span><br>MDD <span class="neg">-23.91%</span><br>总 <span class="pos">+87.70%</span></td>
+<td>CAGR <span class="pos">+8.86%</span><br>MDD <span class="neg">-17.35%</span><br>总 <span class="pos">+97.21%</span></td>
+<td>CAGR <span class="pos">+10.15%</span><br>MDD <span class="neg">-42.32%</span><br>总 <span class="pos">+116.69%</span></td>
+<td>CAGR <span class="pos">+11.61%</span><br>总 <span class="pos">+140.74%</span><br><small>(23指数)</small></td></tr>
+<tr><td><strong>10 年</strong></td>
+<td>CAGR <span class="pos">+8.36%</span><br>MDD <span class="neg">-15.25%</span><br>总 <span class="pos">+123.25%</span></td>
+<td>CAGR <span class="pos">+6.67%</span><br>MDD <span class="neg">-23.30%</span><br>总 <span class="pos">+90.67%</span></td>
+<td>CAGR <span class="pos">+6.79%</span><br>MDD <span class="neg">-16.03%</span><br>总 <span class="pos">+92.95%</span></td>
+<td>CAGR <span class="pos">+9.28%</span><br>MDD <span class="neg">-42.32%</span><br>总 <span class="pos">+142.92%</span></td>
+<td>CAGR <span class="pos">+9.41%</span><br>总 <span class="pos">+145.74%</span><br><small>(23指数)</small></td></tr>
+</tbody></table>
+<h3>🚀 dual-momentum vs virtual best mix（横截面 alpha 是否真实）</h3>
+<table><thead><tr><th>窗口</th><th>dual-momentum CAGR</th><th>virtual best CAGR</th><th>Δ</th><th>解读</th></tr></thead><tbody>
+<tr><td><strong>3 年</strong></td><td><span class="pos">+25.66%</span></td><td><span class="pos">+16.84%</span></td><td><strong><span class="pos">+8.82pp</span></strong></td><td>🚀 横截面 alpha 真实，比 per-index 自由选最佳还高</td></tr>
+<tr><td><strong>5 年</strong></td><td><span class="pos">+9.27%</span></td><td><span class="pos">+10.87%</span></td><td><strong><span class="neg">-1.60pp</span></strong></td><td>≈ 接近持平（dual 已捕捉到 per-index 最优）</td></tr>
+<tr><td><strong>8 年</strong></td><td><span class="pos">+10.15%</span></td><td><span class="pos">+11.61%</span></td><td><strong><span class="neg">-1.46pp</span></strong></td><td>≈ 接近持平（dual 已捕捉到 per-index 最优）</td></tr>
+<tr><td><strong>10 年</strong></td><td><span class="pos">+9.28%</span></td><td><span class="pos">+9.41%</span></td><td><strong><span class="neg">-0.13pp</span></strong></td><td>≈ 接近持平（dual 已捕捉到 per-index 最优）</td></tr>
+</tbody></table>
+<div class="callout-success callout">
+<strong>📌 dual-momentum 实操判断（基于 portfolio 层）</strong>：
+<ul>
+<li><strong>3 年短期</strong>：dual-momentum 比 per-index 自由选最佳还高 +8.82pp → <strong>横截面 alpha 真实存在</strong>，强烈推荐</li>
+<li><strong>5/8/10 年中长期</strong>：dual-momentum ≈ virtual best mix → 横截面 alpha 在长窗口被 per-index 自由选追上；选哪个看 MDD 偏好</li>
+<li><strong>关于 MDD</strong>：dual-momentum 5/8/10y MDD -42.32%（集中度风险）vs baseline -14~-15%。短期 dual MDD -13.37% 还可接受</li>
 </ul>
 </div>
 </body></html>
