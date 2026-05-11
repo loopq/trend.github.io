@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dual-momentum 加右侧趋势过滤器对比</title>
+<style>:root {
+  --c-bg: #fafbfc; --c-text: #1f2328; --c-muted: #656d76; --c-accent: #0969da;
+  --c-border: #d0d7de; --c-code-bg: #f6f8fa; --c-warn: #bf8700; --c-warn-bg: #fff8c5;
+  --c-success: #1a7f37; --c-success-bg: #dafbe1; --c-danger: #d1242f; --c-danger-bg: #ffebe9;
+  --c-info-bg: #ddf4ff; --c-pos: #1a7f37; --c-neg: #d1242f;
+}
+* { box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 15px; line-height: 1.65; color: var(--c-text); background: var(--c-bg);
+  max-width: 1280px; margin: 0 auto; padding: 28px 40px 80px; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--c-border); padding-bottom: 10px; margin-bottom: 8px; }
+h2 { font-size: 21px; margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--c-border); }
+h3 { font-size: 17px; color: var(--c-accent); margin-top: 28px; margin-bottom: 6px; }
+table { border-collapse: collapse; margin: 14px 0; font-size: 13px; width: 100%; }
+th, td { border: 1px solid var(--c-border); padding: 7px 11px; text-align: left; vertical-align: top; white-space: nowrap; }
+th { background: var(--c-code-bg); font-weight: 600; font-size: 12.5px; }
+table tbody tr:hover { background: var(--c-info-bg); }
+.meta { color: var(--c-muted); font-size: 13.5px; }
+.pos { color: var(--c-pos); font-weight: 600; }
+.neg { color: var(--c-neg); font-weight: 600; }
+.zero { color: var(--c-muted); }
+.dd-mid { color: #c2410c; font-weight: 600; }
+.dd-deep { color: var(--c-danger); font-weight: 600; }
+.callout { border-left: 4px solid var(--c-accent); background: var(--c-info-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+.callout-warn { border-left-color: var(--c-warn); background: var(--c-warn-bg); }
+.callout-success { border-left-color: var(--c-success); background: var(--c-success-bg); }
+.callout-danger { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.tag-base { background: #e7f5ff; color: #1971c2; }
+.tag-w { background: #d3f9d8; color: #2b8a3e; }
+.tag-m { background: #fff3bf; color: #b08800; }
+.tag-d { background: #ffe3e3; color: #c92a2a; }
+.tag-better { background: var(--c-success-bg); color: var(--c-success); font-weight: 600; }
+.tag-worse { background: var(--c-danger-bg); color: var(--c-danger); }
+nav.toc { background: var(--c-code-bg); padding: 14px 22px; border-radius: 6px; margin: 18px 0 24px; border: 1px solid var(--c-border); }
+nav.toc h4 { margin: 0 0 6px; font-size: 13px; }
+nav.toc ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+nav.toc li { margin: 2px 0; font-size: 13.5px; }
+nav.toc a { color: var(--c-accent); text-decoration: none; }
+.bar-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 13px; }
+.bar-label { min-width: 90px; }
+.bar-track { flex: 1; height: 16px; background: var(--c-code-bg); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--c-accent); }
+.bar-fill.warn { background: var(--c-warn); }
+.bar-fill.danger { background: var(--c-danger); }
+.bar-count { min-width: 50px; text-align: right; font-weight: 600; }
+@media (max-width: 720px) { body { padding: 18px 16px 60px; font-size: 14px; } nav.toc ul { columns: 1; } table { font-size: 11.5px; } th, td { padding: 4px 6px; } }
+</style>
+</head>
+<body>
+<h1>dual-momentum-top5 加右侧趋势过滤器对比</h1>
+<p class="meta"><strong>生成日</strong>: 2026-05-11 · <strong>universe</strong>: combined-24 · <strong>基础策略</strong>: dual-momentum-top5 (lookback 12 / topk 5 / abs_threshold 0%) · <strong>过滤条件</strong>: 在 top-5 选出后再做二次确认，未通过 → cash idle</p>
+<div class="callout">
+<strong>📌 思路</strong>：dual-momentum 选出 top-5 后，每个候选还要满足"右侧趋势已启动"才进场。
+3 个变体测试不同时间维度的趋势确认：
+<ul>
+<li><strong>A: 周线 MA10</strong>——close > 周线 MA10（趋势方向中期确认）</li>
+<li><strong>B: 月线 MA10</strong>——close > 月线 MA10（趋势方向长期确认，最严格）</li>
+<li><strong>C: 日线 MA5 > MA10</strong>——日线短期均线在长期均线之上（已金叉状态，最敏捷）</li>
+</ul>
+未通过的 top-K 该月不持仓 → cash idle。预期效果：CAGR 略降，MDD 改善（避开熊市初段持仓）。
+</div>
+<nav class="toc"><h4>目录</h4><ul>
+<li><a href="#overall">一、4 变体全期对比</a></li>
+<li><a href="#windows">二、4 窗口 CAGR/MDD/总收益对比</a></li>
+<li><a href="#delta">三、Δ vs baseline（量化提升）</a></li>
+<li><a href="#dd-dist">四、DD 深度分布对比</a></li>
+<li><a href="#top-dd">五、Top 10 最深 DD 对比</a></li>
+<li><a href="#holding">六、持仓率统计</a></li>
+<li><a href="#conclusion">七、结论 + 推荐</a></li>
+</ul></nav>
+<h2 id="overall">一、4 变体全期对比</h2>
+<table><thead><tr><th>变体</th><th>全期 CAGR</th><th>全期 MDD</th><th>全期总收益</th><th>DD 段数</th><th>平均持仓数</th><th>cash idle 月占比</th></tr></thead><tbody>
+<tr><td><span class="tag tag-base">baseline (top-5 无过滤)</span></td><td><span class="pos">+8.82%</span></td><td><span class="dd-deep">-51.01%</span></td><td><span class="pos">+554.70%</span></td><td>17</td><td>3.44</td><td>8.3%</td></tr>
+<tr><td><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span></td><td><span class="pos">+8.38%</span></td><td><span class="dd-deep">-39.26%</span></td><td><span class="pos">+497.77%</span></td><td>13</td><td>2.33</td><td>22.8%</td></tr>
+<tr><td><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span></td><td><span class="pos">+8.66%</span></td><td><span class="dd-deep">-54.90%</span></td><td><span class="pos">+533.87%</span></td><td>15</td><td>3.01</td><td>12.8%</td></tr>
+<tr><td><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span></td><td><span class="pos">+7.64%</span></td><td><span class="dd-deep">-38.74%</span></td><td><span class="pos">+413.68%</span></td><td>13</td><td>2.08</td><td>26.6%</td></tr>
+</tbody></table>
+<h2 id="windows">二、4 窗口 CAGR/MDD/总收益对比</h2>
+<table><thead><tr><th>变体</th>
+<th colspan="3">3 年</th>
+<th colspan="3">5 年</th>
+<th colspan="3">8 年</th>
+<th colspan="3">10 年</th>
+</tr><tr><th></th>
+<th>CAGR</th><th>MDD</th><th>总收益</th>
+<th>CAGR</th><th>MDD</th><th>总收益</th>
+<th>CAGR</th><th>MDD</th><th>总收益</th>
+<th>CAGR</th><th>MDD</th><th>总收益</th>
+</tr></thead><tbody>
+<tr><td><span class="tag tag-base">baseline (top-5 无过滤)</span></td>
+<td><span class="pos">+25.66%</span></td><td><span class="dd-mid">-13.37%</span></td><td><span class="pos">+98.44%</span></td>
+<td><span class="pos">+9.26%</span></td><td><span class="dd-deep">-42.32%</span></td><td><span class="pos">+55.74%</span></td>
+<td><span class="pos">+10.15%</span></td><td><span class="dd-deep">-42.32%</span></td><td><span class="pos">+116.69%</span></td>
+<td><span class="pos">+9.28%</span></td><td><span class="dd-deep">-42.32%</span></td><td><span class="pos">+142.92%</span></td>
+</tr>
+<tr><td><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span></td>
+<td><span class="pos">+28.53%</span></td><td><span class="dd-mid">-13.37%</span></td><td><span class="pos">+112.33%</span></td>
+<td><span class="pos">+13.71%</span></td><td><span class="dd-deep">-31.29%</span></td><td><span class="pos">+90.11%</span></td>
+<td><span class="pos">+13.07%</span></td><td><span class="dd-deep">-31.29%</span></td><td><span class="pos">+167.19%</span></td>
+<td><span class="pos">+11.59%</span></td><td><span class="dd-deep">-31.29%</span></td><td><span class="pos">+199.44%</span></td>
+</tr>
+<tr><td><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span></td>
+<td><span class="pos">+30.93%</span></td><td><span class="dd-mid">-13.37%</span></td><td><span class="pos">+124.46%</span></td>
+<td><span class="pos">+8.93%</span></td><td><span class="dd-deep">-46.19%</span></td><td><span class="pos">+53.38%</span></td>
+<td><span class="pos">+10.69%</span></td><td><span class="dd-deep">-46.19%</span></td><td><span class="pos">+125.32%</span></td>
+<td><span class="pos">+9.85%</span></td><td><span class="dd-deep">-46.19%</span></td><td><span class="pos">+155.84%</span></td>
+</tr>
+<tr><td><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span></td>
+<td><span class="pos">+30.01%</span></td><td><span class="dd-mid">-13.37%</span></td><td><span class="pos">+119.76%</span></td>
+<td><span class="pos">+14.55%</span></td><td><span class="dd-deep">-36.41%</span></td><td><span class="pos">+97.22%</span></td>
+<td><span class="pos">+12.73%</span></td><td><span class="dd-deep">-36.41%</span></td><td><span class="pos">+160.81%</span></td>
+<td><span class="pos">+11.11%</span></td><td><span class="dd-deep">-36.41%</span></td><td><span class="pos">+186.83%</span></td>
+</tr>
+</tbody></table>
+<h2 id="delta">三、Δ vs baseline（量化提升）</h2>
+<p>正 ΔCAGR = 比 baseline 赚得多；正 ΔMDD = MDD 比 baseline 浅（更好）。最理想情况：ΔMDD 大正 + ΔCAGR 微负或正。</p>
+<table><thead><tr><th>变体</th>
+<th colspan="2">3 年</th>
+<th colspan="2">5 年</th>
+<th colspan="2">8 年</th>
+<th colspan="2">10 年</th>
+</tr><tr><th></th>
+<th>ΔCAGR</th><th>ΔMDD</th>
+<th>ΔCAGR</th><th>ΔMDD</th>
+<th>ΔCAGR</th><th>ΔMDD</th>
+<th>ΔCAGR</th><th>ΔMDD</th>
+</tr></thead><tbody>
+<tr><td><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span></td>
+<td><span class="pos">+2.87pp</span></td><td><span class="zero">+0.00pp</span></td>
+<td><span class="pos">+4.45pp</span></td><td><span class="pos">+11.02pp</span></td>
+<td><span class="pos">+2.92pp</span></td><td><span class="pos">+11.02pp</span></td>
+<td><span class="pos">+2.31pp</span></td><td><span class="pos">+11.02pp</span></td>
+</tr>
+<tr><td><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span></td>
+<td><span class="pos">+5.27pp</span></td><td><span class="zero">+0.00pp</span></td>
+<td><span class="neg">-0.33pp</span></td><td><span class="neg">-3.87pp</span></td>
+<td><span class="pos">+0.54pp</span></td><td><span class="neg">-3.87pp</span></td>
+<td><span class="pos">+0.57pp</span></td><td><span class="neg">-3.87pp</span></td>
+</tr>
+<tr><td><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span></td>
+<td><span class="pos">+4.35pp</span></td><td><span class="zero">+0.00pp</span></td>
+<td><span class="pos">+5.28pp</span></td><td><span class="pos">+5.91pp</span></td>
+<td><span class="pos">+2.58pp</span></td><td><span class="pos">+5.91pp</span></td>
+<td><span class="pos">+1.83pp</span></td><td><span class="pos">+5.91pp</span></td>
+</tr>
+</tbody></table>
+<h2 id="dd-dist">四、DD 深度分布对比</h2>
+<table><thead><tr><th>深度区间</th>
+<th><span class="tag tag-base">baseline (top-5 无过滤)</span></th>
+<th><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span></th>
+<th><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span></th>
+<th><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span></th>
+</tr></thead><tbody>
+<tr><td><strong>0~-2%</strong></td>
+<td>1</td>
+<td>2 <small class="zero">(+1)</small></td>
+<td>1 <small class="zero"></small></td>
+<td>1 <small class="zero"></small></td>
+</tr>
+<tr><td><strong>-2~-5%</strong></td>
+<td>7</td>
+<td>4 <small class="zero">(-3)</small></td>
+<td>7 <small class="zero"></small></td>
+<td>3 <small class="zero">(-4)</small></td>
+</tr>
+<tr><td><strong>-5~-10%</strong></td>
+<td>3</td>
+<td>1 <small class="zero">(-2)</small></td>
+<td>1 <small class="zero">(-2)</small></td>
+<td>3 <small class="zero"></small></td>
+</tr>
+<tr><td><strong>-10~-20%</strong></td>
+<td>3</td>
+<td>2 <small class="pos">(-1)</small></td>
+<td>2 <small class="pos">(-1)</small></td>
+<td>2 <small class="pos">(-1)</small></td>
+</tr>
+<tr><td><strong>-20~-30%</strong></td>
+<td>0</td>
+<td>0 <small class="zero"></small></td>
+<td>2 <small class="neg">(+2)</small></td>
+<td>0 <small class="zero"></small></td>
+</tr>
+<tr><td><strong>-30~-40%</strong></td>
+<td>1</td>
+<td>4 <small class="neg">(+3)</small></td>
+<td>0 <small class="pos">(-1)</small></td>
+<td>4 <small class="neg">(+3)</small></td>
+</tr>
+<tr><td><strong>-40~-100%</strong></td>
+<td>2</td>
+<td>0 <small class="pos">(-2)</small></td>
+<td>2 <small class="zero"></small></td>
+<td>0 <small class="pos">(-2)</small></td>
+</tr>
+</tbody></table>
+<h2 id="top-dd">五、Top 5 最深 DD 对比</h2>
+<h3><span class="tag tag-base">baseline (top-5 无过滤)</span></h3>
+<table><thead><tr><th>#</th><th>peak 日期</th><th>trough 日期</th><th>深度</th><th>peak→trough</th><th>恢复</th></tr></thead><tbody>
+<tr><td>1</td><td>2015-05-29</td><td>2016-02-29</td><td><span class="dd-deep">-51.01%</span></td><td>9.1 月</td><td>66.0 月</td></tr>
+<tr><td>2</td><td>2021-08-31</td><td>2022-04-29</td><td><span class="dd-deep">-42.32%</span></td><td>7.9 月</td><td>44.1 月</td></tr>
+<tr><td>3</td><td>2008-02-29</td><td>2008-10-31</td><td><span class="dd-deep">-38.21%</span></td><td>8.0 月</td><td>23.9 月</td></tr>
+<tr><td>4</td><td>2012-04-30</td><td>2013-06-28</td><td><span class="dd-mid">-18.79%</span></td><td>13.9 月</td><td>5.1 月</td></tr>
+<tr><td>5</td><td>2011-04-29</td><td>2011-12-30</td><td><span class="dd-mid">-16.37%</span></td><td>8.0 月</td><td>3.9 月</td></tr>
+</tbody></table>
+<h3><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span></h3>
+<table><thead><tr><th>#</th><th>peak 日期</th><th>trough 日期</th><th>深度</th><th>peak→trough</th><th>恢复</th></tr></thead><tbody>
+<tr><td>1</td><td>2015-05-29</td><td>2016-06-30</td><td><span class="dd-deep">-39.26%</span></td><td>13.1 月</td><td>53.0 月</td></tr>
+<tr><td>2</td><td>2010-11-30</td><td>2012-12-31</td><td><span class="dd-deep">-39.16%</span></td><td>25.0 月</td><td>27.9 月</td></tr>
+<tr><td>3</td><td>2021-08-31</td><td>2023-05-31</td><td><span class="dd-deep">-31.29%</span></td><td>21.0 月</td><td>27.0 月</td></tr>
+<tr><td>4</td><td>2008-02-29</td><td>2008-10-31</td><td><span class="dd-deep">-31.27%</span></td><td>8.0 月</td><td>22.0 月</td></tr>
+<tr><td>5</td><td>2021-01-29</td><td>2021-03-31</td><td><span class="dd-mid">-18.28%</span></td><td>2.0 月</td><td>5.0 月</td></tr>
+</tbody></table>
+<h3><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span></h3>
+<table><thead><tr><th>#</th><th>peak 日期</th><th>trough 日期</th><th>深度</th><th>peak→trough</th><th>恢复</th></tr></thead><tbody>
+<tr><td>1</td><td>2015-05-29</td><td>2016-05-31</td><td><span class="dd-deep">-54.90%</span></td><td>12.1 月</td><td>63.0 月</td></tr>
+<tr><td>2</td><td>2021-08-31</td><td>2023-10-31</td><td><span class="dd-deep">-46.19%</span></td><td>26.0 月</td><td>26.0 月</td></tr>
+<tr><td>3</td><td>2011-08-31</td><td>2013-06-28</td><td><span class="dd-deep">-26.84%</span></td><td>21.9 月</td><td>13.1 月</td></tr>
+<tr><td>4</td><td>2008-02-29</td><td>2008-08-29</td><td><span class="dd-deep">-23.10%</span></td><td>6.0 月</td><td>24.0 月</td></tr>
+<tr><td>5</td><td>2026-02-27</td><td>2026-03-31</td><td><span class="dd-mid">-13.37%</span></td><td>1.1 月</td><td>未恢复</td></tr>
+</tbody></table>
+<h3><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span></h3>
+<table><thead><tr><th>#</th><th>peak 日期</th><th>trough 日期</th><th>深度</th><th>peak→trough</th><th>恢复</th></tr></thead><tbody>
+<tr><td>1</td><td>2011-04-29</td><td>2013-12-25</td><td><span class="dd-deep">-38.74%</span></td><td>31.9 月</td><td>16.1 月</td></tr>
+<tr><td>2</td><td>2021-08-31</td><td>2023-04-28</td><td><span class="dd-deep">-36.41%</span></td><td>19.9 月</td><td>28.1 月</td></tr>
+<tr><td>3</td><td>2015-12-31</td><td>2016-11-30</td><td><span class="dd-deep">-36.03%</span></td><td>11.0 月</td><td>50.0 月</td></tr>
+<tr><td>4</td><td>2008-02-29</td><td>2008-10-31</td><td><span class="dd-deep">-30.46%</span></td><td>8.0 月</td><td>29.9 月</td></tr>
+<tr><td>5</td><td>2015-05-29</td><td>2015-06-30</td><td><span class="dd-mid">-14.94%</span></td><td>1.1 月</td><td>4.0 月</td></tr>
+</tbody></table>
+<h2 id="holding">六、持仓率统计</h2>
+<p>过滤越严格 → 平均持仓数越少、cash idle 月份越多。这是"derisk"的代价。</p>
+<table><thead><tr><th>变体</th><th>平均持仓数</th><th>满仓 (5/5) 月份占比</th><th>cash idle 月份占比</th><th>持仓月数</th></tr></thead><tbody>
+<tr><td><span class="tag tag-base">baseline (top-5 无过滤)</span></td><td>3.44</td><td>51.9%</td><td>8.3%</td><td>264</td></tr>
+<tr><td><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span></td><td>2.33</td><td>22.5%</td><td>22.8%</td><td>222</td></tr>
+<tr><td><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span></td><td>3.01</td><td>39.8%</td><td>12.8%</td><td>251</td></tr>
+<tr><td><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span></td><td>2.08</td><td>15.6%</td><td>26.6%</td><td>211</td></tr>
+</tbody></table>
+<h2 id="conclusion">七、结论 + 推荐</h2>
+<h3>每窗口 MDD 最佳变体</h3>
+<ul>
+<li><strong>3 年</strong>: MDD 最浅 = <span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span> (<span class="dd-mid">-13.37%</span>)</li>
+<li><strong>5 年</strong>: MDD 最浅 = <span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span> (<span class="dd-deep">-31.29%</span>)</li>
+<li><strong>8 年</strong>: MDD 最浅 = <span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span> (<span class="dd-deep">-31.29%</span>)</li>
+<li><strong>10 年</strong>: MDD 最浅 = <span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span> (<span class="dd-deep">-31.29%</span>)</li>
+</ul>
+<h3>每窗口 CAGR 最佳变体</h3>
+<ul>
+<li><strong>3 年</strong>: CAGR 最高 = <span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span> (<span class="pos">+30.93%</span>)</li>
+<li><strong>5 年</strong>: CAGR 最高 = <span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span> (<span class="pos">+14.55%</span>)</li>
+<li><strong>8 年</strong>: CAGR 最高 = <span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span> (<span class="pos">+13.07%</span>)</li>
+<li><strong>10 年</strong>: CAGR 最高 = <span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span> (<span class="pos">+11.59%</span>)</li>
+</ul>
+<h3>📊 总体判定（基于全期数据）</h3>
+<ul>
+<li><span class="tag tag-base">baseline (top-5 无过滤)</span>: CAGR <span class="pos">+8.82%</span> / MDD <span class="dd-deep">-51.01%</span>（基准）</li>
+<li><span class="tag tag-w">A: + 周线 MA10 (close > MA10w)</span>: ΔCAGR <span class="neg">-0.44pp</span> / ΔMDD <span class="pos">+11.75pp</span> <span class="tag tag-better">🚀 推荐：MDD 大幅改善 + CAGR 损失可控</span></li>
+<li><span class="tag tag-m">B: + 月线 MA10 (close > MA10m)</span>: ΔCAGR <span class="neg">-0.16pp</span> / ΔMDD <span class="neg">-3.89pp</span> <span class="tag tag-worse">❌ 不推荐：MDD 没改善（甚至更深）</span></li>
+<li><span class="tag tag-d">C: + 日线 MA5>MA10 (已金叉)</span>: ΔCAGR <span class="neg">-1.18pp</span> / ΔMDD <span class="pos">+12.27pp</span> <span class="tag tag-better">🚀 推荐：MDD 大幅改善 + CAGR 损失可控</span></li>
+</ul>
+<div class="callout-success callout">
+<strong>💡 下一步建议</strong>：
+<ul>
+<li>若有变体明显改善 MDD 且 CAGR 损失可控（&lt; 3pp）→ 直接选用，不需要再加策略</li>
+<li>若 3 变体效果都不理想 → 用户提到的"补充策略"可考虑：
+    <ul>
+    <li>组合 A+B（双重确认：周线 MA10 + 月线 MA10 同时通过）</li>
+    <li>替换 lookback（12 → 6，对趋势变化更敏感）</li>
+    <li>portfolio 层 trailing stop（组合回撤超 N% 削半仓）</li>
+    </ul>
+</li>
+</ul>
+</div>
+</body></html>
