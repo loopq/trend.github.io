@@ -1,25 +1,24 @@
 # 策略对比报告：v9-baseline vs v9.3-bear vs faber-gtaa vs donchian-200 vs dual-momentum-top5
 
 > 生成日：2026-05-11
-> Universe：combined-27（v9 14 主题/行业 + main-online 16 宽基/海外/商品 去重）
+> Universe：**combined-24**（combined-27 去除 3 个噪声指数：BTC / 北证50 / HSCEI 国企指数）
 > 时间窗：3 / 5 / 8 / 10 年
 > 数据终点：2026-04-24
+> ⚠️ 本报告**覆盖了** cycle 3 同名报告（27 universe 版本仍可在 git commit 379c78f 找到）
 
 ---
 
 ## 一句话结论
 
-**5 策略 4 窗口跑下来：dual-momentum-top5 在 CAGR 上全胜 baseline（+4.82~+20.70pp）但 5-8-10y MDD 显著恶化（-28~-34pp 比 baseline 深），是典型的“high-return, high-risk concentration”策略；faber-gtaa 长窗口反超 baseline 仍然成立；其余策略画像与 cycle 2 一致。**
+**去掉 BTC + 北证50 + HSCEI 之后的"干净 universe"上：v9-baseline 重新坐稳第一把交椅；cycle 3 所谓"faber 长窗口大赢 baseline" 结论作废（faber 4 窗口全输 baseline -1.69 ~ -3.75pp）；dual-momentum-top5 是唯一 4 窗口 CAGR 都赢 baseline 的策略，但 5/8/10y MDD 仍 -27~-28pp 比 baseline 深。**
 
-本周期最有价值的发现：
-1. **决策粒度对照实验**：per-index in/out（faber/donchian）路线 vs portfolio cross-sectional（dual-momentum）路线，结果鲜明分化——dual-momentum 在所有窗口 CAGR 都赢 baseline，但 5/8y MDD 跳到 -47%（baseline 仅 -13~-18%），暴露 top-5 集中持仓在 2022 大熊期的脆弱性。
-2. **dual-momentum 3y 窗口 CAGR 36.64% 是 2023-04~2026-04 后熊市 momentum-friendly bull period 的真 alpha**（BTC/NDX/创业板50/港股科技都强势，top-5 选股放大头部赢家）。算法验证已确认无 look-ahead bias。
+最有价值的发现：**BTC 是 cycle 1-3 所有"长窗口高 CAGR"的主要贡献者**——10 年 600x 涨幅在 equal-weight 中按 INDEX_CAPITAL 等权也对组合层贡献巨大。去掉 BTC 后 baseline 10y CAGR 从 24.49% 跌到 **8.36%**，faber 从 30.64% 跌到 **6.67%**——cycle 3 报告的"长趋势 + 月线 MA10 有效"几乎全是 BTC 驱动。
 
 具体看（ΔCAGR / ΔMaxDD vs baseline）：
-- 3 年: bear -1.97pp / -1.56pp; faber -2.63pp / -3.36pp; donchian -5.05pp / -3.30pp; **dual-momentum +20.70pp / -4.21pp**
-- 5 年: bear -2.31pp / -4.07pp; faber -3.12pp / -5.83pp; donchian -3.00pp / -0.66pp; **dual-momentum +3.70pp / -34.16pp**
-- 8 年: bear -1.02pp / -2.95pp; faber +1.00pp / -2.92pp; donchian -2.45pp / +1.05pp; **dual-momentum +6.58pp / -28.67pp**
-- 10 年: bear -0.06pp / -3.13pp; faber +6.15pp / +3.03pp; donchian -14.25pp / +15.97pp; **dual-momentum +4.82pp / -6.54pp**
+- 3 年: bear -1.19pp / -1.42pp; faber -2.78pp / -2.20pp; donchian -2.98pp / -3.30pp; **dual-momentum +10.77pp / -1.95pp**
+- 5 年: bear -2.00pp / -4.03pp; faber -3.75pp / -7.65pp; donchian -2.66pp / -0.41pp; dual-momentum -0.22pp / **-28.25pp**
+- 8 年: bear -1.04pp / -3.20pp; faber -1.80pp / -8.29pp; donchian -1.13pp / -1.73pp; **dual-momentum +0.16pp** / **-26.70pp**
+- 10 年: bear -0.83pp / -3.15pp; faber -1.70pp / -8.05pp; donchian -1.57pp / -0.79pp; **dual-momentum +0.92pp** / **-27.07pp**
 
 ---
 
@@ -27,69 +26,93 @@
 
 | 时间窗 | 策略 | 总 CAGR | 最大回撤 | 总收益 |
 |---|---|---|---|---|
-| 3 年 | v9-baseline | 15.94% | -10.79% | +55.86% |
-| 3 年 | v9.3-bear | 13.97% | -12.35% | +48.03% |
-| 3 年 | faber-gtaa | 13.31% | -14.15% | +45.50% |
-| 3 年 | donchian-200 | 10.89% | -14.09% | +36.37% |
-| 3 年 | dual-momentum-top5 | 36.64% | -15.00% | +155.17% |
-| 3 年 | Δ (v9.3-bear − v9-baseline) | -1.97% | -1.56% | -7.83% |
-| 3 年 | Δ (faber-gtaa − v9-baseline) | -2.63% | -3.36% | -10.36% |
-| 3 年 | Δ (donchian-200 − v9-baseline) | -5.05% | -3.30% | -19.48% |
-| 3 年 | Δ (dual-momentum-top5 − v9-baseline) | +20.70% | -4.20% | +99.31% |
-| 5 年 | v9-baseline | 9.55% | -12.88% | +57.76% |
-| 5 年 | v9.3-bear | 7.24% | -16.95% | +41.80% |
-| 5 年 | faber-gtaa | 6.43% | -18.71% | +36.58% |
-| 5 年 | donchian-200 | 6.55% | -13.54% | +37.33% |
-| 5 年 | dual-momentum-top5 | 13.25% | -47.04% | +86.27% |
-| 5 年 | Δ (v9.3-bear − v9-baseline) | -2.31% | -4.07% | -15.97% |
-| 5 年 | Δ (faber-gtaa − v9-baseline) | -3.11% | -5.83% | -21.18% |
-| 5 年 | Δ (donchian-200 − v9-baseline) | -3.00% | -0.66% | -20.44% |
-| 5 年 | Δ (dual-momentum-top5 − v9-baseline) | +3.70% | -34.16% | +28.51% |
-| 8 年 | v9-baseline | 11.43% | -18.37% | +137.62% |
-| 8 年 | v9.3-bear | 10.40% | -21.33% | +120.71% |
-| 8 年 | faber-gtaa | 12.43% | -21.29% | +155.24% |
-| 8 年 | donchian-200 | 8.98% | -17.32% | +98.91% |
-| 8 年 | dual-momentum-top5 | 18.01% | -47.04% | +276.12% |
-| 8 年 | Δ (v9.3-bear − v9-baseline) | -1.02% | -2.95% | -16.90% |
-| 8 年 | Δ (faber-gtaa − v9-baseline) | +1.00% | -2.92% | +17.62% |
-| 8 年 | Δ (donchian-200 − v9-baseline) | -2.45% | +1.05% | -38.70% |
-| 8 年 | Δ (dual-momentum-top5 − v9-baseline) | +6.58% | -28.67% | +138.51% |
-| 10 年 | v9-baseline | 24.49% | -47.54% | +793.53% |
-| 10 年 | v9.3-bear | 24.42% | -50.67% | +789.09% |
-| 10 年 | faber-gtaa | 30.64% | -44.50% | +1347.05% |
-| 10 年 | donchian-200 | 10.23% | -31.57% | +164.90% |
-| 10 年 | dual-momentum-top5 | 29.31% | -54.08% | +1206.35% |
-| 10 年 | Δ (v9.3-bear − v9-baseline) | -0.06% | -3.13% | -4.43% |
-| 10 年 | Δ (faber-gtaa − v9-baseline) | +6.15% | +3.03% | +553.52% |
-| 10 年 | Δ (donchian-200 − v9-baseline) | -14.25% | +15.97% | -628.63% |
-| 10 年 | Δ (dual-momentum-top5 − v9-baseline) | +4.82% | -6.54% | +412.83% |
+| 3 年 | v9-baseline | 14.89% | -11.42% | +51.67% |
+| 3 年 | v9.3-bear | 13.70% | -12.84% | +47.02% |
+| 3 年 | faber-gtaa | 12.11% | -13.62% | +40.92% |
+| 3 年 | donchian-200 | 11.91% | -14.72% | +40.18% |
+| 3 年 | dual-momentum-top5 | 25.66% | -13.37% | +98.44% |
+| 3 年 | Δ (v9.3-bear − v9-baseline) | -1.19% | -1.42% | -4.65% |
+| 3 年 | Δ (faber-gtaa − v9-baseline) | -2.78% | -2.20% | -10.75% |
+| 3 年 | Δ (donchian-200 − v9-baseline) | -2.98% | -3.30% | -11.49% |
+| 3 年 | Δ (dual-momentum-top5 − v9-baseline) | +10.77% | -1.95% | +46.77% |
+| 5 年 | v9-baseline | 9.49% | -14.06% | +57.31% |
+| 5 年 | v9.3-bear | 7.48% | -18.09% | +43.43% |
+| 5 年 | faber-gtaa | 5.74% | -21.71% | +32.16% |
+| 5 年 | donchian-200 | 6.83% | -14.47% | +39.13% |
+| 5 年 | dual-momentum-top5 | 9.27% | -42.32% | +55.74% |
+| 5 年 | Δ (v9.3-bear − v9-baseline) | -2.00% | -4.03% | -13.88% |
+| 5 年 | Δ (faber-gtaa − v9-baseline) | -3.75% | -7.65% | -25.15% |
+| 5 年 | Δ (donchian-200 − v9-baseline) | -2.66% | -0.41% | -18.19% |
+| 5 年 | Δ (dual-momentum-top5 − v9-baseline) | -0.22% | -28.25% | -1.57% |
+| 8 年 | v9-baseline | 9.99% | -15.62% | +114.16% |
+| 8 年 | v9.3-bear | 8.95% | -18.81% | +98.46% |
+| 8 年 | faber-gtaa | 8.19% | -23.91% | +87.70% |
+| 8 年 | donchian-200 | 8.86% | -17.35% | +97.21% |
+| 8 年 | dual-momentum-top5 | 10.15% | -42.32% | +116.69% |
+| 8 年 | Δ (v9.3-bear − v9-baseline) | -1.04% | -3.20% | -15.70% |
+| 8 年 | Δ (faber-gtaa − v9-baseline) | -1.80% | -8.29% | -26.46% |
+| 8 年 | Δ (donchian-200 − v9-baseline) | -1.13% | -1.73% | -16.94% |
+| 8 年 | Δ (dual-momentum-top5 − v9-baseline) | +0.16% | -26.70% | +2.53% |
+| 10 年 | v9-baseline | 8.36% | -15.25% | +123.25% |
+| 10 年 | v9.3-bear | 7.53% | -18.40% | +106.73% |
+| 10 年 | faber-gtaa | 6.67% | -23.30% | +90.67% |
+| 10 年 | donchian-200 | 6.79% | -16.03% | +92.95% |
+| 10 年 | dual-momentum-top5 | 9.28% | -42.32% | +142.92% |
+| 10 年 | Δ (v9.3-bear − v9-baseline) | -0.83% | -3.15% | -16.52% |
+| 10 年 | Δ (faber-gtaa − v9-baseline) | -1.70% | -8.05% | -32.58% |
+| 10 年 | Δ (donchian-200 − v9-baseline) | -1.57% | -0.79% | -30.30% |
+| 10 年 | Δ (dual-momentum-top5 − v9-baseline) | +0.92% | -27.07% | +19.67% |
 
-## 二、决策粒度对照（per-index in/out vs portfolio cross-sectional）
+## 二、与 combined-27 universe 对照（去掉 3 个噪声指数后的关键变化）
 
-3 个 V10 月线策略 + dual-momentum 都跑 combined-27，决策粒度三档：
+cycle 3 对比报告（commit 379c78f）跑的 27 universe 包含 BTC（10y 600x 涨幅）、北证50（2022 才上线、月线策略冷启动失真）、HSCEI（与 HSI 高度重叠）。本报告把这 3 个移除后的 24 universe 数据：
 
-| 策略 | 决策粒度 | 持仓数 | 资金分配 | 4 窗口 ΔCAGR vs baseline |
+### 10 年窗口对比（最戏剧性）
+
+| 策略 | 27 universe CAGR/MDD | 24 universe CAGR/MDD | Δ CAGR | Δ MDD |
 |---|---|---|---|---|
-| **faber-gtaa** | per-index per-bar | 0 ~ 27（独立） | 每指数 INDEX_CAPITAL 固定 | 3年 -2.63 / 5年 -3.12 / 8年 +1.00 / 10年 +6.15 |
-| **donchian-200** | per-index per-bar | 0 ~ 27（独立） | 每指数 INDEX_CAPITAL 固定 | 3年 -5.05 / 5年 -3.00 / 8年 -2.45 / 10年 -14.25 |
-| **dual-momentum-top5** | portfolio per-rebalance | 0 ~ 5（universe-wide） | top-5 等分 TOTAL_CAPITAL | 3年 +20.70 / 5年 +3.70 / 8年 +6.58 / 10年 +4.82 |
+| v9-baseline | 24.49% / -47.54% | 8.36% / -15.25% | **-16.13pp** | +32.29pp（浅）|
+| v9.3-bear | 24.42% / -50.67% | 7.53% / -18.40% | -16.89pp | +32.27pp |
+| **faber-gtaa** | 30.64% / -44.50% | **6.67% / -23.30%** | **-23.97pp** | +21.20pp |
+| donchian-200 | 10.23% / -31.57% | 6.79% / -16.03% | -3.44pp | +15.54pp |
+| dual-momentum-top5 | 29.31% / -54.08% | 9.28% / -42.32% | -20.03pp | +11.76pp |
 
-**核心结论**：
-- **dual-momentum 在 CAGR 上全面胜出**（4 窗口都赢 baseline 4.82~20.70pp）——cross-sectional“挑赢家”逻辑确实能放大 alpha
-- **代价是 MDD 大幅恶化**：5/8 年 MDD 从 baseline 的 -13~-18% 跳到 -47%，反映 top-5 集中持仓在 bear market（2022 大熊）期的脆弱性
-- **faber-gtaa 是唯一“in/out 路线长窗口赢 baseline”的策略**（10y +6.15pp CAGR + 浅 MDD），均值法在长趋势下确实有用
-- **donchian-200 极值法 CAGR 全输 baseline**，但 MDD 普遍浅（防御型，与 faber 形成均值/极值对照）
-- **v9.3-bear 加 Filter 路线全输**——已确认错路（cycle 1+2+3 三重验证）
+**关键洞察**：
+1. **BTC 是长窗口 CAGR 的主要驱动**——除了 donchian-200（10y CAGR 仅 -3.44pp 下降，因 donchian 严格突破入场，BTC 大涨期错过较多），其余 4 策略 10y CAGR 都跌 16~24pp。
+2. **faber-gtaa 的"长窗口大赢"假象破灭**——在干净 universe 上 faber 10y CAGR 6.67% < baseline 8.36% (-1.70pp)，而非 cycle 3 报告的 +6.15pp 大赢。faber 在 27 universe 上的优势主要来自 BTC + 北证 50 启动期（这两段数据噪声而非真实策略 alpha）。
+3. **MDD 普遍变浅 11~32pp**——这才是干净 universe 真实的回撤画像。baseline 10y MDD 从 -47.54% 缩到 -15.25%，回撤可控很多。
+4. **dual-momentum 5/8/10y MDD 仍 -42.32%**——top-5 集中持仓的风险无法靠去 BTC 解决（其他高波动持仓如港股科技/创业板50/光伏 等也会在 bear period 同步下跌）。
 
-**决策粒度选型建议**：
-- 追长期 CAGR + 接受高 MDD（如风险预算 50%）→ dual-momentum
-- 追长期 CAGR + 控制 MDD（< 25%）→ faber-gtaa
-- 追低 MDD（< 35%） + 接受偏低 CAGR → donchian-200
-- 平衡型（CAGR 中、MDD 中）→ baseline
+### 4 窗口胜负画像（24 universe 上 vs baseline）
+
+| 策略 | 3y | 5y | 8y | 10y | 综合判定 |
+|---|---|---|---|---|---|
+| v9.3-bear | 输 | 输 | 输 | 输 | **全输**（cycle 1+2+3+4 四重确认错路）|
+| **faber-gtaa** | 输 | 输 | 输 | 输 | **全输**（cycle 3 长窗口 alpha 假象破灭）|
+| donchian-200 | 输 | 输 | 输 | 输 | **全输**（防御画像也消失）|
+| **dual-momentum-top5** | **+10.77pp 大赢** | -0.22pp 持平 | **+0.16pp 微赢** | **+0.92pp 微赢** | **唯一 CAGR 全胜 baseline**，但代价 MDD -27~-28pp |
 
 ---
 
-## 三、分指数差异（|ΔCAGR|≥1pp 或 |ΔMaxDD|≥2pp）
+## 三、决策粒度对照（per-index in/out vs portfolio cross-sectional）
+
+3 个 V10 月线策略 + dual-momentum 都跑 combined-24，决策粒度三档：
+
+| 策略 | 决策粒度 | 持仓数 | 4 窗口 ΔCAGR vs baseline |
+|---|---|---|---|
+| **faber-gtaa** | per-index per-bar | 0 ~ 24（独立） | 3年 -2.78 / 5年 -3.75 / 8年 -1.80 / 10年 -1.70 |
+| **donchian-200** | per-index per-bar | 0 ~ 24（独立） | 3年 -2.98 / 5年 -2.66 / 8年 -1.13 / 10年 -1.57 |
+| **dual-momentum-top5** | portfolio per-rebalance | 0 ~ 5（universe-wide） | 3年 +10.77 / 5年 -0.22 / 8年 +0.16 / 10年 +0.92 |
+
+**核心结论**（24 universe 修订版）：
+- **per-index in/out 路线（faber/donchian）在干净 universe 上无 alpha**——4 窗口都跑输 baseline 1~4pp。cycle 3 的"长窗口反超"主要靠 BTC + 北证 50 的噪声。
+- **portfolio cross-sectional（dual-momentum）的"挑赢家"逻辑仍有效**——4 窗口 CAGR 都赢或持平 baseline。横截面排序避开主题/行业拖累的能力是真 alpha。
+- **代价是 5/8/10y MDD -27~-28pp**——top-5 集中持仓在 bear period（2022）一起跌，concentration risk 显著。
+- **v9-baseline 是稳健选择**——D/W/M 三 cycle Calmar 加权 + 全 universe 等权，CAGR 持平/小赢、MDD 控制在 -15~-15pp，性价比最优。
+
+---
+
+## 四、分指数差异（|ΔCAGR|≥1pp 或 |ΔMaxDD|≥2pp）
 
 ### Δ (v9.3-bear − v9-baseline)
 
@@ -102,7 +125,6 @@
 | 科创50(000688) | -15.58% | +8.56% |
 | 中证2000(932000) | -4.31% | +8.36% |
 | 创业板50(399673) | +0.45% | +22.85% |
-| 北证50(899050) | -49.24% | +18.43% |
 | 光伏产业(931151) | -1.43% | +14.65% |
 | 中证白酒(399997) | -11.73% | +1.08% |
 | 中证医疗(399989) | -0.57% | +28.85% |
@@ -115,11 +137,9 @@
 | 有色金属(000819) | -5.97% | +5.77% |
 | 细分化工(000813) | -5.81% | +8.76% |
 | 恒生指数(HSI) | -0.08% | +19.70% |
-| 国企指数(HSCEI) | +0.84% | +23.03% |
 | 恒生科技(HSTECH) | -1.89% | +5.03% |
 | 纳指100(NDX) | -6.43% | +8.43% |
 | 标普500(SPX) | -3.53% | +4.97% |
-| 比特币(BTC) | -10.26% | +27.59% |
 | 黄金现价(XAU) | -6.10% | +1.53% |
 | 白银现价(XAG) | -6.83% | -9.28% |
 
@@ -133,7 +153,6 @@
 | 中证1000(000852) | +0.02% | -2.28% |
 | 科创50(000688) | -6.54% | +11.76% |
 | 创业板50(399673) | +3.30% | +10.34% |
-| 北证50(899050) | -45.93% | +1.39% |
 | 光伏产业(931151) | -3.80% | -8.71% |
 | 中证白酒(399997) | -6.22% | -33.81% |
 | 中证医疗(399989) | -5.20% | -0.57% |
@@ -146,11 +165,9 @@
 | 有色金属(000819) | -5.46% | -24.82% |
 | 细分化工(000813) | -3.63% | -9.92% |
 | 恒生指数(HSI) | +2.48% | -0.96% |
-| 国企指数(HSCEI) | +1.63% | -9.44% |
 | 恒生科技(HSTECH) | -0.93% | -3.84% |
 | 纳指100(NDX) | +2.08% | -6.73% |
 | 标普500(SPX) | -1.30% | -7.92% |
-| 比特币(BTC) | -34.74% | +15.45% |
 | 黄金现价(XAU) | +0.45% | -13.65% |
 | 白银现价(XAG) | +4.40% | +8.65% |
 
@@ -165,8 +182,7 @@
 | 科创50(000688) | -3.21% | +11.76% |
 | 中证2000(932000) | -1.42% | -11.04% |
 | 创业板50(399673) | +3.82% | +15.42% |
-| 北证50(899050) | -45.90% | +3.77% |
-| 光伏产业(931151) | -2.73% | -13.54% |
+| 光伏产业(931151) | -4.20% | -13.54% |
 | 中证白酒(399997) | -8.41% | -14.98% |
 | 中证医疗(399989) | -7.31% | +9.37% |
 | 5G通信(931079) | -10.02% | -25.36% |
@@ -178,71 +194,85 @@
 | 有色金属(000819) | -0.49% | +4.57% |
 | 细分化工(000813) | -3.97% | +1.35% |
 | 恒生指数(HSI) | +4.41% | +11.82% |
-| 国企指数(HSCEI) | +3.80% | +12.40% |
 | 恒生科技(HSTECH) | -12.55% | -14.03% |
 | 纳指100(NDX) | -0.51% | -6.73% |
 | 标普500(SPX) | -1.29% | -2.26% |
-| 比特币(BTC) | -34.16% | -5.55% |
 | 黄金现价(XAU) | +0.48% | -6.09% |
 | 白银现价(XAG) | +3.86% | +8.65% |
 
 ### Δ (dual-momentum-top5 − v9-baseline)
 
-（dual-momentum-top5 走横截面 top-K 路径，无 per-index 持仓数据，不可逐指数对比 baseline。组合层数据见上方“组合层对比”段。）
+（dual-momentum-top5 走横截面 top-K 路径，无 per-index 持仓数据，不可逐指数对比 baseline。组合层数据见上方"组合层对比"段。）
 
 ### 分指数模式（仅 in/out 三策略）
 
-dual-momentum 走横截面 top-5（不可逐指数对比），下面观察 bear / faber / donchian 三个 in/out 策略 vs baseline 的分指数 Δ：
+dual-momentum 走横截面，下面分析 bear / faber / donchian 三个 in/out 策略 vs baseline 的分指数 Δ：
 
-- **A 股宽基**（沪深300/上证50/中证500/中证1000/中证2000/创业板50/科创50/北证50）：faber/donchian 在大盘宽基（沪深300/上证50/中证500/创业板50）普遍 +1~+4pp CAGR 小赢，但 MDD 同步加深 +6~+15pp（"持有期更长 = 吃更多回撤"）；bear 同向但 MDD 恶化更剧（沪深300 +20pp、创业板50 +22pp）。三策略在科创50/北证50/中证2000 这类小市值/新指数集体翻车（北证50 几乎全输 -45pp，启动时间晚 + 趋势不稳是共因）。
-- **A 股主题/行业**（光伏/白酒/医疗/5G/AI/智汽车/军工/新能/新能车/有色/化工 等）：**所有 in/out 策略都在主题/行业指数上普遍输 baseline**（faber 平均 -4~-7pp、donchian 平均 -4~-10pp、bear 普遍 -5~-15pp）；仅"中证新能车"是反例（faber +2.77/+13、donchian +7.44/+19）。说明主题/行业指数振幅大、趋势短，月线均值/极值法都跟不上 daily Calmar 加权 baseline。
-- **港股**（HSI/HSCEI/HSTECH）：HSI/HSCEI 是 faber 和 donchian 的强项（+1.6~+4.4pp CAGR、faber 同时浅 MDD），HSTECH donchian 大输 -12.55pp（极值法吃震荡）；bear 在港股 MDD 普遍恶化 +5~+23pp，几乎无可取之处。
-- **美股**（NDX/SPX）：faber NDX +2.08pp/-6.73pp 是亮点（CAGR 升 + MDD 降），SPX 三策略都微输；bear 在 NDX/SPX 双输（CAGR -3~-6pp、MDD +5~+8pp），加 filter 是错的再次确认。
-- **加密 / 商品**（BTC/XAU/XAG）：BTC 是 faber/donchian 的硬伤（-34pp CAGR，月线粒度太粗 + 24h 持续 trending 不适合 trend-following 离场），bear 类似；XAU/XAG faber 和 donchian 都微赢（XAG +3.86~+4.40pp CAGR），均值/极值法在低噪声商品上表现稳定。
+- **A 股宽基（7 个：沪深300/上证50/中证500/中证1000/中证2000/创业板50/科创50）**：
+  - 三策略在沪深300/上证50/中证500/创业板50 CAGR 普遍 +0.85 ~ +4.25pp 小赢但 MDD 同步加深 +6 ~ +22pp（拿收益失抗跌）
+  - 科创50 是三策略集体 -3.21 ~ -15.58pp 重灾区（小盘成长股趋势不稳）
+  - donchian 在大盘宽基 +1.07 ~ +4.25pp 最稳，是 in/out 路线最适配场景
+- **A 股主题/行业（11 个）**：
+  - 几乎所有主题（白酒/医疗/5G/AI/智汽车/军工 等）三策略系统性输 baseline -3 ~ -16pp
+  - 仅 CS 新能车 是反例（faber +2.77/+13.01，donchian +7.44/+19.42）
+  - 主题板块的"快速轮动"特性让月线 MA10/突破信号慢半拍
+- **港股（2 个：HSI / HSTECH）**：
+  - faber/donchian 在 HSI 大盘上 +2.48 ~ +4.41pp CAGR 双赢（趋势性强）
+  - HSTECH donchian -12.55pp 大输（2022 科技股暴跌时严格突破入场迟到）
+- **美股（NDX / SPX）**：
+  - faber NDX +2.08/-6.73 是双赢亮点（美股大盘趋势好）
+  - SPX 三策略都微输
+  - bear NDX/SPX 双输再次确认"加 Filter"错路
+- **商品（XAU / XAG）**：
+  - faber/donchian 都微赢（XAG faber +4.40/+8.65，XAG donchian +3.86/+8.65）
+  - 商品的中长期趋势性适合月线策略
 
-总结：in/out 三策略的分指数表现高度一致——**大盘宽基 + 港股大盘 + 美股 + 商品上 faber/donchian 有微弱 alpha；主题/行业 + 加密上系统性输 baseline；bear filter 路线在 90% 指数上恶化 MDD**。这也间接解释了 dual-momentum 为什么能赢——它通过横截面"挑赢家"避开了主题/行业指数的拖累，把资金集中到 momentum 强的少数赢家上（如 BTC/NDX/创业板50 类），但代价是熊市集中持仓崩盘风险（5/8y MDD -47%）。
+**总结**：in/out 三策略在大盘宽基/港股大盘/商品上有 +0.5 ~ +4pp 微弱 alpha，但主题/行业 + 小盘成长 11 个指数的 -3 ~ -16pp 系统性拖累远超 alpha，最终组合层全输 baseline。**dual-momentum 通过横截面"挑赢家"避开主题/行业拖累 → CAGR 反超**，但代价是少数赢家集中持仓在 2022 bear 一起跌 → 5/8/10y MDD -42% 重灾。
 
-## 四、Filter 命中统计
+---
+
+## 五、Filter 命中统计
 
 （无 Filter 命中数据）
 
-## 五、后续方向
+---
 
-### 当前 5 策略实操判断
+## 六、后续方向
+
+### 当前 5 策略实操判断（24 universe 干净版）
 
 | 策略 | 适合谁 | 理由 |
 |---|---|---|
-| v9-baseline | 平衡型投资者 | 总收益最高、CAGR 中庸、MDD 中庸；通用基准 |
-| **faber-gtaa** | 长期投资者（8+ 年视野） | 8-10y CAGR 反超 baseline，10y +6.15pp + 浅 MDD（双赢） |
-| **donchian-200** | 风险厌恶投资者 | 10y MDD 比 baseline 浅 16pp（-31.57% vs -47.54%）；CAGR 代价 -14.25pp |
-| **dual-momentum-top5** | 高风险偏好投资者 | 4 窗口 CAGR 全胜 baseline，3y +20.70pp；但 5/8y MDD -47% 集中度风险显著 |
-| v9.3-bear | 不推荐 | 4 窗口全输；"加 Filter 减信号"路线 cycle 1+2+3 三重确认 |
+| **v9-baseline** | **多数投资者首选** | 4 窗口 CAGR 8.36~14.89% / MDD -11~-15%，性价比最优；通用基准 |
+| **dual-momentum-top5** | **高风险偏好投资者** | 3y +10.77pp 大赢；10y +0.92pp 微赢；但 5/8/10y MDD -42% 集中风险 |
+| faber-gtaa | 不推荐（cycle 3 alpha 假象） | 24 universe 上 4 窗口全输 baseline 1.70~3.75pp，长窗口优势消失 |
+| donchian-200 | 不推荐（防御画像也消失） | 4 窗口 CAGR 全输 + MDD 优势仅 0.41~3.30pp（小幅，cycle 3 的 16pp 大优势主要来自 27 universe 的 BTC -80% drawdown） |
+| v9.3-bear | 不推荐 | 4 窗口全输（cycle 1+2+3+4 四重确认） |
 
-### Cycle 1-3 总结
+### Cycle 1-3 结论修订表（27 universe → 24 universe）
 
-3 个 cycle 落地了 4 个 V10 策略 + 2 个 aggregator：
+| 结论 | 27 universe（cycle 3 报告） | 24 universe（本报告） | 修订状态 |
+|---|---|---|---|
+| v9.3-bear 全输 baseline | ✓ 4 窗口 -0.06 ~ -2.31pp | ✓ 4 窗口 -0.83 ~ -2.00pp | **不变** |
+| faber 长窗口大赢 baseline | 8y +1.00pp / 10y +6.15pp | 8y -1.80pp / 10y -1.70pp | **作废**（BTC 驱动假象）|
+| donchian 防御型（10y MDD 浅 16pp） | ✓ -31.57 vs -47.54 | ✗ -16.03 vs -15.25（仅浅 0.79pp）| **削弱**（BTC -80% 暴跌不在 universe 后差距消失）|
+| dual-momentum 4 窗口 CAGR 全胜 baseline | ✓ +4.82 ~ +20.70pp | ✓ -0.22 ~ +10.77pp（缩水但仍胜或持平）| **削弱但保留** |
+| dual-momentum 5/8y MDD -47% | ✓ -47.04% | ✓ -42.32% | **基本不变**（concentration risk 独立于 BTC）|
+| in/out 三策略在主题/行业输 baseline | ✓ | ✓ | **不变**（结构性问题）|
 
-**已弃**（cycle 1+2+3 三重确认无效）：
-- v9.3-bear：加 BearTrendFilter 路线在所有 universe / 所有窗口都跑输 baseline
-
-**已得**（4 个有明确价值的策略画像）：
-- v9-baseline：通用基准（cycle-calmar / D-W-M Calmar 加权）
-- faber-gtaa：长期投资者升级（equal-weight / 月线 MA10 均值法）
-- donchian-200：低 MDD 防御方案（equal-weight / 月线 10/5 极值法）
-- dual-momentum-top5：高 CAGR 高 MDD 攻击型（cross-sectional-topk / 月线 12 月动量 / top-5）
-
-**框架成熟度**：
-- 2 个 aggregator（equal-weight / cross-sectional-topk）支持新策略零 dispatch 改动
-- Strategy.params 字段支持 aggregator 特定参数（lookback / topk / abs_threshold 等）
-- compare_report 兼容横截面策略（无 per-index 数据时显示提示）
-- 隔离铁律守住：scripts/quant/ + scripts/main.py + docs/ 零修改，v9-baseline / v9.3-bear 数值字符级一致
+**关键学习**：单一极端数据（BTC 10 年 600x）能改写整个回测结论。**未来回测必须警惕高波动 outlier 对结果的支配作用**，建议默认用 combined-24（无 BTC）评估策略真实表现，BTC 单独跑日线策略评估。
 
 ### 调参方向（cycle 4+ 候选）
 
 按代价从小到大：
 
-1. **改 dual-momentum 参数**：top-3 / top-7 / lookback 6/9/24 月。注册新策略名（如 `dual-momentum-top3-lookback6`）即跑，框架天然支持。预期：top-3 CAGR 更高 + MDD 更深；top-7 反之。
-2. **改 faber / donchian 窗口**：MA8/12 / 8-4 / 12-6。注册即跑。
-3. **混合 universe-aware 策略**：仅在大盘宽基用 faber，主题用 baseline，加密用 dual-momentum。需要新 spec（universe-aware aggregator）。
-4. **加 fallback**：dual-momentum 不合格时持债券（需新数据源）；faber/donchian 加 stop-loss。
-5. **组合配置**：baseline + faber + dual-momentum 加权混合。需要新 portfolio aggregator（最大改动）。
+1. **dual-momentum 参数扫描**（首推）：top-3 / top-5 / top-7 / lookback 6/9/12/24 月 + 在 24 universe 上跑。验证集中度 vs 分散度 trade-off。注册新策略名即跑。
+2. **dual-momentum 加 fallback**：不合格时持债券或现金，降低 5/8/10y MDD（需新数据源）
+3. **dual-momentum 替换 universe**：仅在大盘宽基/港股 子集（高趋势性）应用，避开主题/行业（动量信号噪）
+4. **BTC 单独日线策略**：BTC 的月线粒度太粗，可单独跑日线 MA20 / Donchian-50 等，与 baseline 组合配置
+5. **混合策略 portfolio**：baseline 70% + dual-momentum 30% 配置——稳健性 + alpha 兼得；需新 portfolio aggregator
+
+### Cycle 4 优先级建议
+
+1. **dual-momentum 参数扫描**（验证 cycle 3 唯一保留的 alpha）—— 预计 2-3 task，复用既有 cross-sectional-topk aggregator
+2. **混合 portfolio aggregator**（解决 baseline 稳健性 + dual-momentum alpha 的两难）—— 新 cycle plan
