@@ -36,6 +36,7 @@ class IndexContribution:
     return_pct: float
     actual_start: pd.Timestamp
     is_late: bool
+    max_drawdown: float = 0.0   # 该指数在窗口内的 MDD（cycle-calmar = sum 3 bucket curves；equal-weight = 单 bucket curve）
 
 
 @dataclass
@@ -88,6 +89,7 @@ def run_portfolio_window(
         index_final = 0.0
         index_actual_start: Optional[pd.Timestamp] = None
         active_strategies = 0  # 该 index 实际参与的策略数
+        per_index_buckets: List[pd.Series] = []  # 本指数的 bucket curves（用于算 per-index MDD）
 
         for strat_name, info in allocation.items():
             if info["excluded"] or info["weight"] == 0:
@@ -126,7 +128,9 @@ def run_portfolio_window(
 
             final_val = float(eq.iloc[-1])
             index_final += final_val
-            bucket_series.append(eq.rename(f"{code}_{strat_name}"))
+            renamed = eq.rename(f"{code}_{strat_name}")
+            bucket_series.append(renamed)
+            per_index_buckets.append(renamed)
 
         # 修复：如该 index 三策略全被 Calmar 剔除（CAGR ≤ 0）→ 视为 $10k 闲置现金
         if active_strategies == 0:
@@ -135,9 +139,14 @@ def run_portfolio_window(
             # 也加入一个 idle 净值曲线（用于聚合 + max_drawdown 准确）
             idle_eq = pd.Series([INDEX_CAPITAL, INDEX_CAPITAL], index=[window_start, as_of])
             bucket_series.append(idle_eq.rename(f"{code}_idle"))
+            per_index_buckets.append(idle_eq.rename(f"{code}_idle"))
 
         if index_actual_start is None:
             index_actual_start = as_of
+
+        # per-index MDD：sum 该指数所有 bucket 的 curves，再算 drawdown
+        per_index_curve = _aggregate_curves(per_index_buckets, window_start, as_of)
+        per_index_mdd = _max_drawdown(per_index_curve)
 
         is_late = index_actual_start > window_start + pd.Timedelta(days=1)
         per_index_list.append(IndexContribution(
@@ -149,6 +158,7 @@ def run_portfolio_window(
             return_pct=(index_final / INDEX_CAPITAL - 1) * 100,
             actual_start=index_actual_start,
             is_late=is_late,
+            max_drawdown=per_index_mdd,
         ))
 
     index_count = len(per_index_list)
@@ -287,6 +297,9 @@ def run_portfolio_window_equal_weight(
         index_final = float(eq.iloc[-1])
         bucket_series.append(eq.rename(f"{code}_{cycle}"))
 
+        # per-index MDD：equal-weight 路径下每指数仅 1 个 bucket curve，直接算 drawdown
+        per_index_mdd = _max_drawdown(eq)
+
         is_late = actual > window_start + pd.Timedelta(days=1)
         per_index_list.append(IndexContribution(
             code=code,
@@ -297,6 +310,7 @@ def run_portfolio_window_equal_weight(
             return_pct=(index_final / INDEX_CAPITAL - 1) * 100,
             actual_start=actual,
             is_late=is_late,
+            max_drawdown=per_index_mdd,
         ))
 
     index_count = len(per_index_list)
