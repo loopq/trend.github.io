@@ -124,8 +124,21 @@ UNIVERSES = {
 
 
 def _load_universe(name: str):
+    """加载 universe。支持两种形式：
+    - 注册名：v9 / main-online / combined-27 / combined-24
+    - ad-hoc：codes:000905,399673（逗号分隔的代码列表，从 combined-27 大注册表反查 IndexMeta）
+    """
+    if name.startswith("codes:"):
+        wanted = [c.strip() for c in name[len("codes:"):].split(",") if c.strip()]
+        if not wanted:
+            raise SystemExit("codes: 协议至少需要一个代码")
+        all_metas = {m.code: m for m in _build_combined_27_universe()}
+        unknown = [c for c in wanted if c not in all_metas]
+        if unknown:
+            raise SystemExit(f"unknown codes: {unknown}; known: {sorted(all_metas)}")
+        return [all_metas[c] for c in wanted]
     if name not in UNIVERSES:
-        raise SystemExit(f"unknown universe {name!r}, known: {sorted(UNIVERSES)}")
+        raise SystemExit(f"unknown universe {name!r}, known: {sorted(UNIVERSES)} (or use 'codes:CODE1,CODE2,...')")
     return UNIVERSES[name]()
 
 
