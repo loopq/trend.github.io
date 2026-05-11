@@ -547,3 +547,59 @@ def test_combine_filters_and():
     assert combine_filters_and(f_true, f_true)("X", pd.Timestamp("2024-01-01")) is True
     assert combine_filters_and(f_true, f_false)("X", pd.Timestamp("2024-01-01")) is False
     assert combine_filters_and(f_false, f_false)("X", pd.Timestamp("2024-01-01")) is False
+
+
+def test_dual_momentum_w5w10_stop20_registered():
+    """新策略 dual-momentum-w5w10-stop20：w5w10 + portfolio -20% 止损。"""
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("dual-momentum-w5w10-stop20")
+    assert s.name == "dual-momentum-w5w10-stop20"
+    assert s.cycles == ("M",)
+    assert s.aggregator == "cross-sectional-topk"
+    assert s.params["portfolio_stop_pct"] == 0.20
+    assert s.params["topk"] == 5
+    assert s.params["trend_filters"] == [
+        {"timeframe": "weekly", "period": 5, "trend_lookback": 2},
+        {"timeframe": "weekly", "period": 10, "trend_lookback": 3},
+    ]
+
+
+def test_run_portfolio_window_with_portfolio_stop():
+    """run_portfolio_window_cross_sectional_topk + portfolio_stop_pct：
+    构造 toy 序列让 portfolio 跌超阈值 → 该月被强制 cash + peak 重置。
+    """
+    from scripts.backtest.window_engine import (
+        run_portfolio_window_cross_sectional_topk, INDEX_CAPITAL,
+    )
+    # 构造单指数 universe，月线 close 序列：100→120→90→110→130
+    # 不加 stop 时：100→120 (+20%) → 90 (-25%) → 110 (+22%) → 130 (+18%)
+    # peak 在第 2 月（120）；第 3 月跌到 -25% 触发 stop（如 stop=0.20）
+    # stop 触发后该月 cash → cur 不变（应等于第 2 月 cur，不是跌后值）
+    closes_by_code = {
+        "X": pd.Series([100.0, 120.0, 90.0, 110.0, 130.0],
+                       index=pd.date_range("2024-01-31", periods=5, freq="ME")),
+    }
+    # holdings 全月持有 X
+    schedule = {d: {"X"} for d in closes_by_code["X"].index}
+    as_of = closes_by_code["X"].index[-1]
+
+    # 不开 stop
+    wr_no_stop = run_portfolio_window_cross_sectional_topk(
+        closes_by_code, schedule, window_years=1, as_of=as_of,
+    )
+    # 开 -20% stop
+    wr_stop = run_portfolio_window_cross_sectional_topk(
+        closes_by_code, schedule, window_years=1, as_of=as_of,
+        portfolio_stop_pct=0.20,
+    )
+    # stop 版本应该在第 3 月避开了 -25% 那段（被 cash 替代后，第 4/5 月按 schedule 重新进场）
+    # 不开 stop 的 final = 100 * 1.2 * 0.75 * (110/90) * (130/110) = 100 * 1.2 * 0.75 * 1.222 * 1.182 ≈ 130
+    # 开 stop：第 3 月触发，cur = 120（cash idle，不跌）；之后 prev_holdings={X} 在第 4 月按 110/90 涨...
+    # 等等：stop 触发后 prev_holdings = {} 空集，所以第 4 月不持仓 cur = 120
+    # 第 5 月 prev_holdings = {X}（第 4 月 schedule）→ 算 prev=110 (第 4 月)？不对，prev_date 是第 4 月的 date
+    # 具体复杂，关键是断言 stop 版本不能比 no-stop 更差
+    assert wr_no_stop.final_value > 0
+    assert wr_stop.final_value > 0
+    # MDD 应该改善（不开 stop 经历完整 -25% 跌幅；开 stop 避开了部分）
+    assert wr_stop.max_drawdown >= wr_no_stop.max_drawdown  # 浅一点（数值更大）

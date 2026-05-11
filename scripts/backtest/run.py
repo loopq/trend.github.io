@@ -279,6 +279,7 @@ def _run_cross_sectional_topk(strategy, registry, windows: List[int]):
     topk = params.get("topk", 5)
     abs_threshold = params.get("abs_threshold", 0.0)
     trend_filter_specs = params.get("trend_filters", [])
+    portfolio_stop_pct = params.get("portfolio_stop_pct")  # None = 不开止损
 
     logger.info("加载 %d 个指数数据 ...", len(registry))
     monthly_close_by_code: Dict[str, pd.Series] = {}
@@ -330,6 +331,7 @@ def _run_cross_sectional_topk(strategy, registry, windows: List[int]):
             holdings_schedule=schedule,
             window_years=n,
             as_of=AS_OF,
+            portfolio_stop_pct=portfolio_stop_pct,
         )
         logger.info("  %d 年 总 CAGR %.2f%% / MDD %.2f%%", n, wr.cagr, wr.max_drawdown)
         window_results.append(wr)

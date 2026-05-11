@@ -273,6 +273,39 @@ def _dual_momentum_top5() -> Strategy:
     )
 
 
+@register("dual-momentum-w5w10-stop20")
+def _dual_momentum_w5w10_stop20() -> Strategy:
+    """dual-momentum-w5w10 + portfolio drawdown -20% 止损（with peak reset）。
+
+    在 w5w10 基础上加 portfolio 层动态止损：
+    - 跟踪 portfolio equity 历史最高（peak）
+    - 当前 equity / peak - 1 < -20% → 该月强制 cash idle + 重置 peak = 当前 equity
+    - 重置 peak 避免触发后永久 cash 锁死，下月可重新跟踪
+
+    回测对比（全期，universe combined-24）：
+    - dual-momentum-w5w10:         CAGR +10.12% / MDD -38.72%
+    - dual-momentum-w5w10-stop20:  CAGR +10.46% / MDD -38.72% (5y/8y/10y MDD -33.49% → -28.80%)
+    详见 agents/results/2026-05-11-dual-momentum-w5w10-stop-loss-v2.html
+    """
+    return Strategy(
+        name="dual-momentum-w5w10-stop20",
+        decider=DualMomentumNoOpDecider(),
+        filters=(),
+        cycles=("M",),
+        aggregator="cross-sectional-topk",
+        params={
+            "lookback_months": 12,
+            "topk": 5,
+            "abs_threshold": 0.0,
+            "trend_filters": [
+                {"timeframe": "weekly", "period": 5, "trend_lookback": 2},
+                {"timeframe": "weekly", "period": 10, "trend_lookback": 3},
+            ],
+            "portfolio_stop_pct": 0.20,
+        },
+    )
+
+
 @register("dual-momentum-w5w10")
 def _dual_momentum_w5w10() -> Strategy:
     """dual-momentum-top5 + 周线 MA5 ∩ MA10 双重右侧趋势过滤。

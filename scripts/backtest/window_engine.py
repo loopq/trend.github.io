@@ -346,6 +346,7 @@ def run_portfolio_window_cross_sectional_topk(
     holdings_schedule: Dict[pd.Timestamp, set],
     window_years: int,
     as_of: pd.Timestamp,
+    portfolio_stop_pct: Optional[float] = None,
 ) -> WindowResult:
     """横截面 top-K 路径：portfolio-level equity，无 per-index BacktestResult。
 
@@ -360,6 +361,7 @@ def run_portfolio_window_cross_sectional_topk(
         holdings_schedule: rebalance_date -> set of codes（cross_sectional.build_holdings_schedule 输出）
         window_years: 窗口年数
         as_of: 评估日
+        portfolio_stop_pct: 可选 portfolio drawdown 止损（如 0.20 = 组合从 peak 跌 > 20% → 该月 cash + 重置 peak）
     """
     window_start = as_of - pd.DateOffset(years=window_years)
     total_capital = INDEX_CAPITAL * len(monthly_close_by_code)
@@ -378,6 +380,7 @@ def run_portfolio_window_cross_sectional_topk(
     # 累积 equity_curve（月度 series）
     equity_records: Dict[pd.Timestamp, float] = {window_start: total_capital}
     cur_equity = total_capital
+    portfolio_peak = total_capital  # 用于 portfolio_stop_pct trigger
     prev_holdings: set = set()
     prev_date: Optional[pd.Timestamp] = None
 
@@ -396,8 +399,19 @@ def run_portfolio_window_cross_sectional_topk(
             if returns:
                 portfolio_return = sum(returns) / len(returns)  # 等权
                 cur_equity = cur_equity * (1 + portfolio_return)
+        if cur_equity > portfolio_peak:
+            portfolio_peak = cur_equity
         equity_records[date] = cur_equity
-        prev_holdings = holdings_schedule[date]
+
+        # portfolio stop check：触发即 cash + 重置 peak（避免永久 cash 锁死）
+        target_holdings = holdings_schedule[date]
+        if portfolio_stop_pct is not None:
+            dd = cur_equity / portfolio_peak - 1
+            if dd < -portfolio_stop_pct:
+                target_holdings = set()  # 该月 cash idle
+                portfolio_peak = cur_equity  # 重置 peak
+
+        prev_holdings = target_holdings
         prev_date = date
 
     portfolio_curve = pd.Series(equity_records).sort_index()
