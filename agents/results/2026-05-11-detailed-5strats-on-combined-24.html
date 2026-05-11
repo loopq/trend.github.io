@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5 策略详细对比 on combined-24 — 回测报告</title>
+<style>:root {
+  --c-bg: #fafbfc; --c-text: #1f2328; --c-muted: #656d76; --c-accent: #0969da;
+  --c-border: #d0d7de; --c-code-bg: #f6f8fa; --c-warn: #bf8700; --c-warn-bg: #fff8c5;
+  --c-success: #1a7f37; --c-success-bg: #dafbe1; --c-danger: #d1242f; --c-danger-bg: #ffebe9;
+  --c-info-bg: #ddf4ff; --c-pos: #1a7f37; --c-neg: #d1242f; --c-mdd-shallow: #57b884;
+  --c-mdd-mid: #bf8700; --c-mdd-deep: #d1242f;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  font-size: 15px; line-height: 1.65; color: var(--c-text); background: var(--c-bg);
+  max-width: 1280px; margin: 0 auto; padding: 28px 40px 80px;
+}
+h1 { font-size: 26px; border-bottom: 2px solid var(--c-border); padding-bottom: 10px; margin-bottom: 8px; }
+h2 { font-size: 21px; margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--c-border); }
+h3 { font-size: 17px; color: var(--c-accent); margin-top: 28px; margin-bottom: 6px; }
+h4 { font-size: 14px; color: var(--c-muted); margin-top: 16px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+p { margin: 8px 0; }
+code { background: var(--c-code-bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, Consolas, monospace; }
+table { border-collapse: collapse; margin: 14px 0; font-size: 13px; width: 100%; }
+th, td { border: 1px solid var(--c-border); padding: 6px 10px; text-align: left; vertical-align: top; white-space: nowrap; }
+th { background: var(--c-code-bg); font-weight: 600; font-size: 12.5px; }
+table.detail td:first-child, table.summary td:first-child { font-weight: 500; min-width: 140px; }
+table.detail tbody tr:hover, table.summary tbody tr:hover { background: var(--c-info-bg); }
+ul, ol { padding-left: 22px; } li { margin: 4px 0; }
+.meta { color: var(--c-muted); font-size: 13.5px; margin-top: 0; }
+.pos { color: var(--c-pos); font-weight: 600; }
+.neg { color: var(--c-neg); font-weight: 600; }
+.zero { color: var(--c-muted); }
+.mdd-shallow { color: var(--c-mdd-shallow); }
+.mdd-mid { color: var(--c-mdd-mid); }
+.mdd-deep { color: var(--c-mdd-deep); font-weight: 600; }
+.callout { border-left: 4px solid var(--c-accent); background: var(--c-info-bg); padding: 12px 16px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+.callout-warn { border-left-color: var(--c-warn); background: var(--c-warn-bg); }
+.callout-danger { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.callout-success { border-left-color: var(--c-success); background: var(--c-success-bg); }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; vertical-align: middle; margin-right: 6px; }
+.tag-best { background: var(--c-success-bg); color: var(--c-success); }
+.tag-good { background: var(--c-info-bg); color: var(--c-accent); }
+.tag-mid { background: var(--c-warn-bg); color: var(--c-warn); }
+.tag-bad { background: var(--c-danger-bg); color: var(--c-danger); }
+.tag-rank-1 { background: #fff3bf; color: #b08800; font-weight: 600; }
+.tag-rank-2 { background: #e7f5ff; color: #1971c2; }
+.tag-rank-3 { background: #fff0e6; color: #c2410c; }
+nav.toc { background: var(--c-code-bg); padding: 14px 22px; border-radius: 6px; margin: 18px 0 24px; border: 1px solid var(--c-border); }
+nav.toc h4 { margin: 0 0 6px; color: var(--c-text); text-transform: none; letter-spacing: 0; font-size: 13px; }
+nav.toc ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+nav.toc li { margin: 2px 0; font-size: 13.5px; }
+nav.toc a { color: var(--c-accent); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+.ranking-list { background: var(--c-code-bg); padding: 12px 18px; border-radius: 6px; border: 1px solid var(--c-border); margin: 8px 0; }
+.ranking-list ol { margin: 4px 0; padding-left: 28px; }
+.window-strip { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 20px; }
+.window-strip .window-card { flex: 1 1 280px; padding: 12px 16px; border: 1px solid var(--c-border); border-radius: 6px; background: white; }
+.window-strip .window-card h4 { margin: 0 0 8px; color: var(--c-accent); text-transform: none; letter-spacing: 0; font-size: 14px; }
+.window-strip .window-card ol { margin: 0; padding-left: 22px; font-size: 13px; }
+.window-strip .window-card li { margin: 3px 0; }
+hr { border: none; border-top: 1px solid var(--c-border); margin: 24px 0; }
+@media (max-width: 720px) {
+  body { padding: 18px 16px 60px; font-size: 14px; }
+  nav.toc ul { columns: 1; }
+  table { font-size: 11.5px; }
+  th, td { padding: 4px 6px; }
+}
+</style>
+</head>
+<body>
+<h1>5 策略详细对比 on combined-24 — 回测报告</h1>
+<p class="meta"><strong>生成日</strong>: 2026-05-11 · <strong>Universe</strong>: combined-24（combined-27 去 BTC / 北证50 / HSCEI）· <strong>时间窗</strong>: 3 / 5 / 8 / 10 年 · <strong>数据终点</strong>: 2026-04-24</p>
+<nav class="toc"><h4>目录</h4><ul>
+<li><a href="#summary">一、组合层汇总（5×4）</a></li>
+<li><a href="#ranking">二、各窗口 CAGR 排名</a></li>
+<li><a href="#text-summary">三、综合评分 + 平均排名</a></li>
+<li><a href="#style">四、风格倾向分析</a></li>
+<li><a href="#detail-v9-baseline">五-1. v9-baseline 详细表</a></li>
+<li><a href="#detail-v9.3-bear">五-2. v9.3-bear 详细表</a></li>
+<li><a href="#detail-faber-gtaa">五-3. faber-gtaa 详细表</a></li>
+<li><a href="#detail-donchian-200">五-4. donchian-200 详细表</a></li>
+<li><a href="#detail-dual-momentum-top5">五-5. dual-momentum-top5 详细表</a></li>
+<li><a href="#insights">六、关键洞察 + 实操建议</a></li>
+</ul></nav>
+<h2 id="summary">一、组合层汇总（每策略每窗口）</h2>
+<div class="callout"><strong>读图速看</strong>：4 个窗口（3/5/8/10 年）下每策略的 CAGR、MDD、总收益。<span class="pos">绿色</span>=正、<span class="neg">红色</span>=负；MDD <span class="mdd-shallow">浅绿</span>=&lt;20%、<span class="mdd-mid">黄</span>=20-35%、<span class="mdd-deep">深红</span>=≥35%。</div>
+<table class="summary"><thead><tr>
+<th>策略</th>
+<th>3 年 CAGR</th>
+<th>3 年 MDD</th>
+<th>3 年 总收益</th>
+<th>5 年 CAGR</th>
+<th>5 年 MDD</th>
+<th>5 年 总收益</th>
+<th>8 年 CAGR</th>
+<th>8 年 MDD</th>
+<th>8 年 总收益</th>
+<th>10 年 CAGR</th>
+<th>10 年 MDD</th>
+<th>10 年 总收益</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>v9-baseline</strong></td>
+<td class="pos">14.89%</td>
+<td class="mdd-shallow">-11.42%</td>
+<td class="pos">+51.67%</td>
+<td class="pos">9.49%</td>
+<td class="mdd-shallow">-14.06%</td>
+<td class="pos">+57.31%</td>
+<td class="pos">9.99%</td>
+<td class="mdd-shallow">-15.62%</td>
+<td class="pos">+114.16%</td>
+<td class="pos">8.36%</td>
+<td class="mdd-shallow">-15.25%</td>
+<td class="pos">+123.25%</td>
+</tr>
+<tr>
+<td><strong>v9.3-bear</strong></td>
+<td class="pos">13.70%</td>
+<td class="mdd-shallow">-12.84%</td>
+<td class="pos">+47.02%</td>
+<td class="pos">7.48%</td>
+<td class="mdd-shallow">-18.09%</td>
+<td class="pos">+43.43%</td>
+<td class="pos">8.95%</td>
+<td class="mdd-shallow">-18.81%</td>
+<td class="pos">+98.46%</td>
+<td class="pos">7.53%</td>
+<td class="mdd-shallow">-18.40%</td>
+<td class="pos">+106.73%</td>
+</tr>
+<tr>
+<td><strong>faber-gtaa</strong></td>
+<td class="pos">12.11%</td>
+<td class="mdd-shallow">-13.62%</td>
+<td class="pos">+40.92%</td>
+<td class="pos">5.74%</td>
+<td class="mdd-mid">-21.71%</td>
+<td class="pos">+32.16%</td>
+<td class="pos">8.19%</td>
+<td class="mdd-mid">-23.91%</td>
+<td class="pos">+87.70%</td>
+<td class="pos">6.67%</td>
+<td class="mdd-mid">-23.30%</td>
+<td class="pos">+90.67%</td>
+</tr>
+<tr>
+<td><strong>donchian-200</strong></td>
+<td class="pos">11.91%</td>
+<td class="mdd-shallow">-14.72%</td>
+<td class="pos">+40.18%</td>
+<td class="pos">6.83%</td>
+<td class="mdd-shallow">-14.47%</td>
+<td class="pos">+39.13%</td>
+<td class="pos">8.86%</td>
+<td class="mdd-shallow">-17.35%</td>
+<td class="pos">+97.21%</td>
+<td class="pos">6.79%</td>
+<td class="mdd-shallow">-16.03%</td>
+<td class="pos">+92.95%</td>
+</tr>
+<tr>
+<td><strong>dual-momentum-top5</strong></td>
+<td class="pos">25.66%</td>
+<td class="mdd-shallow">-13.37%</td>
+<td class="pos">+98.44%</td>
+<td class="pos">9.27%</td>
+<td class="mdd-deep">-42.32%</td>
+<td class="pos">+55.74%</td>
+<td class="pos">10.15%</td>
+<td class="mdd-deep">-42.32%</td>
+<td class="pos">+116.69%</td>
+<td class="pos">9.28%</td>
+<td class="mdd-deep">-42.32%</td>
+<td class="pos">+142.92%</td>
+</tr>
+</tbody></table>
+<h2 id="ranking">二、各窗口 CAGR 排名</h2>
+<div class="window-strip">
+<div class="window-card"><h4>3 年窗口</h4><ol>
+<li><span class="tag tag-rank-1">🥇</span><strong>dual-momentum-top5</strong> — CAGR <span class="pos">25.66%</span> / MDD <span class="mdd-shallow">-13.37%</span> / 总收益 <span class="pos">+98.44%</span></li>
+<li><span class="tag tag-rank-2">🥈</span><strong>v9-baseline</strong> — CAGR <span class="pos">14.89%</span> / MDD <span class="mdd-shallow">-11.42%</span> / 总收益 <span class="pos">+51.67%</span></li>
+<li><span class="tag tag-rank-3">🥉</span><strong>v9.3-bear</strong> — CAGR <span class="pos">13.70%</span> / MDD <span class="mdd-shallow">-12.84%</span> / 总收益 <span class="pos">+47.02%</span></li>
+<li><strong>faber-gtaa</strong> — CAGR <span class="pos">12.11%</span> / MDD <span class="mdd-shallow">-13.62%</span> / 总收益 <span class="pos">+40.92%</span></li>
+<li><strong>donchian-200</strong> — CAGR <span class="pos">11.91%</span> / MDD <span class="mdd-shallow">-14.72%</span> / 总收益 <span class="pos">+40.18%</span></li>
+</ol></div>
+<div class="window-card"><h4>5 年窗口</h4><ol>
+<li><span class="tag tag-rank-1">🥇</span><strong>v9-baseline</strong> — CAGR <span class="pos">9.49%</span> / MDD <span class="mdd-shallow">-14.06%</span> / 总收益 <span class="pos">+57.31%</span></li>
+<li><span class="tag tag-rank-2">🥈</span><strong>dual-momentum-top5</strong> — CAGR <span class="pos">9.27%</span> / MDD <span class="mdd-deep">-42.32%</span> / 总收益 <span class="pos">+55.74%</span></li>
+<li><span class="tag tag-rank-3">🥉</span><strong>v9.3-bear</strong> — CAGR <span class="pos">7.48%</span> / MDD <span class="mdd-shallow">-18.09%</span> / 总收益 <span class="pos">+43.43%</span></li>
+<li><strong>donchian-200</strong> — CAGR <span class="pos">6.83%</span> / MDD <span class="mdd-shallow">-14.47%</span> / 总收益 <span class="pos">+39.13%</span></li>
+<li><strong>faber-gtaa</strong> — CAGR <span class="pos">5.74%</span> / MDD <span class="mdd-mid">-21.71%</span> / 总收益 <span class="pos">+32.16%</span></li>
+</ol></div>
+<div class="window-card"><h4>8 年窗口</h4><ol>
+<li><span class="tag tag-rank-1">🥇</span><strong>dual-momentum-top5</strong> — CAGR <span class="pos">10.15%</span> / MDD <span class="mdd-deep">-42.32%</span> / 总收益 <span class="pos">+116.69%</span></li>
+<li><span class="tag tag-rank-2">🥈</span><strong>v9-baseline</strong> — CAGR <span class="pos">9.99%</span> / MDD <span class="mdd-shallow">-15.62%</span> / 总收益 <span class="pos">+114.16%</span></li>
+<li><span class="tag tag-rank-3">🥉</span><strong>v9.3-bear</strong> — CAGR <span class="pos">8.95%</span> / MDD <span class="mdd-shallow">-18.81%</span> / 总收益 <span class="pos">+98.46%</span></li>
+<li><strong>donchian-200</strong> — CAGR <span class="pos">8.86%</span> / MDD <span class="mdd-shallow">-17.35%</span> / 总收益 <span class="pos">+97.21%</span></li>
+<li><strong>faber-gtaa</strong> — CAGR <span class="pos">8.19%</span> / MDD <span class="mdd-mid">-23.91%</span> / 总收益 <span class="pos">+87.70%</span></li>
+</ol></div>
+<div class="window-card"><h4>10 年窗口</h4><ol>
+<li><span class="tag tag-rank-1">🥇</span><strong>dual-momentum-top5</strong> — CAGR <span class="pos">9.28%</span> / MDD <span class="mdd-deep">-42.32%</span> / 总收益 <span class="pos">+142.92%</span></li>
+<li><span class="tag tag-rank-2">🥈</span><strong>v9-baseline</strong> — CAGR <span class="pos">8.36%</span> / MDD <span class="mdd-shallow">-15.25%</span> / 总收益 <span class="pos">+123.25%</span></li>
+<li><span class="tag tag-rank-3">🥉</span><strong>v9.3-bear</strong> — CAGR <span class="pos">7.53%</span> / MDD <span class="mdd-shallow">-18.40%</span> / 总收益 <span class="pos">+106.73%</span></li>
+<li><strong>donchian-200</strong> — CAGR <span class="pos">6.79%</span> / MDD <span class="mdd-shallow">-16.03%</span> / 总收益 <span class="pos">+92.95%</span></li>
+<li><strong>faber-gtaa</strong> — CAGR <span class="pos">6.67%</span> / MDD <span class="mdd-mid">-23.30%</span> / 总收益 <span class="pos">+90.67%</span></li>
+</ol></div>
+</div>
+<h2 id="text-summary">三、综合评分 + 平均排名</h2>
+<h3>综合评分（4 窗口平均 CAGR + 平均 MDD，越高越好）</h3>
+<div class="ranking-list"><ol>
+<li><span class="tag tag-rank-1">🥇</span><strong>v9-baseline</strong>: 综合分 <span class="neg">-3.41</span> = 平均 CAGR <span class="pos">10.68%</span> + 平均 MDD <span class="mdd-shallow">-14.09%</span></li>
+<li><span class="tag tag-rank-2">🥈</span><strong>donchian-200</strong>: 综合分 <span class="neg">-7.05</span> = 平均 CAGR <span class="pos">8.60%</span> + 平均 MDD <span class="mdd-shallow">-15.64%</span></li>
+<li><span class="tag tag-rank-3">🥉</span><strong>v9.3-bear</strong>: 综合分 <span class="neg">-7.62</span> = 平均 CAGR <span class="pos">9.42%</span> + 平均 MDD <span class="mdd-shallow">-17.03%</span></li>
+<li><strong>faber-gtaa</strong>: 综合分 <span class="neg">-12.46</span> = 平均 CAGR <span class="pos">8.18%</span> + 平均 MDD <span class="mdd-mid">-20.63%</span></li>
+<li><strong>dual-momentum-top5</strong>: 综合分 <span class="neg">-21.49</span> = 平均 CAGR <span class="pos">13.59%</span> + 平均 MDD <span class="mdd-deep">-35.08%</span></li>
+</ol></div>
+<h3>每策略各窗口排名（按 CAGR）</h3>
+<table class="summary"><thead><tr>
+<th>策略</th>
+<th>3 年</th>
+<th>5 年</th>
+<th>8 年</th>
+<th>10 年</th>
+<th>平均排名</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>v9-baseline</strong></td>
+<td><span class="tag tag-rank-2">第 2</span></td>
+<td><span class="tag tag-rank-1">第 1</span></td>
+<td><span class="tag tag-rank-2">第 2</span></td>
+<td><span class="tag tag-rank-2">第 2</span></td>
+<td><strong>1.75</strong></td>
+</tr>
+<tr>
+<td><strong>v9.3-bear</strong></td>
+<td><span class="tag tag-rank-3">第 3</span></td>
+<td><span class="tag tag-rank-3">第 3</span></td>
+<td><span class="tag tag-rank-3">第 3</span></td>
+<td><span class="tag tag-rank-3">第 3</span></td>
+<td><strong>3.00</strong></td>
+</tr>
+<tr>
+<td><strong>faber-gtaa</strong></td>
+<td><span class="tag tag">第 4</span></td>
+<td><span class="tag tag">第 5</span></td>
+<td><span class="tag tag">第 5</span></td>
+<td><span class="tag tag">第 5</span></td>
+<td><strong>4.75</strong></td>
+</tr>
+<tr>
+<td><strong>donchian-200</strong></td>
+<td><span class="tag tag">第 5</span></td>
+<td><span class="tag tag">第 4</span></td>
+<td><span class="tag tag">第 4</span></td>
+<td><span class="tag tag">第 4</span></td>
+<td><strong>4.25</strong></td>
+</tr>
+<tr>
+<td><strong>dual-momentum-top5</strong></td>
+<td><span class="tag tag-rank-1">第 1</span></td>
+<td><span class="tag tag-rank-2">第 2</span></td>
+<td><span class="tag tag-rank-1">第 1</span></td>
+<td><span class="tag tag-rank-1">第 1</span></td>
+<td><strong>1.25</strong></td>
+</tr>
+</tbody></table>
+<h2 id="style">四、风格倾向分析（vs baseline v9-baseline）</h2>
+<div class="callout-warn callout"><strong>10y 窗口</strong>下每策略在 5 个 universe 子集上的平均 ΔCAGR / ΔMDD vs baseline。<span class="pos">正</span>=跑赢 baseline、<span class="neg">负</span>=跑输。ΔMDD <span class="pos">正</span>=回撤更浅（更好）、<span class="neg">负</span>=回撤更深（更差）。</div>
+<table class="summary"><thead><tr>
+<th>策略</th>
+<th>主题</th>
+<th>商品</th>
+<th>宽基</th>
+<th>海外宽基</th>
+<th>港股</th>
+<th>行业</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>v9.3-bear</strong></td>
+<td>ΔCAGR <span class="neg">-1.41pp</span> / ΔMDD <span class="neg">-5.78pp</span> <small style="color:var(--c-muted)">(9指数)</small></td>
+<td>ΔCAGR <span class="pos">+0.62pp</span> / ΔMDD <span class="neg">-3.78pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-1.09pp</span> / ΔMDD <span class="neg">-4.77pp</span> <small style="color:var(--c-muted)">(7指数)</small></td>
+<td>ΔCAGR <span class="pos">+0.09pp</span> / ΔMDD <span class="neg">-0.51pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.13pp</span> / ΔMDD <span class="pos">+0.33pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.86pp</span> / ΔMDD <span class="neg">-1.22pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+</tr>
+<tr>
+<td><strong>faber-gtaa</strong></td>
+<td>ΔCAGR <span class="neg">-3.05pp</span> / ΔMDD <span class="neg">-10.89pp</span> <small style="color:var(--c-muted)">(9指数)</small></td>
+<td>ΔCAGR <span class="neg">-1.63pp</span> / ΔMDD <span class="neg">-9.41pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.66pp</span> / ΔMDD <span class="neg">-5.12pp</span> <small style="color:var(--c-muted)">(7指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.36pp</span> / ΔMDD <span class="neg">-6.93pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.11pp</span> / ΔMDD <span class="neg">-11.01pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-3.79pp</span> / ΔMDD <span class="neg">-18.06pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+</tr>
+<tr>
+<td><strong>donchian-200</strong></td>
+<td>ΔCAGR <span class="neg">-3.37pp</span> / ΔMDD <span class="neg">-9.77pp</span> <small style="color:var(--c-muted)">(9指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.67pp</span> / ΔMDD <span class="neg">-5.63pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-0.34pp</span> / ΔMDD <span class="neg">-0.36pp</span> <small style="color:var(--c-muted)">(7指数)</small></td>
+<td>ΔCAGR <span class="neg">-2.48pp</span> / ΔMDD <span class="neg">-4.09pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-2.47pp</span> / ΔMDD <span class="neg">-9.72pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+<td>ΔCAGR <span class="neg">-1.47pp</span> / ΔMDD <span class="pos">+2.42pp</span> <small style="color:var(--c-muted)">(2指数)</small></td>
+</tr>
+<tr>
+<td><strong>dual-momentum-top5</strong></td>
+<td><small style="color:var(--c-muted)">横截面无数据</small></td>
+<td><small style="color:var(--c-muted)">横截面无数据</small></td>
+<td><small style="color:var(--c-muted)">横截面无数据</small></td>
+<td><small style="color:var(--c-muted)">横截面无数据</small></td>
+<td><small style="color:var(--c-muted)">横截面无数据</small></td>
+<td><small style="color:var(--c-muted)">横截面无数据</small></td>
+</tr>
+</tbody></table>
+<h2 id="detail-v9-baseline">五-1. v9-baseline 详细表</h2>
+<div class="callout"><span class="tag tag-best">🥇 性价比之王（综合分第 1）</span><br><span style="font-size:13.5px;color:var(--c-muted)">4 窗口平均排名 1.75；CAGR 平均 10.68% / MDD 平均 -14.09%；全 universe 通吃，MDD 控制最严</span></div>
+<table class="detail"><thead><tr>
+<th>指数</th>
+<th>3y CAGR</th>
+<th>3y MDD</th>
+<th>3y 总收益</th>
+<th>5y CAGR</th>
+<th>5y MDD</th>
+<th>5y 总收益</th>
+<th>8y CAGR</th>
+<th>8y MDD</th>
+<th>8y 总收益</th>
+<th>10y CAGR</th>
+<th>10y MDD</th>
+<th>10y 总收益</th>
+</tr></thead><tbody>
+<tr>
+<td>沪深300(000300)</td>
+<td class="pos">5.88%</td>
+<td class="mdd-shallow">-12.94%</td>
+<td class="pos">+18.72%</td>
+<td class="pos">0.98%</td>
+<td class="mdd-mid">-22.36%</td>
+<td class="pos">+4.97%</td>
+<td class="pos">2.95%</td>
+<td class="mdd-mid">-28.89%</td>
+<td class="pos">+26.23%</td>
+<td class="pos">3.32%</td>
+<td class="mdd-mid">-29.01%</td>
+<td class="pos">+38.58%</td>
+</tr>
+<tr>
+<td>上证50(000016)</td>
+<td class="pos">1.66%</td>
+<td class="mdd-shallow">-11.60%</td>
+<td class="pos">+5.07%</td>
+<td class="neg">-1.46%</td>
+<td class="mdd-mid">-22.69%</td>
+<td class="neg">-7.09%</td>
+<td class="pos">1.15%</td>
+<td class="mdd-mid">-30.68%</td>
+<td class="pos">+9.55%</td>
+<td class="pos">2.70%</td>
+<td class="mdd-mid">-31.36%</td>
+<td class="pos">+30.53%</td>
+</tr>
+<tr>
+<td>中证500(000905)</td>
+<td class="pos">11.73%</td>
+<td class="mdd-shallow">-11.85%</td>
+<td class="pos">+39.50%</td>
+<td class="pos">6.23%</td>
+<td class="mdd-mid">-22.14%</td>
+<td class="pos">+35.24%</td>
+<td class="pos">4.63%</td>
+<td class="mdd-mid">-22.90%</td>
+<td class="pos">+43.60%</td>
+<td class="pos">2.13%</td>
+<td class="mdd-mid">-23.08%</td>
+<td class="pos">+23.49%</td>
+</tr>
+<tr>
+<td>中证1000(000852)</td>
+<td class="pos">11.43%</td>
+<td class="mdd-shallow">-11.30%</td>
+<td class="pos">+38.38%</td>
+<td class="pos">6.85%</td>
+<td class="mdd-mid">-22.79%</td>
+<td class="pos">+39.27%</td>
+<td class="pos">4.54%</td>
+<td class="mdd-mid">-24.78%</td>
+<td class="pos">+42.66%</td>
+<td class="pos">2.71%</td>
+<td class="mdd-mid">-24.52%</td>
+<td class="pos">+30.60%</td>
+</tr>
+<tr>
+<td>科创50(000688)</td>
+<td class="pos">14.40%</td>
+<td class="mdd-shallow">-18.35%</td>
+<td class="pos">+49.74%</td>
+<td class="pos">8.00%</td>
+<td class="mdd-mid">-23.86%</td>
+<td class="pos">+46.93%</td>
+<td class="pos">4.93%</td>
+<td class="mdd-mid">-23.86%</td>
+<td class="pos">+46.93%</td>
+<td class="pos">3.92%</td>
+<td class="mdd-mid">-23.86%</td>
+<td class="pos">+46.93%</td>
+</tr>
+<tr>
+<td>中证2000(932000)</td>
+<td class="pos">14.09%</td>
+<td class="mdd-shallow">-11.66%</td>
+<td class="pos">+48.50%</td>
+<td class="pos">12.44%</td>
+<td class="mdd-shallow">-14.38%</td>
+<td class="pos">+79.68%</td>
+<td class="pos">6.70%</td>
+<td class="mdd-shallow">-19.11%</td>
+<td class="pos">+67.99%</td>
+<td class="pos">3.97%</td>
+<td class="mdd-mid">-25.39%</td>
+<td class="pos">+47.53%</td>
+</tr>
+<tr>
+<td>创业板50(399673)</td>
+<td class="pos">19.94%</td>
+<td class="mdd-mid">-20.92%</td>
+<td class="pos">+72.58%</td>
+<td class="pos">8.07%</td>
+<td class="mdd-deep">-36.21%</td>
+<td class="pos">+47.38%</td>
+<td class="pos">15.65%</td>
+<td class="mdd-deep">-36.29%</td>
+<td class="pos">+219.96%</td>
+<td class="pos">11.42%</td>
+<td class="mdd-deep">-37.35%</td>
+<td class="pos">+194.79%</td>
+</tr>
+<tr>
+<td>光伏产业(931151)</td>
+<td class="pos">11.22%</td>
+<td class="mdd-shallow">-17.11%</td>
+<td class="pos">+37.58%</td>
+<td class="pos">15.26%</td>
+<td class="mdd-mid">-32.15%</td>
+<td class="pos">+103.42%</td>
+<td class="pos">10.65%</td>
+<td class="mdd-mid">-32.31%</td>
+<td class="pos">+124.71%</td>
+<td class="pos">8.43%</td>
+<td class="mdd-mid">-32.31%</td>
+<td class="pos">+124.71%</td>
+</tr>
+<tr>
+<td>中证白酒(399997)</td>
+<td class="neg">-1.12%</td>
+<td class="mdd-shallow">-13.11%</td>
+<td class="neg">-3.33%</td>
+<td class="pos">0.25%</td>
+<td class="mdd-mid">-24.58%</td>
+<td class="pos">+1.25%</td>
+<td class="pos">12.41%</td>
+<td class="mdd-mid">-27.55%</td>
+<td class="pos">+154.95%</td>
+<td class="pos">15.11%</td>
+<td class="mdd-mid">-27.98%</td>
+<td class="pos">+308.36%</td>
+</tr>
+<tr>
+<td>中证医疗(399989)</td>
+<td class="pos">0.59%</td>
+<td class="mdd-shallow">-16.07%</td>
+<td class="pos">+1.78%</td>
+<td class="neg">-4.29%</td>
+<td class="mdd-deep">-37.44%</td>
+<td class="neg">-19.69%</td>
+<td class="pos">8.91%</td>
+<td class="mdd-deep">-38.70%</td>
+<td class="pos">+97.94%</td>
+<td class="pos">7.87%</td>
+<td class="mdd-deep">-39.01%</td>
+<td class="pos">+113.22%</td>
+</tr>
+<tr>
+<td>5G通信(931079)</td>
+<td class="pos">41.21%</td>
+<td class="mdd-mid">-21.14%</td>
+<td class="pos">+181.67%</td>
+<td class="pos">26.77%</td>
+<td class="mdd-mid">-20.51%</td>
+<td class="pos">+227.40%</td>
+<td class="pos">15.49%</td>
+<td class="mdd-mid">-32.78%</td>
+<td class="pos">+216.45%</td>
+<td class="pos">12.21%</td>
+<td class="mdd-mid">-32.78%</td>
+<td class="pos">+216.45%</td>
+</tr>
+<tr>
+<td>中证新能(399808)</td>
+<td class="pos">12.20%</td>
+<td class="mdd-shallow">-15.18%</td>
+<td class="pos">+41.26%</td>
+<td class="pos">11.80%</td>
+<td class="mdd-mid">-30.49%</td>
+<td class="pos">+74.68%</td>
+<td class="pos">14.93%</td>
+<td class="mdd-mid">-30.81%</td>
+<td class="pos">+204.46%</td>
+<td class="pos">10.94%</td>
+<td class="mdd-mid">-30.56%</td>
+<td class="pos">+182.31%</td>
+</tr>
+<tr>
+<td>人工智能(931071)</td>
+<td class="pos">23.18%</td>
+<td class="mdd-mid">-33.20%</td>
+<td class="pos">+86.95%</td>
+<td class="pos">17.19%</td>
+<td class="mdd-mid">-33.11%</td>
+<td class="pos">+121.04%</td>
+<td class="pos">9.22%</td>
+<td class="mdd-mid">-33.34%</td>
+<td class="pos">+102.53%</td>
+<td class="pos">7.31%</td>
+<td class="mdd-mid">-33.34%</td>
+<td class="pos">+102.53%</td>
+</tr>
+<tr>
+<td>CS智汽车(930721)</td>
+<td class="pos">16.31%</td>
+<td class="mdd-shallow">-17.42%</td>
+<td class="pos">+57.35%</td>
+<td class="pos">12.47%</td>
+<td class="mdd-mid">-26.22%</td>
+<td class="pos">+79.91%</td>
+<td class="pos">11.86%</td>
+<td class="mdd-mid">-30.09%</td>
+<td class="pos">+145.13%</td>
+<td class="pos">7.69%</td>
+<td class="mdd-mid">-30.10%</td>
+<td class="pos">+109.77%</td>
+</tr>
+<tr>
+<td>中证军工(399967)</td>
+<td class="pos">10.26%</td>
+<td class="mdd-shallow">-17.80%</td>
+<td class="pos">+34.07%</td>
+<td class="pos">8.25%</td>
+<td class="mdd-mid">-28.12%</td>
+<td class="pos">+48.65%</td>
+<td class="pos">9.33%</td>
+<td class="mdd-mid">-27.95%</td>
+<td class="pos">+104.13%</td>
+<td class="pos">7.36%</td>
+<td class="mdd-mid">-27.96%</td>
+<td class="pos">+103.36%</td>
+</tr>
+<tr>
+<td>CS新能车(399976)</td>
+<td class="pos">9.80%</td>
+<td class="mdd-shallow">-15.63%</td>
+<td class="pos">+32.39%</td>
+<td class="pos">6.67%</td>
+<td class="mdd-deep">-40.16%</td>
+<td class="pos">+38.08%</td>
+<td class="pos">14.18%</td>
+<td class="mdd-deep">-40.69%</td>
+<td class="pos">+188.89%</td>
+<td class="pos">10.70%</td>
+<td class="mdd-deep">-41.59%</td>
+<td class="pos">+176.28%</td>
+</tr>
+<tr>
+<td>有色金属(000819)</td>
+<td class="pos">20.38%</td>
+<td class="mdd-mid">-23.95%</td>
+<td class="pos">+74.45%</td>
+<td class="pos">13.74%</td>
+<td class="mdd-deep">-35.76%</td>
+<td class="pos">+90.34%</td>
+<td class="pos">12.03%</td>
+<td class="mdd-deep">-36.22%</td>
+<td class="pos">+148.07%</td>
+<td class="pos">10.06%</td>
+<td class="mdd-deep">-35.41%</td>
+<td class="pos">+160.82%</td>
+</tr>
+<tr>
+<td>细分化工(000813)</td>
+<td class="pos">9.75%</td>
+<td class="mdd-shallow">-12.44%</td>
+<td class="pos">+32.19%</td>
+<td class="pos">3.24%</td>
+<td class="mdd-mid">-31.19%</td>
+<td class="pos">+17.28%</td>
+<td class="pos">10.71%</td>
+<td class="mdd-mid">-32.65%</td>
+<td class="pos">+125.67%</td>
+<td class="pos">7.99%</td>
+<td class="mdd-mid">-32.61%</td>
+<td class="pos">+115.61%</td>
+</tr>
+<tr>
+<td>恒生指数(HSI)</td>
+<td class="pos">6.17%</td>
+<td class="mdd-shallow">-19.95%</td>
+<td class="pos">+19.70%</td>
+<td class="pos">0.25%</td>
+<td class="mdd-mid">-22.10%</td>
+<td class="pos">+1.26%</td>
+<td class="neg">-1.02%</td>
+<td class="mdd-mid">-29.34%</td>
+<td class="neg">-7.88%</td>
+<td class="pos">2.09%</td>
+<td class="mdd-mid">-34.26%</td>
+<td class="pos">+22.97%</td>
+</tr>
+<tr>
+<td>恒生科技(HSTECH)</td>
+<td class="pos">4.89%</td>
+<td class="mdd-mid">-20.97%</td>
+<td class="pos">+15.40%</td>
+<td class="pos">3.16%</td>
+<td class="mdd-mid">-21.03%</td>
+<td class="pos">+16.82%</td>
+<td class="pos">1.96%</td>
+<td class="mdd-mid">-21.03%</td>
+<td class="pos">+16.82%</td>
+<td class="pos">1.57%</td>
+<td class="mdd-mid">-21.03%</td>
+<td class="pos">+16.82%</td>
+</tr>
+<tr>
+<td>纳指100(NDX)</td>
+<td class="pos">17.30%</td>
+<td class="mdd-shallow">-14.46%</td>
+<td class="pos">+61.42%</td>
+<td class="pos">8.68%</td>
+<td class="mdd-mid">-23.21%</td>
+<td class="pos">+51.61%</td>
+<td class="pos">14.51%</td>
+<td class="mdd-mid">-23.24%</td>
+<td class="pos">+195.61%</td>
+<td class="pos">14.84%</td>
+<td class="mdd-mid">-23.36%</td>
+<td class="pos">+298.96%</td>
+</tr>
+<tr>
+<td>标普500(SPX)</td>
+<td class="pos">12.54%</td>
+<td class="mdd-shallow">-10.53%</td>
+<td class="pos">+42.53%</td>
+<td class="pos">6.05%</td>
+<td class="mdd-shallow">-16.54%</td>
+<td class="pos">+34.13%</td>
+<td class="pos">9.39%</td>
+<td class="mdd-shallow">-16.53%</td>
+<td class="pos">+105.09%</td>
+<td class="pos">9.02%</td>
+<td class="mdd-shallow">-16.80%</td>
+<td class="pos">+137.11%</td>
+</tr>
+<tr>
+<td>黄金现价(XAU)</td>
+<td class="pos">27.89%</td>
+<td class="mdd-shallow">-16.93%</td>
+<td class="pos">+109.20%</td>
+<td class="pos">16.49%</td>
+<td class="mdd-shallow">-16.85%</td>
+<td class="pos">+114.51%</td>
+<td class="pos">13.90%</td>
+<td class="mdd-shallow">-17.18%</td>
+<td class="pos">+183.17%</td>
+<td class="pos">10.62%</td>
+<td class="mdd-shallow">-16.90%</td>
+<td class="pos">+174.43%</td>
+</tr>
+<tr>
+<td>白银现价(XAG)</td>
+<td class="pos">34.42%</td>
+<td class="mdd-deep">-41.07%</td>
+<td class="pos">+142.94%</td>
+<td class="pos">17.97%</td>
+<td class="mdd-deep">-41.07%</td>
+<td class="pos">+128.42%</td>
+<td class="pos">13.59%</td>
+<td class="mdd-deep">-40.86%</td>
+<td class="pos">+177.13%</td>
+<td class="pos">10.92%</td>
+<td class="mdd-deep">-40.95%</td>
+<td class="pos">+181.87%</td>
+</tr>
+</tbody></table>
+<h2 id="detail-v9.3-bear">五-2. v9.3-bear 详细表</h2>
+<div class="callout"><span class="tag tag-mid">🥉 中规中矩（综合分第 3）</span><br><span style="font-size:13.5px;color:var(--c-muted)">4 窗口排名都第 3；加 BearTrendFilter 减信号路线 cycle 1+2+3+4+5 五重确认全输 baseline；无明确风格偏好</span></div>
+<table class="detail"><thead><tr>
+<th>指数</th>
+<th>3y CAGR</th>
+<th>3y MDD</th>
+<th>3y 总收益</th>
+<th>5y CAGR</th>
+<th>5y MDD</th>
+<th>5y 总收益</th>
+<th>8y CAGR</th>
+<th>8y MDD</th>
+<th>8y 总收益</th>
+<th>10y CAGR</th>
+<th>10y MDD</th>
+<th>10y 总收益</th>
+</tr></thead><tbody>
+<tr>
+<td>沪深300(000300)</td>
+<td class="pos">4.12%</td>
+<td class="mdd-shallow">-12.09%</td>
+<td class="pos">+12.88%</td>
+<td class="neg">-0.42%</td>
+<td class="mdd-mid">-24.62%</td>
+<td class="neg">-2.11%</td>
+<td class="pos">1.63%</td>
+<td class="mdd-mid">-31.53%</td>
+<td class="pos">+13.77%</td>
+<td class="pos">2.41%</td>
+<td class="mdd-mid">-31.74%</td>
+<td class="pos">+26.86%</td>
+</tr>
+<tr>
+<td>上证50(000016)</td>
+<td class="neg">-0.06%</td>
+<td class="mdd-shallow">-12.37%</td>
+<td class="neg">-0.17%</td>
+<td class="neg">-2.41%</td>
+<td class="mdd-mid">-24.45%</td>
+<td class="neg">-11.47%</td>
+<td class="neg">-0.08%</td>
+<td class="mdd-mid">-31.92%</td>
+<td class="neg">-0.64%</td>
+<td class="pos">2.00%</td>
+<td class="mdd-mid">-32.45%</td>
+<td class="pos">+21.84%</td>
+</tr>
+<tr>
+<td>中证500(000905)</td>
+<td class="pos">7.77%</td>
+<td class="mdd-shallow">-19.66%</td>
+<td class="pos">+25.19%</td>
+<td class="pos">2.27%</td>
+<td class="mdd-deep">-36.95%</td>
+<td class="pos">+11.85%</td>
+<td class="pos">2.31%</td>
+<td class="mdd-deep">-36.72%</td>
+<td class="pos">+20.06%</td>
+<td class="pos">1.21%</td>
+<td class="mdd-deep">-36.97%</td>
+<td class="pos">+12.77%</td>
+</tr>
+<tr>
+<td>中证1000(000852)</td>
+<td class="pos">7.63%</td>
+<td class="mdd-shallow">-16.87%</td>
+<td class="pos">+24.68%</td>
+<td class="pos">3.20%</td>
+<td class="mdd-mid">-32.92%</td>
+<td class="pos">+17.04%</td>
+<td class="pos">3.28%</td>
+<td class="mdd-mid">-32.96%</td>
+<td class="pos">+29.45%</td>
+<td class="pos">2.23%</td>
+<td class="mdd-mid">-33.08%</td>
+<td class="pos">+24.66%</td>
+</tr>
+<tr>
+<td>科创50(000688)</td>
+<td class="pos">12.73%</td>
+<td class="mdd-shallow">-17.98%</td>
+<td class="pos">+43.27%</td>
+<td class="pos">2.80%</td>
+<td class="mdd-mid">-25.79%</td>
+<td class="pos">+14.83%</td>
+<td class="pos">1.74%</td>
+<td class="mdd-mid">-25.79%</td>
+<td class="pos">+14.83%</td>
+<td class="pos">1.39%</td>
+<td class="mdd-mid">-25.79%</td>
+<td class="pos">+14.83%</td>
+</tr>
+<tr>
+<td>中证2000(932000)</td>
+<td class="pos">8.91%</td>
+<td class="mdd-shallow">-16.86%</td>
+<td class="pos">+29.18%</td>
+<td class="pos">7.70%</td>
+<td class="mdd-mid">-26.37%</td>
+<td class="pos">+44.91%</td>
+<td class="pos">4.64%</td>
+<td class="mdd-mid">-27.23%</td>
+<td class="pos">+43.78%</td>
+<td class="pos">2.37%</td>
+<td class="mdd-mid">-33.03%</td>
+<td class="pos">+26.42%</td>
+</tr>
+<tr>
+<td>创业板50(399673)</td>
+<td class="pos">19.78%</td>
+<td class="mdd-shallow">-19.63%</td>
+<td class="pos">+71.89%</td>
+<td class="pos">8.10%</td>
+<td class="mdd-mid">-34.06%</td>
+<td class="pos">+47.62%</td>
+<td class="pos">15.62%</td>
+<td class="mdd-mid">-33.57%</td>
+<td class="pos">+219.43%</td>
+<td class="pos">10.93%</td>
+<td class="mdd-mid">-34.89%</td>
+<td class="pos">+182.13%</td>
+</tr>
+<tr>
+<td>光伏产业(931151)</td>
+<td class="pos">11.89%</td>
+<td class="mdd-shallow">-17.77%</td>
+<td class="pos">+40.11%</td>
+<td class="pos">15.91%</td>
+<td class="mdd-mid">-32.59%</td>
+<td class="pos">+109.19%</td>
+<td class="pos">11.11%</td>
+<td class="mdd-mid">-32.73%</td>
+<td class="pos">+132.22%</td>
+<td class="pos">8.79%</td>
+<td class="mdd-mid">-32.73%</td>
+<td class="pos">+132.22%</td>
+</tr>
+<tr>
+<td>中证白酒(399997)</td>
+<td class="neg">-5.56%</td>
+<td class="mdd-shallow">-16.51%</td>
+<td class="neg">-15.78%</td>
+<td class="neg">-6.16%</td>
+<td class="mdd-deep">-37.81%</td>
+<td class="neg">-27.21%</td>
+<td class="pos">7.39%</td>
+<td class="mdd-deep">-38.09%</td>
+<td class="pos">+76.83%</td>
+<td class="pos">11.71%</td>
+<td class="mdd-deep">-41.38%</td>
+<td class="pos">+202.68%</td>
+</tr>
+<tr>
+<td>中证医疗(399989)</td>
+<td class="neg">-1.34%</td>
+<td class="mdd-mid">-23.03%</td>
+<td class="neg">-3.95%</td>
+<td class="neg">-5.44%</td>
+<td class="mdd-deep">-38.25%</td>
+<td class="neg">-24.38%</td>
+<td class="pos">7.90%</td>
+<td class="mdd-deep">-39.47%</td>
+<td class="pos">+83.71%</td>
+<td class="pos">7.15%</td>
+<td class="mdd-deep">-39.63%</td>
+<td class="pos">+99.47%</td>
+</tr>
+<tr>
+<td>5G通信(931079)</td>
+<td class="pos">39.32%</td>
+<td class="mdd-mid">-24.44%</td>
+<td class="pos">+170.50%</td>
+<td class="pos">18.40%</td>
+<td class="mdd-mid">-34.33%</td>
+<td class="pos">+132.69%</td>
+<td class="pos">10.91%</td>
+<td class="mdd-deep">-52.99%</td>
+<td class="pos">+128.88%</td>
+<td class="pos">8.63%</td>
+<td class="mdd-deep">-52.99%</td>
+<td class="pos">+128.88%</td>
+</tr>
+<tr>
+<td>中证新能(399808)</td>
+<td class="pos">12.14%</td>
+<td class="mdd-shallow">-14.64%</td>
+<td class="pos">+41.02%</td>
+<td class="pos">11.58%</td>
+<td class="mdd-mid">-31.05%</td>
+<td class="pos">+72.96%</td>
+<td class="pos">14.83%</td>
+<td class="mdd-mid">-31.39%</td>
+<td class="pos">+202.37%</td>
+<td class="pos">10.84%</td>
+<td class="mdd-mid">-31.11%</td>
+<td class="pos">+179.87%</td>
+</tr>
+<tr>
+<td>人工智能(931071)</td>
+<td class="pos">13.22%</td>
+<td class="mdd-deep">-35.52%</td>
+<td class="pos">+45.15%</td>
+<td class="pos">7.59%</td>
+<td class="mdd-deep">-35.58%</td>
+<td class="pos">+44.17%</td>
+<td class="pos">4.99%</td>
+<td class="mdd-deep">-46.38%</td>
+<td class="pos">+47.64%</td>
+<td class="pos">3.97%</td>
+<td class="mdd-deep">-46.38%</td>
+<td class="pos">+47.64%</td>
+</tr>
+<tr>
+<td>CS智汽车(930721)</td>
+<td class="pos">12.78%</td>
+<td class="mdd-shallow">-17.49%</td>
+<td class="pos">+43.47%</td>
+<td class="pos">8.09%</td>
+<td class="mdd-mid">-31.75%</td>
+<td class="pos">+47.52%</td>
+<td class="pos">9.53%</td>
+<td class="mdd-mid">-34.13%</td>
+<td class="pos">+107.17%</td>
+<td class="pos">5.90%</td>
+<td class="mdd-mid">-34.15%</td>
+<td class="pos">+77.45%</td>
+</tr>
+<tr>
+<td>中证军工(399967)</td>
+<td class="pos">10.22%</td>
+<td class="mdd-shallow">-17.34%</td>
+<td class="pos">+33.92%</td>
+<td class="pos">8.13%</td>
+<td class="mdd-mid">-28.37%</td>
+<td class="pos">+47.78%</td>
+<td class="pos">9.21%</td>
+<td class="mdd-mid">-28.19%</td>
+<td class="pos">+102.36%</td>
+<td class="pos">7.27%</td>
+<td class="mdd-mid">-28.20%</td>
+<td class="pos">+101.63%</td>
+</tr>
+<tr>
+<td>CS新能车(399976)</td>
+<td class="pos">9.19%</td>
+<td class="mdd-shallow">-17.28%</td>
+<td class="pos">+30.20%</td>
+<td class="pos">6.67%</td>
+<td class="mdd-deep">-39.79%</td>
+<td class="pos">+38.09%</td>
+<td class="pos">14.21%</td>
+<td class="mdd-deep">-40.02%</td>
+<td class="pos">+189.58%</td>
+<td class="pos">10.67%</td>
+<td class="mdd-deep">-41.04%</td>
+<td class="pos">+175.52%</td>
+</tr>
+<tr>
+<td>有色金属(000819)</td>
+<td class="pos">19.87%</td>
+<td class="mdd-mid">-25.84%</td>
+<td class="pos">+72.26%</td>
+<td class="pos">12.31%</td>
+<td class="mdd-deep">-39.42%</td>
+<td class="pos">+78.66%</td>
+<td class="pos">11.29%</td>
+<td class="mdd-deep">-39.61%</td>
+<td class="pos">+135.36%</td>
+<td class="pos">8.98%</td>
+<td class="mdd-deep">-38.25%</td>
+<td class="pos">+136.22%</td>
+</tr>
+<tr>
+<td>细分化工(000813)</td>
+<td class="pos">10.32%</td>
+<td class="mdd-shallow">-10.23%</td>
+<td class="pos">+34.27%</td>
+<td class="pos">3.43%</td>
+<td class="mdd-mid">-32.17%</td>
+<td class="pos">+18.34%</td>
+<td class="pos">9.87%</td>
+<td class="mdd-mid">-32.21%</td>
+<td class="pos">+112.38%</td>
+<td class="pos">7.36%</td>
+<td class="mdd-mid">-32.21%</td>
+<td class="pos">+103.37%</td>
+</tr>
+<tr>
+<td>恒生指数(HSI)</td>
+<td class="pos">4.60%</td>
+<td class="mdd-shallow">-19.95%</td>
+<td class="pos">+14.44%</td>
+<td class="neg">-0.17%</td>
+<td class="mdd-shallow">-19.95%</td>
+<td class="neg">-0.83%</td>
+<td class="neg">-1.32%</td>
+<td class="mdd-mid">-29.16%</td>
+<td class="neg">-10.09%</td>
+<td class="pos">1.91%</td>
+<td class="mdd-mid">-33.49%</td>
+<td class="pos">+20.79%</td>
+</tr>
+<tr>
+<td>恒生科技(HSTECH)</td>
+<td class="pos">4.69%</td>
+<td class="mdd-mid">-21.19%</td>
+<td class="pos">+14.75%</td>
+<td class="pos">3.02%</td>
+<td class="mdd-mid">-21.13%</td>
+<td class="pos">+16.03%</td>
+<td class="pos">1.88%</td>
+<td class="mdd-mid">-21.13%</td>
+<td class="pos">+16.03%</td>
+<td class="pos">1.50%</td>
+<td class="mdd-mid">-21.13%</td>
+<td class="pos">+16.03%</td>
+</tr>
+<tr>
+<td>纳指100(NDX)</td>
+<td class="pos">17.54%</td>
+<td class="mdd-shallow">-14.80%</td>
+<td class="pos">+62.40%</td>
+<td class="pos">8.79%</td>
+<td class="mdd-mid">-23.32%</td>
+<td class="pos">+52.37%</td>
+<td class="pos">14.64%</td>
+<td class="mdd-mid">-23.34%</td>
+<td class="pos">+198.31%</td>
+<td class="pos">14.99%</td>
+<td class="mdd-mid">-23.45%</td>
+<td class="pos">+304.05%</td>
+</tr>
+<tr>
+<td>标普500(SPX)</td>
+<td class="pos">12.76%</td>
+<td class="mdd-shallow">-10.88%</td>
+<td class="pos">+43.38%</td>
+<td class="pos">6.01%</td>
+<td class="mdd-shallow">-17.39%</td>
+<td class="pos">+33.86%</td>
+<td class="pos">9.36%</td>
+<td class="mdd-shallow">-17.32%</td>
+<td class="pos">+104.54%</td>
+<td class="pos">9.06%</td>
+<td class="mdd-shallow">-17.74%</td>
+<td class="pos">+137.97%</td>
+</tr>
+<tr>
+<td>黄金现价(XAU)</td>
+<td class="pos">29.85%</td>
+<td class="mdd-shallow">-18.31%</td>
+<td class="pos">+119.00%</td>
+<td class="pos">17.42%</td>
+<td class="mdd-shallow">-18.28%</td>
+<td class="pos">+123.22%</td>
+<td class="pos">14.79%</td>
+<td class="mdd-shallow">-18.42%</td>
+<td class="pos">+201.48%</td>
+<td class="pos">11.10%</td>
+<td class="mdd-shallow">-18.30%</td>
+<td class="pos">+186.52%</td>
+</tr>
+<tr>
+<td>白银现价(XAG)</td>
+<td class="pos">40.33%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+176.40%</td>
+<td class="pos">20.81%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+157.27%</td>
+<td class="pos">14.41%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+193.63%</td>
+<td class="pos">11.68%</td>
+<td class="mdd-deep">-47.11%</td>
+<td class="pos">+201.76%</td>
+</tr>
+</tbody></table>
+<h2 id="detail-faber-gtaa">五-3. faber-gtaa 详细表</h2>
+<div class="callout"><span class="tag tag-bad">❌ 6 子集全输（综合分第 4）</span><br><span style="font-size:13.5px;color:var(--c-muted)">4 窗口排名最差（4.75）；月线 MA10 均值法在主题/行业/港股 MDD 全部恶化；cycle 3 的"长窗口大赢"在干净 universe 上证伪</span></div>
+<table class="detail"><thead><tr>
+<th>指数</th>
+<th>3y CAGR</th>
+<th>3y MDD</th>
+<th>3y 总收益</th>
+<th>5y CAGR</th>
+<th>5y MDD</th>
+<th>5y 总收益</th>
+<th>8y CAGR</th>
+<th>8y MDD</th>
+<th>8y 总收益</th>
+<th>10y CAGR</th>
+<th>10y MDD</th>
+<th>10y 总收益</th>
+</tr></thead><tbody>
+<tr>
+<td>沪深300(000300)</td>
+<td class="neg">-2.62%</td>
+<td class="mdd-mid">-24.76%</td>
+<td class="neg">-7.65%</td>
+<td class="neg">-3.41%</td>
+<td class="mdd-mid">-33.77%</td>
+<td class="neg">-15.95%</td>
+<td class="pos">0.33%</td>
+<td class="mdd-deep">-39.08%</td>
+<td class="pos">+2.69%</td>
+<td class="pos">1.87%</td>
+<td class="mdd-deep">-39.08%</td>
+<td class="pos">+20.30%</td>
+</tr>
+<tr>
+<td>上证50(000016)</td>
+<td class="neg">-4.24%</td>
+<td class="mdd-mid">-23.01%</td>
+<td class="neg">-12.18%</td>
+<td class="neg">-3.56%</td>
+<td class="mdd-mid">-29.22%</td>
+<td class="neg">-16.57%</td>
+<td class="pos">0.22%</td>
+<td class="mdd-deep">-35.61%</td>
+<td class="pos">+1.78%</td>
+<td class="pos">2.18%</td>
+<td class="mdd-deep">-35.61%</td>
+<td class="pos">+24.09%</td>
+</tr>
+<tr>
+<td>中证500(000905)</td>
+<td class="pos">11.64%</td>
+<td class="mdd-shallow">-16.48%</td>
+<td class="pos">+39.16%</td>
+<td class="pos">5.95%</td>
+<td class="mdd-mid">-27.45%</td>
+<td class="pos">+33.48%</td>
+<td class="pos">4.85%</td>
+<td class="mdd-mid">-27.45%</td>
+<td class="pos">+46.02%</td>
+<td class="pos">3.07%</td>
+<td class="mdd-mid">-27.45%</td>
+<td class="pos">+35.26%</td>
+</tr>
+<tr>
+<td>中证1000(000852)</td>
+<td class="pos">11.90%</td>
+<td class="mdd-shallow">-16.87%</td>
+<td class="pos">+40.11%</td>
+<td class="pos">4.16%</td>
+<td class="mdd-mid">-32.34%</td>
+<td class="pos">+22.62%</td>
+<td class="pos">4.00%</td>
+<td class="mdd-mid">-32.34%</td>
+<td class="pos">+36.86%</td>
+<td class="pos">2.49%</td>
+<td class="mdd-mid">-32.34%</td>
+<td class="pos">+27.87%</td>
+</tr>
+<tr>
+<td>科创50(000688)</td>
+<td class="pos">9.99%</td>
+<td class="mdd-shallow">-19.26%</td>
+<td class="pos">+33.06%</td>
+<td class="pos">1.31%</td>
+<td class="mdd-mid">-27.21%</td>
+<td class="pos">+6.71%</td>
+<td class="pos">0.82%</td>
+<td class="mdd-mid">-27.21%</td>
+<td class="pos">+6.71%</td>
+<td class="pos">0.65%</td>
+<td class="mdd-mid">-27.21%</td>
+<td class="pos">+6.71%</td>
+</tr>
+<tr>
+<td>中证2000(932000)</td>
+<td class="pos">15.14%</td>
+<td class="mdd-shallow">-19.65%</td>
+<td class="pos">+52.65%</td>
+<td class="pos">8.38%</td>
+<td class="mdd-mid">-29.06%</td>
+<td class="pos">+49.56%</td>
+<td class="pos">5.62%</td>
+<td class="mdd-mid">-29.23%</td>
+<td class="pos">+54.87%</td>
+<td class="pos">5.19%</td>
+<td class="mdd-mid">-29.23%</td>
+<td class="pos">+65.82%</td>
+</tr>
+<tr>
+<td>创业板50(399673)</td>
+<td class="pos">17.25%</td>
+<td class="mdd-mid">-31.22%</td>
+<td class="pos">+61.19%</td>
+<td class="pos">7.22%</td>
+<td class="mdd-deep">-39.53%</td>
+<td class="pos">+41.70%</td>
+<td class="pos">16.66%</td>
+<td class="mdd-deep">-39.53%</td>
+<td class="pos">+243.09%</td>
+<td class="pos">10.09%</td>
+<td class="mdd-deep">-39.53%</td>
+<td class="pos">+161.56%</td>
+</tr>
+<tr>
+<td>光伏产业(931151)</td>
+<td class="pos">5.53%</td>
+<td class="mdd-shallow">-19.61%</td>
+<td class="pos">+17.54%</td>
+<td class="pos">4.89%</td>
+<td class="mdd-deep">-43.53%</td>
+<td class="pos">+26.96%</td>
+<td class="pos">10.23%</td>
+<td class="mdd-deep">-43.53%</td>
+<td class="pos">+117.91%</td>
+<td class="pos">6.55%</td>
+<td class="mdd-deep">-43.53%</td>
+<td class="pos">+88.61%</td>
+</tr>
+<tr>
+<td>中证白酒(399997)</td>
+<td class="neg">-8.87%</td>
+<td class="mdd-mid">-25.15%</td>
+<td class="neg">-24.31%</td>
+<td class="neg">-13.33%</td>
+<td class="mdd-deep">-58.91%</td>
+<td class="neg">-51.10%</td>
+<td class="pos">4.40%</td>
+<td class="mdd-deep">-58.91%</td>
+<td class="pos">+41.09%</td>
+<td class="pos">10.65%</td>
+<td class="mdd-deep">-58.91%</td>
+<td class="pos">+175.06%</td>
+</tr>
+<tr>
+<td>中证医疗(399989)</td>
+<td class="neg">-9.68%</td>
+<td class="mdd-deep">-35.33%</td>
+<td class="neg">-26.32%</td>
+<td class="neg">-8.59%</td>
+<td class="mdd-deep">-43.73%</td>
+<td class="neg">-36.16%</td>
+<td class="pos">3.48%</td>
+<td class="mdd-deep">-43.73%</td>
+<td class="pos">+31.50%</td>
+<td class="pos">2.86%</td>
+<td class="mdd-deep">-43.73%</td>
+<td class="pos">+32.51%</td>
+</tr>
+<tr>
+<td>5G通信(931079)</td>
+<td class="pos">29.62%</td>
+<td class="mdd-mid">-34.51%</td>
+<td class="pos">+117.80%</td>
+<td class="pos">14.74%</td>
+<td class="mdd-mid">-34.51%</td>
+<td class="pos">+98.89%</td>
+<td class="pos">10.59%</td>
+<td class="mdd-deep">-43.12%</td>
+<td class="pos">+123.80%</td>
+<td class="pos">7.86%</td>
+<td class="mdd-deep">-43.12%</td>
+<td class="pos">+113.04%</td>
+</tr>
+<tr>
+<td>中证新能(399808)</td>
+<td class="pos">11.48%</td>
+<td class="mdd-mid">-23.11%</td>
+<td class="pos">+38.55%</td>
+<td class="pos">10.09%</td>
+<td class="mdd-deep">-39.37%</td>
+<td class="pos">+61.70%</td>
+<td class="pos">13.82%</td>
+<td class="mdd-deep">-39.37%</td>
+<td class="pos">+181.76%</td>
+<td class="pos">9.60%</td>
+<td class="mdd-deep">-39.37%</td>
+<td class="pos">+150.16%</td>
+</tr>
+<tr>
+<td>人工智能(931071)</td>
+<td class="pos">23.09%</td>
+<td class="mdd-mid">-30.81%</td>
+<td class="pos">+86.54%</td>
+<td class="pos">12.10%</td>
+<td class="mdd-mid">-30.81%</td>
+<td class="pos">+76.99%</td>
+<td class="pos">9.94%</td>
+<td class="mdd-deep">-38.59%</td>
+<td class="pos">+113.35%</td>
+<td class="pos">5.16%</td>
+<td class="mdd-deep">-38.59%</td>
+<td class="pos">+65.31%</td>
+</tr>
+<tr>
+<td>CS智汽车(930721)</td>
+<td class="neg">-1.29%</td>
+<td class="mdd-mid">-23.43%</td>
+<td class="neg">-3.83%</td>
+<td class="neg">-4.93%</td>
+<td class="mdd-mid">-31.24%</td>
+<td class="neg">-22.34%</td>
+<td class="pos">3.17%</td>
+<td class="mdd-deep">-39.65%</td>
+<td class="pos">+28.35%</td>
+<td class="pos">1.40%</td>
+<td class="mdd-deep">-39.65%</td>
+<td class="pos">+14.92%</td>
+</tr>
+<tr>
+<td>中证军工(399967)</td>
+<td class="pos">7.04%</td>
+<td class="mdd-mid">-23.70%</td>
+<td class="pos">+22.65%</td>
+<td class="pos">1.77%</td>
+<td class="mdd-deep">-43.92%</td>
+<td class="pos">+9.15%</td>
+<td class="pos">3.04%</td>
+<td class="mdd-deep">-47.36%</td>
+<td class="pos">+27.07%</td>
+<td class="pos">1.42%</td>
+<td class="mdd-deep">-47.36%</td>
+<td class="pos">+15.14%</td>
+</tr>
+<tr>
+<td>CS新能车(399976)</td>
+<td class="pos">16.65%</td>
+<td class="mdd-shallow">-19.28%</td>
+<td class="pos">+58.76%</td>
+<td class="pos">11.86%</td>
+<td class="mdd-deep">-39.38%</td>
+<td class="pos">+75.09%</td>
+<td class="pos">19.05%</td>
+<td class="mdd-deep">-39.38%</td>
+<td class="pos">+303.49%</td>
+<td class="pos">14.67%</td>
+<td class="mdd-deep">-39.38%</td>
+<td class="pos">+292.93%</td>
+</tr>
+<tr>
+<td>有色金属(000819)</td>
+<td class="pos">15.47%</td>
+<td class="mdd-deep">-35.55%</td>
+<td class="pos">+53.99%</td>
+<td class="pos">5.13%</td>
+<td class="mdd-deep">-62.15%</td>
+<td class="pos">+28.39%</td>
+<td class="pos">5.64%</td>
+<td class="mdd-deep">-62.15%</td>
+<td class="pos">+55.05%</td>
+<td class="pos">5.94%</td>
+<td class="mdd-deep">-62.15%</td>
+<td class="pos">+78.00%</td>
+</tr>
+<tr>
+<td>细分化工(000813)</td>
+<td class="pos">9.27%</td>
+<td class="mdd-mid">-20.55%</td>
+<td class="pos">+30.48%</td>
+<td class="pos">5.92%</td>
+<td class="mdd-deep">-37.06%</td>
+<td class="pos">+33.32%</td>
+<td class="pos">5.52%</td>
+<td class="mdd-deep">-42.00%</td>
+<td class="pos">+53.67%</td>
+<td class="pos">4.54%</td>
+<td class="mdd-deep">-42.00%</td>
+<td class="pos">+55.82%</td>
+</tr>
+<tr>
+<td>恒生指数(HSI)</td>
+<td class="pos">5.40%</td>
+<td class="mdd-mid">-22.92%</td>
+<td class="pos">+17.09%</td>
+<td class="pos">1.25%</td>
+<td class="mdd-mid">-31.05%</td>
+<td class="pos">+6.43%</td>
+<td class="neg">-1.84%</td>
+<td class="mdd-deep">-43.44%</td>
+<td class="neg">-13.79%</td>
+<td class="pos">1.95%</td>
+<td class="mdd-deep">-46.20%</td>
+<td class="pos">+21.33%</td>
+</tr>
+<tr>
+<td>恒生科技(HSTECH)</td>
+<td class="pos">10.35%</td>
+<td class="mdd-mid">-27.91%</td>
+<td class="pos">+34.37%</td>
+<td class="pos">2.98%</td>
+<td class="mdd-mid">-31.12%</td>
+<td class="pos">+15.80%</td>
+<td class="pos">1.85%</td>
+<td class="mdd-mid">-31.12%</td>
+<td class="pos">+15.80%</td>
+<td class="pos">1.48%</td>
+<td class="mdd-mid">-31.12%</td>
+<td class="pos">+15.80%</td>
+</tr>
+<tr>
+<td>纳指100(NDX)</td>
+<td class="pos">17.42%</td>
+<td class="mdd-shallow">-13.58%</td>
+<td class="pos">+61.90%</td>
+<td class="pos">13.80%</td>
+<td class="mdd-shallow">-15.51%</td>
+<td class="pos">+90.88%</td>
+<td class="pos">15.52%</td>
+<td class="mdd-mid">-28.03%</td>
+<td class="pos">+217.15%</td>
+<td class="pos">15.77%</td>
+<td class="mdd-mid">-28.03%</td>
+<td class="pos">+332.50%</td>
+</tr>
+<tr>
+<td>标普500(SPX)</td>
+<td class="pos">10.92%</td>
+<td class="mdd-shallow">-10.28%</td>
+<td class="pos">+36.47%</td>
+<td class="pos">4.62%</td>
+<td class="mdd-mid">-25.98%</td>
+<td class="pos">+25.32%</td>
+<td class="pos">5.96%</td>
+<td class="mdd-mid">-25.98%</td>
+<td class="pos">+58.88%</td>
+<td class="pos">7.38%</td>
+<td class="mdd-mid">-25.98%</td>
+<td class="pos">+103.71%</td>
+</tr>
+<tr>
+<td>黄金现价(XAU)</td>
+<td class="pos">30.16%</td>
+<td class="mdd-shallow">-19.15%</td>
+<td class="pos">+120.57%</td>
+<td class="pos">15.02%</td>
+<td class="mdd-shallow">-19.15%</td>
+<td class="pos">+101.30%</td>
+<td class="pos">12.27%</td>
+<td class="mdd-mid">-34.82%</td>
+<td class="pos">+152.36%</td>
+<td class="pos">9.07%</td>
+<td class="mdd-mid">-34.82%</td>
+<td class="pos">+138.26%</td>
+</tr>
+<tr>
+<td>白银现价(XAG)</td>
+<td class="pos">32.65%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+133.45%</td>
+<td class="pos">15.96%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+109.69%</td>
+<td class="pos">14.97%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+205.35%</td>
+<td class="pos">9.21%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+141.36%</td>
+</tr>
+</tbody></table>
+<h2 id="detail-donchian-200">五-4. donchian-200 详细表</h2>
+<div class="callout"><span class="tag tag-mid">⚠️ 防御画像消失（综合分第 2）</span><br><span style="font-size:13.5px;color:var(--c-muted)">4 窗口排名 4.25；突破策略对主题快速轮动失效；只有 A 股宽基 ΔCAGR 微负 (-0.34pp)</span></div>
+<table class="detail"><thead><tr>
+<th>指数</th>
+<th>3y CAGR</th>
+<th>3y MDD</th>
+<th>3y 总收益</th>
+<th>5y CAGR</th>
+<th>5y MDD</th>
+<th>5y 总收益</th>
+<th>8y CAGR</th>
+<th>8y MDD</th>
+<th>8y 总收益</th>
+<th>10y CAGR</th>
+<th>10y MDD</th>
+<th>10y 总收益</th>
+</tr></thead><tbody>
+<tr>
+<td>沪深300(000300)</td>
+<td class="pos">0.82%</td>
+<td class="mdd-shallow">-15.66%</td>
+<td class="pos">+2.47%</td>
+<td class="pos">0.49%</td>
+<td class="mdd-shallow">-15.66%</td>
+<td class="pos">+2.47%</td>
+<td class="pos">1.51%</td>
+<td class="mdd-mid">-25.99%</td>
+<td class="pos">+12.70%</td>
+<td class="pos">1.83%</td>
+<td class="mdd-mid">-25.99%</td>
+<td class="pos">+19.82%</td>
+</tr>
+<tr>
+<td>上证50(000016)</td>
+<td class="pos">0.85%</td>
+<td class="mdd-shallow">-11.78%</td>
+<td class="pos">+2.57%</td>
+<td class="pos">0.51%</td>
+<td class="mdd-shallow">-11.78%</td>
+<td class="pos">+2.57%</td>
+<td class="pos">0.21%</td>
+<td class="mdd-mid">-28.96%</td>
+<td class="pos">+1.67%</td>
+<td class="pos">1.11%</td>
+<td class="mdd-mid">-28.96%</td>
+<td class="pos">+11.63%</td>
+</tr>
+<tr>
+<td>中证500(000905)</td>
+<td class="pos">12.82%</td>
+<td class="mdd-shallow">-16.48%</td>
+<td class="pos">+43.61%</td>
+<td class="pos">7.51%</td>
+<td class="mdd-shallow">-16.48%</td>
+<td class="pos">+43.61%</td>
+<td class="pos">7.12%</td>
+<td class="mdd-mid">-20.80%</td>
+<td class="pos">+73.36%</td>
+<td class="pos">5.08%</td>
+<td class="mdd-mid">-20.80%</td>
+<td class="pos">+64.11%</td>
+</tr>
+<tr>
+<td>中证1000(000852)</td>
+<td class="pos">10.73%</td>
+<td class="mdd-shallow">-16.87%</td>
+<td class="pos">+35.76%</td>
+<td class="pos">6.31%</td>
+<td class="mdd-shallow">-16.87%</td>
+<td class="pos">+35.76%</td>
+<td class="pos">4.29%</td>
+<td class="mdd-mid">-26.82%</td>
+<td class="pos">+39.97%</td>
+<td class="pos">3.42%</td>
+<td class="mdd-mid">-26.82%</td>
+<td class="pos">+39.97%</td>
+</tr>
+<tr>
+<td>科创50(000688)</td>
+<td class="pos">12.92%</td>
+<td class="mdd-shallow">-19.26%</td>
+<td class="pos">+44.01%</td>
+<td class="pos">7.57%</td>
+<td class="mdd-shallow">-19.26%</td>
+<td class="pos">+44.01%</td>
+<td class="pos">4.66%</td>
+<td class="mdd-shallow">-19.26%</td>
+<td class="pos">+44.01%</td>
+<td class="pos">3.72%</td>
+<td class="mdd-shallow">-19.26%</td>
+<td class="pos">+44.01%</td>
+</tr>
+<tr>
+<td>中证2000(932000)</td>
+<td class="pos">11.86%</td>
+<td class="mdd-shallow">-19.65%</td>
+<td class="pos">+39.97%</td>
+<td class="pos">5.31%</td>
+<td class="mdd-shallow">-19.65%</td>
+<td class="pos">+29.50%</td>
+<td class="pos">2.54%</td>
+<td class="mdd-deep">-40.82%</td>
+<td class="pos">+22.20%</td>
+<td class="pos">2.02%</td>
+<td class="mdd-deep">-40.82%</td>
+<td class="pos">+22.20%</td>
+</tr>
+<tr>
+<td>创业板50(399673)</td>
+<td class="pos">13.89%</td>
+<td class="mdd-mid">-31.22%</td>
+<td class="pos">+47.72%</td>
+<td class="pos">8.12%</td>
+<td class="mdd-mid">-31.22%</td>
+<td class="pos">+47.72%</td>
+<td class="pos">15.38%</td>
+<td class="mdd-mid">-34.46%</td>
+<td class="pos">+214.16%</td>
+<td class="pos">10.63%</td>
+<td class="mdd-mid">-34.46%</td>
+<td class="pos">+174.48%</td>
+</tr>
+<tr>
+<td>光伏产业(931151)</td>
+<td class="neg">-7.48%</td>
+<td class="mdd-mid">-33.28%</td>
+<td class="neg">-20.81%</td>
+<td class="neg">-4.56%</td>
+<td class="mdd-mid">-33.28%</td>
+<td class="neg">-20.81%</td>
+<td class="pos">9.07%</td>
+<td class="mdd-deep">-48.36%</td>
+<td class="pos">+100.30%</td>
+<td class="pos">6.15%</td>
+<td class="mdd-deep">-48.36%</td>
+<td class="pos">+81.54%</td>
+</tr>
+<tr>
+<td>中证白酒(399997)</td>
+<td class="zero">0.00%</td>
+<td class="mdd-shallow">0.00%</td>
+<td class="zero">+0.00%</td>
+<td class="zero">0.00%</td>
+<td class="mdd-shallow">0.00%</td>
+<td class="zero">+0.00%</td>
+<td class="pos">7.67%</td>
+<td class="mdd-mid">-31.91%</td>
+<td class="pos">+80.59%</td>
+<td class="pos">7.54%</td>
+<td class="mdd-deep">-40.07%</td>
+<td class="pos">+106.78%</td>
+</tr>
+<tr>
+<td>中证医疗(399989)</td>
+<td class="neg">-2.94%</td>
+<td class="mdd-shallow">-16.34%</td>
+<td class="neg">-8.57%</td>
+<td class="neg">-1.78%</td>
+<td class="mdd-shallow">-16.34%</td>
+<td class="neg">-8.57%</td>
+<td class="pos">3.75%</td>
+<td class="mdd-mid">-33.78%</td>
+<td class="pos">+34.25%</td>
+<td class="pos">1.71%</td>
+<td class="mdd-mid">-33.78%</td>
+<td class="pos">+18.43%</td>
+</tr>
+<tr>
+<td>5G通信(931079)</td>
+<td class="pos">26.43%</td>
+<td class="mdd-mid">-30.98%</td>
+<td class="pos">+102.11%</td>
+<td class="pos">13.65%</td>
+<td class="mdd-deep">-39.95%</td>
+<td class="pos">+89.60%</td>
+<td class="pos">6.55%</td>
+<td class="mdd-deep">-59.85%</td>
+<td class="pos">+66.14%</td>
+<td class="pos">5.21%</td>
+<td class="mdd-deep">-59.85%</td>
+<td class="pos">+66.14%</td>
+</tr>
+<tr>
+<td>中证新能(399808)</td>
+<td class="pos">4.13%</td>
+<td class="mdd-mid">-28.39%</td>
+<td class="pos">+12.91%</td>
+<td class="pos">2.46%</td>
+<td class="mdd-mid">-28.39%</td>
+<td class="pos">+12.91%</td>
+<td class="pos">13.81%</td>
+<td class="mdd-deep">-38.93%</td>
+<td class="pos">+181.51%</td>
+<td class="pos">10.44%</td>
+<td class="mdd-deep">-38.93%</td>
+<td class="pos">+169.79%</td>
+</tr>
+<tr>
+<td>人工智能(931071)</td>
+<td class="pos">22.76%</td>
+<td class="mdd-mid">-26.49%</td>
+<td class="pos">+85.01%</td>
+<td class="pos">12.68%</td>
+<td class="mdd-mid">-28.45%</td>
+<td class="pos">+81.66%</td>
+<td class="pos">9.29%</td>
+<td class="mdd-mid">-28.45%</td>
+<td class="pos">+103.54%</td>
+<td class="pos">4.08%</td>
+<td class="mdd-deep">-37.21%</td>
+<td class="pos">+49.17%</td>
+</tr>
+<tr>
+<td>CS智汽车(930721)</td>
+<td class="pos">2.37%</td>
+<td class="mdd-mid">-23.24%</td>
+<td class="pos">+7.29%</td>
+<td class="zero">-0.00%</td>
+<td class="mdd-mid">-23.24%</td>
+<td class="zero">-0.01%</td>
+<td class="pos">2.71%</td>
+<td class="mdd-deep">-48.20%</td>
+<td class="pos">+23.89%</td>
+<td class="pos">0.48%</td>
+<td class="mdd-deep">-48.20%</td>
+<td class="pos">+4.95%</td>
+</tr>
+<tr>
+<td>中证军工(399967)</td>
+<td class="pos">11.94%</td>
+<td class="mdd-mid">-23.70%</td>
+<td class="pos">+40.28%</td>
+<td class="pos">7.00%</td>
+<td class="mdd-mid">-23.70%</td>
+<td class="pos">+40.28%</td>
+<td class="pos">3.38%</td>
+<td class="mdd-deep">-44.19%</td>
+<td class="pos">+30.45%</td>
+<td class="pos">2.69%</td>
+<td class="mdd-deep">-44.19%</td>
+<td class="pos">+30.45%</td>
+</tr>
+<tr>
+<td>CS新能车(399976)</td>
+<td class="pos">18.66%</td>
+<td class="mdd-shallow">-19.28%</td>
+<td class="pos">+67.07%</td>
+<td class="pos">10.81%</td>
+<td class="mdd-shallow">-19.28%</td>
+<td class="pos">+67.07%</td>
+<td class="pos">24.24%</td>
+<td class="mdd-mid">-32.97%</td>
+<td class="pos">+467.61%</td>
+<td class="pos">18.96%</td>
+<td class="mdd-mid">-32.97%</td>
+<td class="pos">+467.61%</td>
+</tr>
+<tr>
+<td>有色金属(000819)</td>
+<td class="pos">24.46%</td>
+<td class="mdd-mid">-28.95%</td>
+<td class="pos">+92.81%</td>
+<td class="pos">14.03%</td>
+<td class="mdd-mid">-28.95%</td>
+<td class="pos">+92.81%</td>
+<td class="pos">16.75%</td>
+<td class="mdd-mid">-30.60%</td>
+<td class="pos">+245.12%</td>
+<td class="pos">11.03%</td>
+<td class="mdd-mid">-32.45%</td>
+<td class="pos">+184.63%</td>
+</tr>
+<tr>
+<td>细分化工(000813)</td>
+<td class="pos">5.70%</td>
+<td class="mdd-shallow">-18.93%</td>
+<td class="pos">+18.09%</td>
+<td class="pos">3.38%</td>
+<td class="mdd-shallow">-18.93%</td>
+<td class="pos">+18.09%</td>
+<td class="pos">6.87%</td>
+<td class="mdd-mid">-30.73%</td>
+<td class="pos">+70.17%</td>
+<td class="pos">4.08%</td>
+<td class="mdd-mid">-30.73%</td>
+<td class="pos">+49.21%</td>
+</tr>
+<tr>
+<td>恒生指数(HSI)</td>
+<td class="pos">5.46%</td>
+<td class="mdd-shallow">-19.95%</td>
+<td class="pos">+17.29%</td>
+<td class="pos">3.24%</td>
+<td class="mdd-shallow">-19.95%</td>
+<td class="pos">+17.29%</td>
+<td class="zero">0.02%</td>
+<td class="mdd-mid">-25.41%</td>
+<td class="pos">+0.13%</td>
+<td class="pos">2.02%</td>
+<td class="mdd-mid">-33.42%</td>
+<td class="pos">+22.12%</td>
+</tr>
+<tr>
+<td>恒生科技(HSTECH)</td>
+<td class="pos">2.64%</td>
+<td class="mdd-mid">-27.91%</td>
+<td class="pos">+8.12%</td>
+<td class="neg">-6.51%</td>
+<td class="mdd-deep">-41.30%</td>
+<td class="neg">-28.57%</td>
+<td class="neg">-4.12%</td>
+<td class="mdd-deep">-41.30%</td>
+<td class="neg">-28.57%</td>
+<td class="neg">-3.31%</td>
+<td class="mdd-deep">-41.30%</td>
+<td class="neg">-28.57%</td>
+</tr>
+<tr>
+<td>纳指100(NDX)</td>
+<td class="pos">3.80%</td>
+<td class="mdd-shallow">-13.83%</td>
+<td class="pos">+11.84%</td>
+<td class="pos">8.89%</td>
+<td class="mdd-shallow">-13.83%</td>
+<td class="pos">+53.10%</td>
+<td class="pos">11.75%</td>
+<td class="mdd-mid">-28.03%</td>
+<td class="pos">+143.18%</td>
+<td class="pos">12.26%</td>
+<td class="mdd-mid">-28.03%</td>
+<td class="pos">+217.86%</td>
+</tr>
+<tr>
+<td>标普500(SPX)</td>
+<td class="pos">5.03%</td>
+<td class="mdd-shallow">-10.13%</td>
+<td class="pos">+15.86%</td>
+<td class="pos">7.21%</td>
+<td class="mdd-shallow">-10.28%</td>
+<td class="pos">+41.61%</td>
+<td class="pos">7.58%</td>
+<td class="mdd-shallow">-16.09%</td>
+<td class="pos">+79.39%</td>
+<td class="pos">6.64%</td>
+<td class="mdd-mid">-20.31%</td>
+<td class="pos">+90.26%</td>
+</tr>
+<tr>
+<td>黄金现价(XAU)</td>
+<td class="pos">28.23%</td>
+<td class="mdd-shallow">-19.15%</td>
+<td class="pos">+110.86%</td>
+<td class="pos">14.97%</td>
+<td class="mdd-mid">-21.39%</td>
+<td class="pos">+100.83%</td>
+<td class="pos">12.29%</td>
+<td class="mdd-mid">-27.27%</td>
+<td class="pos">+152.78%</td>
+<td class="pos">9.58%</td>
+<td class="mdd-mid">-27.27%</td>
+<td class="pos">+149.60%</td>
+</tr>
+<tr>
+<td>白银现价(XAG)</td>
+<td class="pos">42.26%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+187.98%</td>
+<td class="pos">22.52%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+176.06%</td>
+<td class="pos">13.46%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+174.61%</td>
+<td class="pos">10.63%</td>
+<td class="mdd-deep">-41.84%</td>
+<td class="pos">+174.61%</td>
+</tr>
+</tbody></table>
+<h2 id="detail-dual-momentum-top5">五-5. dual-momentum-top5 详细表</h2>
+<div class="callout"><span class="tag tag-good">🚀 CAGR 第 1 但 MDD 第 5（综合分第 5）</span><br><span style="font-size:13.5px;color:var(--c-muted)">4 窗口 CAGR 排名 1.25（3 个窗口第 1）；3y +20.70pp 大赢 baseline；但 5/8/10y MDD -42% 集中度风险显著</span></div>
+<p style="color:var(--c-muted);font-style:italic">（dual-momentum-top5 走横截面 top-K 路径，无 per-index 持仓数据，仅有组合层数字。请见<a href="#summary">第一段组合层汇总</a>。）</p>
+<h2 id="insights">六、关键洞察 + 实操建议</h2>
+
+<h3>核心发现</h3>
+<ol>
+<li><strong>v9-baseline 是真正的"全 universe 通吃"</strong>——4 窗口排名第 1.75（仅次于 dual-momentum 的横截面优势）+ MDD 控制 -14% 最浅。</li>
+<li><strong>dual-momentum-top5 是 CAGR 之王但 MDD 之耻</strong>——CAGR 综合第 1（13.59% 平均）但 MDD 平均 -35% 最深；高 return + 高 risk concentration。</li>
+<li><strong>faber-gtaa 在 6 个 universe 子集全输 baseline</strong>——验证 cycle 4 报告的"alpha 假象"结论；尤其在 A 股行业（化工/有色）和港股 MDD 大幅恶化（-18 / -11pp）。</li>
+<li><strong>donchian-200 在主题 / 港股 / 海外都吃瘪</strong>——突破策略对快速轮动的主题板块和波动型海外指数无效。</li>
+<li><strong>v9.3-bear 五重确认全输</strong>——cycle 1+2+3+4+5 共 5 个 universe 都跑输 baseline，永久弃用。</li>
+</ol>
+
+<h3>实操建议（修订版）</h3>
+<table class="summary"><thead><tr><th>投资者类型</th><th>推荐策略</th><th>理由</th></tr></thead><tbody>
+<tr><td>多数稳健投资者</td><td><span class="tag tag-best">v9-baseline</span></td><td>综合分第 1（性价比最高）+ 全 universe 通吃 + MDD 控制最严</td></tr>
+<tr><td>追求最高 CAGR + 接受 -42% MDD</td><td><span class="tag tag-good">dual-momentum-top5</span></td><td>CAGR 第 1 但承担集中度风险（5/8/10y MDD -42%）</td></tr>
+<tr><td>不推荐</td><td><span class="tag tag-bad">v9.3-bear / faber-gtaa / donchian-200</span></td><td>各种维度全输 baseline，无 alpha 来源</td></tr>
+</tbody></table>
+
+<h3>工具复用</h3>
+<p>本报告通过 <code>scripts/backtest/per_index_report.py</code> 生成。复用方式：</p>
+<pre style="background:var(--c-code-bg);padding:14px 18px;border-radius:6px;font-size:12.5px;border:1px solid var(--c-border)">
+# 任意策略 / 任意 universe / 任意窗口组合
+python -m scripts.backtest.per_index_report \
+  --strategies v9-baseline,dual-momentum-top5 \
+  --universe codes:HSI,NDX,XAU \
+  --windows 5,10 \
+  --output agents/results/任意路径.md
+</pre>
+<p style="color:var(--c-muted);font-size:13px">支持 universe 注册名（如 <code>combined-24</code>）或 <code>codes:CODE1,CODE2,...</code> ad-hoc 协议。当前 27 个已注册指数：A 股宽基 8 + 主题 9 + 行业 2 + 港股 3 + 美股 2 + 加密 1 + 商品 2。</p>
+
+</body></html>
