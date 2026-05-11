@@ -476,3 +476,74 @@ def test_dual_momentum_top5_registered():
     assert s.params == {"lookback_months": 12, "topk": 5, "abs_threshold": 0.0}
     from scripts.backtest.strategy.builtin import DualMomentumNoOpDecider as _NoOpCls
     assert isinstance(s.decider, _NoOpCls)
+
+
+def test_dual_momentum_w5w10_registered():
+    """新策略 dual-momentum-w5w10：周线 MA5 ∩ MA10 双重过滤。"""
+    _reload_builtin()
+    from scripts.backtest.strategy import get
+    s = get("dual-momentum-w5w10")
+    assert s.name == "dual-momentum-w5w10"
+    assert s.cycles == ("M",)
+    assert s.aggregator == "cross-sectional-topk"
+    assert s.params["lookback_months"] == 12
+    assert s.params["topk"] == 5
+    assert s.params["abs_threshold"] == 0.0
+    assert s.params["trend_filters"] == [
+        {"timeframe": "weekly", "period": 5, "trend_lookback": 2},
+        {"timeframe": "weekly", "period": 10, "trend_lookback": 3},
+    ]
+
+
+def test_make_ma_trend_filter_basic():
+    """make_ma_trend_filter 工厂：close > MA + 非空头才返回 True。"""
+    from scripts.backtest.cross_sectional import make_ma_trend_filter
+    # 构造一段上涨序列：100, 102, ..., 130（16 个周）
+    idx = pd.date_range(start="2024-01-01", periods=16, freq="W")
+    closes = pd.Series([100 + i * 2 for i in range(16)], index=idx)
+    f = make_ma_trend_filter({"X": closes}, period=10, trend_lookback=3)
+    # 最后一日 close=130, MA10 = mean(7..16) = 介于均值上方；MA10 当然上行
+    assert f("X", idx[-1]) is True
+
+
+def test_make_ma_trend_filter_insufficient_data():
+    """数据不足 → False。"""
+    from scripts.backtest.cross_sectional import make_ma_trend_filter
+    idx = pd.date_range(start="2024-01-01", periods=5, freq="W")
+    closes = pd.Series([100, 101, 102, 103, 104], index=idx)
+    f = make_ma_trend_filter({"X": closes}, period=10, trend_lookback=3)
+    assert f("X", idx[-1]) is False  # 只 5 条数据 < 10+3
+
+
+def test_make_ma_trend_filter_below_ma_rejects():
+    """close < MA → False。"""
+    from scripts.backtest.cross_sectional import make_ma_trend_filter
+    idx = pd.date_range(start="2024-01-01", periods=16, freq="W")
+    # 先涨后跌：100→150 (前 10 周) → 跌到 80（最后 6 周）
+    closes = pd.Series([100 + i * 5 for i in range(10)] + [140, 120, 100, 90, 85, 80], index=idx)
+    f = make_ma_trend_filter({"X": closes}, period=10, trend_lookback=3)
+    # 最后 close=80, MA10 = mean(140..80) 远 > 80 → close < MA → False
+    assert f("X", idx[-1]) is False
+
+
+def test_make_ma_trend_filter_ma_falling_rejects():
+    """close > MA 但 MA 自身向下 → False（非空头要求 MA 不下跌）。"""
+    from scripts.backtest.cross_sectional import make_ma_trend_filter
+    idx = pd.date_range(start="2024-01-01", periods=16, freq="W")
+    # 先大涨到 200 再回落到 150：MA10 在最后会下行
+    closes = pd.Series(
+        [100 + i * 12 for i in range(10)] + [210, 200, 190, 180, 170, 160], index=idx
+    )
+    f = make_ma_trend_filter({"X": closes}, period=10, trend_lookback=3)
+    # 最后 close=160；MA10 现在 = mean(后 10 个) 约 190；close 160 < MA10 190 → False
+    assert f("X", idx[-1]) is False
+
+
+def test_combine_filters_and():
+    """combine_filters_and: 所有都通过才 True。"""
+    from scripts.backtest.cross_sectional import combine_filters_and
+    f_true = lambda c, d: True
+    f_false = lambda c, d: False
+    assert combine_filters_and(f_true, f_true)("X", pd.Timestamp("2024-01-01")) is True
+    assert combine_filters_and(f_true, f_false)("X", pd.Timestamp("2024-01-01")) is False
+    assert combine_filters_and(f_false, f_false)("X", pd.Timestamp("2024-01-01")) is False

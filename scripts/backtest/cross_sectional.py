@@ -62,6 +62,7 @@ def build_holdings_schedule(
     lookback_months: int,
     topk: int,
     abs_threshold: float = 0.0,
+    trend_filter_fn=None,
 ) -> Dict[pd.Timestamp, Set[str]]:
     """对所有 rebalance dates 构造 holdings schedule。
 
@@ -70,7 +71,12 @@ def build_holdings_schedule(
       1. 算每指数 lookback return（数据不足跳过）
       2. abs_threshold 过滤
       3. select_topk
-      4. 记录 set of codes 到 schedule[date]
+      4. 如有 trend_filter_fn，对 top-K 做二次过滤
+      5. 记录 set of codes 到 schedule[date]
+
+    trend_filter_fn: Optional[Callable[[str, pd.Timestamp], bool]]
+      接受 (code, rebalance_date) 返回 bool。True = 通过过滤；False = 排除。
+      默认 None 不过滤。
 
     返回 {date -> set of codes}（空 set 表示该月无合格 → cash idle）。
     """
@@ -84,5 +90,47 @@ def build_holdings_schedule(
                 returns_by_code[code] = r
         qualifying = filter_qualifying(returns_by_code, abs_threshold)
         topk_list = select_topk(qualifying, topk)
-        schedule[date] = set(code for code, _ in topk_list)
+        codes = set(code for code, _ in topk_list)
+        if trend_filter_fn is not None:
+            codes = {c for c in codes if trend_filter_fn(c, date)}
+        schedule[date] = codes
     return schedule
+
+
+def make_ma_trend_filter(close_by_code: Dict[str, pd.Series], period: int, trend_lookback: int):
+    """Factory: 返回 (code, rebalance_date) → bool 的过滤函数。
+
+    条件：close > MA(period) 且 MA(period) 非空头（MA[t] >= MA[t-trend_lookback]）。
+    数据不足 → False。
+
+    Args:
+        close_by_code: code -> close 序列（daily/weekly/monthly 都可，由调用方决定）
+        period: MA 周期（如 5/10/20/60）
+        trend_lookback: "非空头"判定的回看窗口（约 period × 1/3）
+
+    用法：
+        f_w5 = make_ma_trend_filter(weekly_close_by_code, 5, 2)
+        f_w10 = make_ma_trend_filter(weekly_close_by_code, 10, 3)
+        combined = lambda c, d: f_w5(c, d) and f_w10(c, d)  # AND 双重确认
+    """
+    def filter_fn(code: str, rebalance_date: pd.Timestamp) -> bool:
+        s = close_by_code.get(code)
+        if s is None:
+            return False
+        sub = s[s.index <= rebalance_date]
+        if len(sub) < period + trend_lookback:
+            return False
+        close = float(sub.iloc[-1])
+        ma_now = float(sub.iloc[-period:].mean())
+        ma_then = float(sub.iloc[-(period + trend_lookback):-trend_lookback].mean())
+        if pd.isna(close) or pd.isna(ma_now) or pd.isna(ma_then):
+            return False
+        return close > ma_now and ma_now >= ma_then
+    return filter_fn
+
+
+def combine_filters_and(*filters):
+    """组合多个 filter，所有都通过才返回 True（AND 逻辑）。"""
+    def fn(code: str, rebalance_date: pd.Timestamp) -> bool:
+        return all(f(code, rebalance_date) for f in filters)
+    return fn

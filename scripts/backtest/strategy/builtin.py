@@ -271,3 +271,35 @@ def _dual_momentum_top5() -> Strategy:
             "abs_threshold": 0.0,
         },
     )
+
+
+@register("dual-momentum-w5w10")
+def _dual_momentum_w5w10() -> Strategy:
+    """dual-momentum-top5 + 周线 MA5 ∩ MA10 双重右侧趋势过滤。
+
+    每月 rebalance 选 top-5 后，对每个候选做二次确认：
+      1. close > 周线 MA5 且 MA5 非空头（MA5[t] >= MA5[t-2]）
+      2. close > 周线 MA10 且 MA10 非空头（MA10[t] >= MA10[t-3]）
+    两条都满足才持仓；否则该指数 cash idle。
+
+    回测对比（全期，universe combined-24）：
+    - baseline dual-momentum-top5: CAGR +8.82% / MDD -51.01%
+    - dual-momentum-w5w10:         CAGR +10.12% / MDD -38.72%（CAGR 升 + MDD 降 双赢）
+    详见 agents/results/2026-05-11-dual-momentum-w5-derivatives-v4.html
+    """
+    return Strategy(
+        name="dual-momentum-w5w10",
+        decider=DualMomentumNoOpDecider(),
+        filters=(),
+        cycles=("M",),
+        aggregator="cross-sectional-topk",
+        params={
+            "lookback_months": 12,
+            "topk": 5,
+            "abs_threshold": 0.0,
+            "trend_filters": [
+                {"timeframe": "weekly", "period": 5, "trend_lookback": 2},
+                {"timeframe": "weekly", "period": 10, "trend_lookback": 3},
+            ],
+        },
+    )

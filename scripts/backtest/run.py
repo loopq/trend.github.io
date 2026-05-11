@@ -262,7 +262,11 @@ def _run_cross_sectional_topk(strategy, registry, windows: List[int]):
     要求 strategy.cycles = ("M",)。
     strategy.params: {"lookback_months", "topk", "abs_threshold"}（必填，无默认）
     """
-    from scripts.backtest.cross_sectional import build_holdings_schedule
+    from scripts.backtest.cross_sectional import (
+        build_holdings_schedule,
+        make_ma_trend_filter,
+        combine_filters_and,
+    )
     from scripts.backtest.window_engine import run_portfolio_window_cross_sectional_topk
 
     if len(strategy.cycles) != 1 or strategy.cycles[0] != "M":
@@ -274,9 +278,12 @@ def _run_cross_sectional_topk(strategy, registry, windows: List[int]):
     lookback = params.get("lookback_months", 12)
     topk = params.get("topk", 5)
     abs_threshold = params.get("abs_threshold", 0.0)
+    trend_filter_specs = params.get("trend_filters", [])
 
     logger.info("加载 %d 个指数数据 ...", len(registry))
     monthly_close_by_code: Dict[str, pd.Series] = {}
+    weekly_close_by_code: Dict[str, pd.Series] = {}
+    daily_close_by_code: Dict[str, pd.Series] = {}
     index_data: Dict[str, IndexData] = {}
     for meta in registry:
         data = load_index(meta.code, meta.source, meta.name)
@@ -284,16 +291,36 @@ def _run_cross_sectional_topk(strategy, registry, windows: List[int]):
             logger.warning("  %s 数据缺失", meta.code)
             continue
         monthly_close_by_code[meta.code] = data.monthly["close"]
+        weekly_close_by_code[meta.code] = data.weekly["close"]
+        daily_close_by_code[meta.code] = data.daily["close"]
         index_data[meta.code] = data
 
     if not monthly_close_by_code:
         raise ValueError("无可用指数月线数据")
+
+    # 构造 trend_filter（如 strategy.params 有 trend_filters 配置）
+    trend_filter_fn = None
+    if trend_filter_specs:
+        sub_filters = []
+        tf_map = {"daily": daily_close_by_code, "weekly": weekly_close_by_code,
+                  "monthly": monthly_close_by_code}
+        for spec in trend_filter_specs:
+            tf = spec["timeframe"]
+            if tf not in tf_map:
+                raise ValueError(f"未知 timeframe {tf!r}（支持 daily/weekly/monthly）")
+            sub_filters.append(make_ma_trend_filter(
+                tf_map[tf], spec["period"], spec["trend_lookback"]
+            ))
+        trend_filter_fn = combine_filters_and(*sub_filters) if len(sub_filters) > 1 else sub_filters[0]
+        logger.info("  应用 %d 层 trend filter（%s）", len(sub_filters),
+                    ", ".join(f"{s['timeframe']} MA{s['period']}" for s in trend_filter_specs))
 
     schedule = build_holdings_schedule(
         monthly_close_by_code,
         lookback_months=lookback,
         topk=topk,
         abs_threshold=abs_threshold,
+        trend_filter_fn=trend_filter_fn,
     )
 
     window_results: List[WindowResult] = []
