@@ -1,0 +1,40 @@
+{
+  "completed_at": "2026-06-19T08:01:35",
+  "checked_date": "2026-06-19",
+  "latest_trading_day": "2026-06-18",
+  "policy_advanced": false,
+  "policy_advance_history": [
+    {
+      "trading_day": "2026-06-18",
+      "confirmed": 0,
+      "false_signals": 0
+    }
+  ],
+  "cache_refresh": {
+    "updated_codes": [
+      "931151",
+      "000819",
+      "399997",
+      "399989",
+      "931079",
+      "399808",
+      "931071",
+      "930721",
+      "399967",
+      "399673",
+      "000688",
+      "000813",
+      "399976"
+    ],
+    "failed_codes": []
+  },
+  "close_confirm": {
+    "confirmed": 0,
+    "false_signals": 0,
+    "files_changed": []
+  },
+  "reconcile": {
+    "expired_count": 0,
+    "files_changed": []
+  }
+}
