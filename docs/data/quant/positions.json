@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-19T06:49:30+00:00",
+  "updated_at": "2026-06-22T06:49:30+00:00",
   "paper_trading": true,
   "buckets": {
     "931151-D": {
@@ -18,7 +18,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931151-W": {
@@ -36,7 +36,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931151-M": {
@@ -54,7 +54,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000819-D": {
@@ -72,7 +72,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000819-W": {
@@ -90,7 +90,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000819-M": {
@@ -108,7 +108,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399997-D": {
@@ -126,7 +126,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399997-W": {
@@ -144,7 +144,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399997-M": {
@@ -162,7 +162,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399989-D": {
@@ -180,7 +180,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399989-M": {
@@ -198,7 +198,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931079-D": {
@@ -216,7 +216,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931079-W": {
@@ -234,7 +234,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931079-M": {
@@ -252,7 +252,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399808-D": {
@@ -270,7 +270,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399808-W": {
@@ -288,7 +288,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399808-M": {
@@ -306,7 +306,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931071-D": {
@@ -324,7 +324,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931071-W": {
@@ -342,7 +342,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "931071-M": {
@@ -360,7 +360,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "930721-D": {
@@ -378,7 +378,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "930721-M": {
@@ -396,7 +396,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399967-D": {
@@ -414,7 +414,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399967-M": {
@@ -432,7 +432,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399673-D": {
@@ -450,7 +450,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399673-W": {
@@ -468,7 +468,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399673-M": {
@@ -486,7 +486,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000688-D": {
@@ -504,7 +504,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000688-W": {
@@ -522,7 +522,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000688-M": {
@@ -540,7 +540,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000813-D": {
@@ -558,7 +558,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000813-W": {
@@ -576,7 +576,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "000813-M": {
@@ -594,7 +594,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399976-D": {
@@ -612,7 +612,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399976-W": {
@@ -630,7 +630,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "CASH",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     },
     "399976-M": {
@@ -648,7 +648,7 @@
       "last_action_date": null,
       "last_action_type": null,
       "policy_baseline_today": "HOLD",
-      "policy_baseline_date": "2026-06-19",
+      "policy_baseline_date": "2026-06-22",
       "last_error": null
     }
   }
