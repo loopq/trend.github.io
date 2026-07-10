@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-10T08:01:47+08:00",
+  "updated_at": "2026-07-10T06:49:47+00:00",
   "entries": [
     {
       "date": "2026-04-28",
@@ -577,6 +577,19 @@
       "expired_count": 0,
       "buckets": [
         "D"
+      ]
+    },
+    {
+      "date": "2026-07-10",
+      "file": "signals/2026-07-10.json",
+      "signal_count": 0,
+      "pending_count": 0,
+      "confirmed_count": 0,
+      "skipped_count": 0,
+      "expired_count": 0,
+      "buckets": [
+        "D",
+        "W"
       ]
     }
   ]
