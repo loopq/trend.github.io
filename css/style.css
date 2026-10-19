@@ -54,9 +54,32 @@ body {
 
 /* 头部 */
 .header {
+    position: relative;
     text-align: center;
     margin-bottom: 20px;
     padding: 10px 0;
+}
+
+/* 站点级入口（右上角，如期指观察）；无入口时隐藏 */
+.site-nav {
+    position: absolute;
+    top: 10px;
+    right: 0;
+}
+
+.site-nav:empty {
+    display: none;
+}
+
+.site-nav a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-size: 13px;
+    margin-left: 12px;
+}
+
+.site-nav a:hover {
+    text-decoration: underline;
 }
 
 .header h1 {
@@ -66,11 +89,6 @@ body {
     color: var(--color-text-primary);
     margin-bottom: 5px;
     letter-spacing: 0.02em;
-}
-
-.header .date {
-    font-size: 16px;
-    color: var(--color-text-secondary);
 }
 
 .header .update-type {
@@ -262,17 +280,12 @@ tr:hover {
     color: var(--color-bear-primary);
 }
 
-/* 休市状态 */
-.status-closed {
-    color: #9E9E9E;
-}
-
 /* 数据异常 */
 .status-error {
     color: var(--color-error);
 }
 
-/* 问号提示图标 */
+/* 问号提示图标：模板已不再使用，但 2025-01-21 ~ 2026-01-30 的旧归档页仍在引用，勿删 */
 .tooltip-wrapper {
     position: relative;
     display: inline-block;
@@ -399,8 +412,13 @@ tr:hover {
         font-size: 16px;
     }
 
-    .header .date {
-        font-size: 14px;
+    .site-nav {
+        position: static;
+        margin-bottom: 5px;
+    }
+
+    .site-nav a {
+        margin: 0 6px;
     }
 
     table {
