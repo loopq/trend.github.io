@@ -101,8 +101,21 @@ def test_trend_tests_workflow_covers_site_and_publish_config():
     wf, on = load("trend-test.yml")
     for trigger in ("push", "pull_request"):
         paths = on[trigger]["paths"]
-        for p in ("scripts/*.py", "scripts/tests/**", "templates/**", "docs/css/**",
+        for p in ("scripts/*.py", "scripts/futures/**", "scripts/tests/**", "templates/**", "docs/css/**",
                   ".github/workflows/update.yml", ".github/workflows/backtest.yml",
                   ".github/workflows/trend-test.yml"):
             assert p in paths
     assert find(wf, lambda s: runs(s, "pytest scripts/tests scripts/backtest"))
+
+
+def test_futures_step_is_bounded_and_shares_main_date():
+    wf, _ = load("update.yml")
+    [gen] = find(wf, lambda s: s.get("id") == "run_script")
+    [futures] = find(wf, lambda s: runs(s, "python -m scripts.futures"))
+    [stage] = find(wf, lambda s: runs(s, "scripts.site_publish stage"))
+    assert gen < futures < stage
+    step = steps(wf)[futures]
+    assert step["continue-on-error"] is True and 0 < step["timeout-minutes"] <= 5
+    assert step["if"] == "steps.run_script.outputs.should_deploy == 'true'"
+    assert "--as-of ${{ steps.run_script.outputs.record_date }}" in step["run"]
+    assert step["env"] == steps(wf)[gen]["env"]

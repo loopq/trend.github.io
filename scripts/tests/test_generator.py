@@ -57,3 +57,71 @@ def test_generate_all_dates_come_from_caller(tmp_path):
     index = read(paths["index"])
     assert "日期：2026.10.16" in index and "更新时间：2026-10-17 08:01:02" in index
     assert "归档时间：08:01:02" in read(paths["archive_detail"])
+
+
+def interrupt_write(monkeypatch):
+    """在真实临时文件写入一半后抛错，不替换生产 render。"""
+    import scripts.generator as gen_mod
+
+    def broken(*args, **kwargs):
+        f = open(*args, **kwargs)
+        write = f.write
+
+        def partial(text):
+            write(text[:max(1, len(text) // 2)])
+            f.flush()
+            raise OSError("磁盘写入中断")
+
+        f.write = partial
+        return f
+
+    monkeypatch.setattr(gen_mod, "open", broken, raising=False)
+
+
+def test_render_write_failure_keeps_old_file_and_cleans_tmp(tmp_path, monkeypatch):
+    g = tiny(tmp_path, "new complete page")
+    path = g.render("t.html", "futures/index.html")
+    from pathlib import Path
+    Path(path).write_bytes(b"old\xff")
+    interrupt_write(monkeypatch)
+    with pytest.raises(OSError):
+        g.render("t.html", "futures/index.html")
+    assert Path(path).read_bytes() == b"old\xff"
+    assert list((tmp_path / "out/.tmp").iterdir()) == []
+
+
+def test_sigkill_tmp_is_excluded_by_real_stage(tmp_path):
+    import os
+    import signal
+    import subprocess
+    import sys
+    from scripts.site_publish import SITE_DIRS, SITE_FILES, stage
+
+    g = tiny(tmp_path, "new complete page")
+    site = tmp_path / "out"
+    for name in SITE_DIRS:
+        (site / name).mkdir(parents=True, exist_ok=True)
+    for name in SITE_FILES:
+        (site / name).write_text("site")
+    (site / "futures/index.html").write_bytes(b"old page")
+    script = '''
+import os, signal, sys
+import scripts.generator as gen_mod
+class KillFile:
+    def __init__(self, *args, **kwargs): self.f = open(*args, **kwargs)
+    def __enter__(self): return self
+    def __exit__(self, *args): self.f.close()
+    def write(self, text):
+        self.f.write(text[:3])
+        self.f.flush()
+        os.kill(os.getpid(), signal.SIGKILL)
+gen_mod.open = KillFile
+gen_mod.Generator(sys.argv[1], sys.argv[2]).render("t.html", "futures/index.html")
+'''
+    proc = subprocess.run([sys.executable, "-c", script, str(tmp_path / "tpl"), str(site)], timeout=5)
+    assert proc.returncode == -signal.SIGKILL
+    assert (site / "futures/index.html").read_bytes() == b"old page"
+    assert list((site / ".tmp").iterdir())
+    stage(str(site), str(tmp_path / "publish"))
+    assert (tmp_path / "publish/futures/index.html").read_bytes() == b"old page"
+    assert not (tmp_path / "publish/.tmp").exists()

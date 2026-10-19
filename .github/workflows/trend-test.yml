@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/*.py'
+      - 'scripts/futures/**'
       - 'scripts/tests/**'
       - 'scripts/backtest/**'
       - 'scripts/config.yaml'
@@ -18,6 +19,7 @@ on:
   pull_request:
     paths:
       - 'scripts/*.py'
+      - 'scripts/futures/**'
       - 'scripts/tests/**'
       - 'scripts/backtest/**'
       - 'scripts/config.yaml'

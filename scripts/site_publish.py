@@ -19,7 +19,7 @@ import tarfile
 
 # 主站拥有的发布内容；新增站点页面（如 futures/）在此登记
 SITE_FILES = ["index.html", "CNAME"]
-SITE_DIRS = ["css", "archive"]
+SITE_DIRS = ["css", "archive", "futures"]
 
 
 def restore_archives(ref: str, docs_dir: str, repo: str = ".") -> int:

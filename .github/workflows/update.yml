@@ -70,6 +70,15 @@ jobs:
           TZ: Asia/Shanghai
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
 
+      - name: 生成期指观察页（失败 / 超时不影响主站部署）
+        if: steps.run_script.outputs.should_deploy == 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python -m scripts.futures --out docs --as-of ${{ steps.run_script.outputs.record_date }}
+        env:
+          TZ: Asia/Shanghai
+          GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+
       # gh-pages 有两个写入方：本 workflow 只发布主站文件；quant/、data/ 归 backtest.yml。
       # keep_files 永不删除线上文件；并发 push 被拒时重试一次（peaceiris 每次重新 clone 最新 gh-pages）。
       - name: 组装主站发布目录（不含 quant/、data/）

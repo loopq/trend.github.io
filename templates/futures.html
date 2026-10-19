@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% macro number(value, fmt='%.2f') -%}
+{{ fmt|format(value) if value is not none else '-' }}
+{%- endmacro %}
+{% macro hint_line(hint) -%}
+{{ hint.contract }} 距到期 {% if hint.estimated %}约 {{ hint.n }} 个交易日（按工作日估计）{% else %}{{ hint.n }} 个交易日{% endif %}；
+{%- for path in hint.paths -%}
+{% if loop.index0 == hint.best_path %}<strong>{% endif %}{{ path.path }} {{ path.contract }}：{% if path.value is none %}未上市{% else %}{{ number(path.value) }} 点/月{% endif %}{% if loop.index0 == hint.best_path %}</strong>{% endif %}
+{%- if path.n is not none %}（同期（到期前第 {{ hint.n }} 日）历史分位 {{ number(path.percentile, '%.0f') }}%，n={{ path.n }}）{% endif %}；
+{%- endfor -%}
+{% if hint.outside_window %}尚未进入统计窗口（≤20 个交易日）；{% endif %}
+{%- if hint.history -%}
+历史上 {{ hint.paths[hint.best_path].path }} 平均最划算：到期前第 {{ hint.history.day }} 个交易日（较第 1 日 {{ number(hint.history.delta, '%+.2f') }} 点/月，胜率 {{ number(hint.history.win_rate) }}%，{{ hint.history.n }} 次）
+{%- endif -%}
+{%- endmacro %}
+
+{% block title %}期指观察 · IC / IM - {{ date }}{% endblock %}
+{% block site_nav %}<a href="{{ root }}index.html">趋势首页</a>{% endblock %}
+{% block header %}
+            <h1>期指观察　日期：{{ date }}</h1>
+            <p class="update-type">IC / IM · 贴水曲线与移仓时点统计</p>
+{% endblock %}
+{% block content %}
+        <p class="disclaimer">多头吃贴水视角，数值越大表示贴水越深；历史统计不代表未来，不提供投资建议。</p>
+        <div class="nav-links"><a href="#IC">IC · 中证500</a><a href="#IM">IM · 中证1000</a></div>
+        {% for section in sections %}
+        <section id="{{ section.symbol }}" class="futures-section">
+            <h2 class="module-title">{{ section.symbol }} · {{ section.name }}　现货收盘 {{ number(section.spot) }}</h2>
+            <p class="futures-hint">{{ hint_line(section.hint) }}</p>
+            <div id="chart-{{ section.symbol }}" class="futures-chart" role="img" aria-label="{{ section.symbol }} 单月贴水历史曲线，单位点每月；下方提供今日及历史分位表"></div>
+            <p class="disclaimer">单月贴水 =（现货 − 期货收盘）÷ 剩余自然日 × 30。当月临近交割、分母过小，不展示（从当月移出见下方移仓统计）。点击图例切换，拖动底部滑块查看历史。</p>
+            <h3 class="module-title">今日合约</h3>
+            <div class="table-wrapper">
+                <table data-table="daily">
+                    <thead><tr>{% for label in ['角色', '合约', '最后交易日', '剩余天数', '收盘', '贴水', '单月贴水', '年化%', '历史分位%', '持仓量'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+                    <tbody>{% for row in section.daily %}
+                        <tr><td>{{ row.role }}</td><td>{{ row.contract }}</td><td>{{ row.expiry }}</td><td>{{ row.days }}</td><td>{{ number(row.close) }}</td><td>{{ number(row.basis) }}</td><td>{{ number(row.monthly) }}</td><td>{{ number(row.annual) }}</td><td>{{ number(row.percentile, '%.0f') }}</td><td>{{ number(row.oi, '%.0f') }}</td></tr>
+                    {% endfor %}</tbody>
+                </table>
+            </div>
+            <p class="disclaimer">年化贴水 =（现货 − 期货收盘）÷ 现货 ÷ 剩余自然日 × 365 × 100%；持仓量：新浪日线；到期日为交割前持仓。</p>
+            <h3 class="module-title">单月贴水历史分位（点/月）</h3>
+            <div class="table-wrapper">
+                <table data-table="percentiles">
+                    <thead><tr>{% for label in ['角色', 'P10', 'P25', 'P50', 'P75', 'P90', '样本数'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+                    <tbody>{% for row in section.percentiles %}
+                        <tr><td>{{ row.role }}</td>{% for value in row.quantiles %}<td>{{ number(value) }}</td>{% endfor %}<td>{{ row.n }}</td></tr>
+                    {% endfor %}</tbody>
+                </table>
+            </div>
+            <h3 class="module-title">移仓时点统计</h3>
+            <p class="disclaimer">样本自 {{ start }} 起。跨期单月价差 =（近月 − 目标收盘）÷ 两合约到期间隔自然日 × 30，越大对多头越有利。各行仅比较与第 1 日均有报价的同一批到期事件；不同 N 的事件集合可能不同。胜率为严格高于第 1 日的比例，第 1 日胜率不定义。</p>
+            <div class="table-wrapper">
+                <table data-table="roll">
+                    <thead><tr><th scope="col" rowspan="2">到期前第 N 交易日</th>{% for path in ['→次月', '→当季', '→下季'] %}<th scope="colgroup" colspan="3">{{ path }}</th>{% endfor %}</tr>
+                        <tr>{% for path in range(3) %}<th scope="col">较第1日（点/月）</th><th scope="col">胜率%</th><th scope="col">n</th>{% endfor %}</tr></thead>
+                    <tbody>{% for row in section.roll %}
+                        <tr><td>{{ row.day }}</td>{% for path in row.paths %}<td>{{ number(path.delta) }}</td><td>{{ number(path.win_rate) }}</td><td>{{ number(path.n, '%.0f') }}</td>{% endfor %}</tr>
+                    {% endfor %}</tbody>
+                </table>
+            </div>
+        </section>
+        {% endfor %}
+{% endblock %}
+{% block footer %}数据来源：新浪期货、中金所、中证指数 · 生成时间：{{ update_time }}{% endblock %}
+{% block body_end %}
+    <script id="futures-data" type="application/json">{{ data|tojson }}</script>
+    <script src="echarts.min.js"></script>
+    <script>
+    const futuresData = JSON.parse(document.getElementById('futures-data').textContent);
+    const styles = getComputedStyle(document.documentElement);
+    const color = name => styles.getPropertyValue(name).trim();
+    Object.entries(futuresData).forEach(([symbol, data]) => {
+        const chart = echarts.init(document.getElementById('chart-' + symbol));
+        chart.setOption({
+            // 与 SHOWN_ROLES 同序；默认显示的次月 / 下季用对比最强的红 / 绿
+            color: ['--color-bull-primary', '--color-accent', '--color-bear-primary'].map(color),
+            textStyle: {color: color('--color-text-primary')},
+            legend: {top: 0, selected: {"次月": true, "当季": false, "下季": true}},
+            grid: {left: 15, right: 20, top: 45, bottom: 75, containLabel: true},
+            xAxis: {type: 'time', boundaryGap: false, axisLabel: {hideOverlap: true}},
+            yAxis: {type: 'value', name: '点/月'},
+            tooltip: {
+                trigger: 'axis',
+                confine: true,
+                formatter: params => [data.dates[params[0].dataIndex], ...params.map(param => {
+                    const series = data.series[param.seriesIndex];
+                    return param.marker + param.seriesName + ' ' + series.contracts[param.dataIndex] + '：' +
+                        series.data[param.dataIndex].toFixed(2) + ' 点/月';
+                })].join('<br>')
+            },
+            dataZoom: [
+                {type: 'inside', startValue: data.start, endValue: data.dates[data.dates.length - 1]},
+                {type: 'slider', startValue: data.start, endValue: data.dates[data.dates.length - 1]}
+            ],
+            series: data.series.map(series => ({
+                name: series.name, type: 'line', data: series.data.map((value, i) => [data.dates[i], value]),
+                showSymbol: false
+            }))
+        });
+        window.addEventListener('resize', () => chart.resize());
+    });
+    </script>
+{% endblock %}

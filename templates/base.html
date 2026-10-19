@@ -25,7 +25,7 @@
         <!-- 头部 -->
         <div class="header">
             {#- 站点级入口槽（右上角）：在此 block 里加 <a href="{{ root }}futures/">期指观察</a>，所有页面同时生效 #}
-            <nav class="site-nav">{% block site_nav %}{% endblock %}</nav>
+            <nav class="site-nav">{% block site_nav %}<a href="{{ root }}futures/">期指观察</a>{% endblock %}</nav>
             {% block header %}{% endblock %}
         </div>
 {% block content %}{% endblock %}

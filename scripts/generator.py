@@ -41,8 +41,16 @@ class Generator:
         path = os.path.join(self.output_dir, out)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         html = self.env.get_template(template).render(root="../" * out.count("/"), ga_id=self.ga_id, **ctx)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(html)
+        # 原子写：先写 .tmp/（不在 SITE_DIRS，被强杀留下的残片不会被 stage 发布），写完再替换正式文件
+        tmp = os.path.join(self.output_dir, ".tmp", f"{os.getpid()}-{os.path.basename(path)}")
+        os.makedirs(os.path.dirname(tmp), exist_ok=True)
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(html)
+            os.replace(tmp, path)
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
         logger.info(f"Generated {path}")
         return path
 

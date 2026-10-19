@@ -34,3 +34,7 @@ docs/data/quant/cache/*.csv
 /reviews/
 agents
 .hypothesis
+
+# 期指生成物与原子写临时目录
+docs/futures/index.html
+docs/.tmp/

@@ -24,7 +24,7 @@ def site(run_cli):
     frames = {c["code"]: make_df(range(100 + i, 140 + i), end="2026-10-16")
               for i, c in enumerate(MAJOR + SECTOR)}
     code, out, site, _ = run_cli(["--mock-date", "2026-10-17"], frames, MAJOR, SECTOR)
-    assert code is None and out == {"should_deploy": "true"}
+    assert code is None and out == {"record_date": "2026-10-16", "should_deploy": "true"}
     return site
 
 
@@ -65,10 +65,11 @@ def test_relative_paths(site):
     assert [x["href"] for x in a.select(".nav-links a")] == ["../index.html", "../archive/index.html"]
 
 
-def test_site_nav_slot_present_and_empty(site):
+def test_site_nav_links_to_futures(site):
     for page in (site / "index.html", archive_page(site), site / "archive" / "index.html"):
         nav = soup(page).select_one(".header > nav.site-nav")
-        assert nav is not None and nav.decode_contents() == ""
+        assert nav.select_one("a").text == "期指观察"
+        assert nav.select_one("a")["href"] == ("futures/" if page == site / "index.html" else "../futures/")
 
 
 def test_ga_rendered_only_with_measurement_id(run_cli, monkeypatch):

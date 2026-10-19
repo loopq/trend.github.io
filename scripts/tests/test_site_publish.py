@@ -39,19 +39,19 @@ def remote(tmp_path):
     git(str(tmp_path), "init", "-q", "-b", "main", seed)
     for rel, text in {"docs/index.html": "home", "docs/CNAME": "trend.loopq.cn", "docs/css/style.css": "css",
                       "docs/archive/2026-10-01.html": "d1-main", "docs/quant/backtest/x.md": "report-OLD",
-                      "docs/data/quant/positions.json": "{}"}.items():
+                      "docs/data/quant/positions.json": "{}", "docs/futures/echarts.min.js": "vendor"}.items():
         write(os.path.join(seed, rel), text)
     git(seed, "add", "-A"); git(seed, "commit", "-qm", "main"); git(seed, "remote", "add", "origin", bare)
     git(seed, "push", "-q", "origin", "main")
     git(seed, "checkout", "-q", "--orphan", "gh-pages"); git(seed, "rm", "-rqf", ".")
     for rel, text in {"index.html": "home", "CNAME": "trend.loopq.cn", "archive/2026-10-01.html": "d1-pages",
-                      "archive/2026-10-02.html": "d2-pages", "quant/backtest/x.md": "report-NEW"}.items():
+                      "archive/2026-10-02.html": "d2-pages", "quant/backtest/x.md": "report-NEW", "futures/index.html": "old futures 2026-10-01"}.items():
         write(os.path.join(seed, rel), text)
     git(seed, "add", "-A"); git(seed, "commit", "-qm", "pages"); git(seed, "push", "-q", "origin", "gh-pages")
     return bare
 
 
-def ci_run(remote, workdir, day):
+def ci_run(remote, workdir, day, futures_failure=False):
     """模拟一次 update.yml：checkout main → restore → 生成当日归档 + 列表 → stage → keep_files 发布"""
     shutil.rmtree(workdir, ignore_errors=True)
     git(os.path.dirname(workdir), "clone", "-q", remote, workdir)
@@ -60,6 +60,9 @@ def ci_run(remote, workdir, day):
     gen = Generator(TEMPLATES, docs)
     gen.generate_archive_detail([], [], datetime.strptime(day, "%Y-%m-%d"))
     gen.generate_archive_list()
+    if futures_failure:
+        from scripts.futures import __main__ as cli
+        assert cli.main(["--out", docs, "--as-of", day]) == 1
     staging = workdir + "-publish"
     site_publish.stage(docs, staging)
     # peaceiris keep_files: true —— clone 最新 gh-pages，覆盖拷入发布目录，不删除任何已有文件
@@ -91,7 +94,7 @@ def test_stage_contains_only_site_owned_files(remote, tmp_path):
     staging, _ = ci_run(remote, str(tmp_path / "work"), "2026-10-03")
     tree = sorted(os.path.relpath(os.path.join(d, f), staging) for d, _, fs in os.walk(staging) for f in fs)
     assert tree == ["CNAME", "archive/2026-10-01.html", "archive/2026-10-02.html", "archive/2026-10-03.html",
-                    "archive/index.html", "css/style.css", "index.html"]
+                    "archive/index.html", "css/style.css", "futures/echarts.min.js", "index.html"]
 
 
 def test_deploy_keeps_newer_backtest_report_and_all_archives(remote, tmp_path):
@@ -120,3 +123,14 @@ def test_restore_fails_loudly_without_source(remote, tmp_path):
                           cwd=PROJECT_ROOT, capture_output=True, text=True)
     assert proc.returncode != 0
     assert sorted(os.listdir(os.path.join(work, "docs/archive"))) == ["2026-10-01.html"]  # 未改动
+
+
+def test_futures_failure_preserves_old_page_and_updates_main(remote, tmp_path, monkeypatch):
+    from scripts.futures import __main__ as cli
+    def fail():
+        raise RuntimeError("期指取数失败")
+    monkeypatch.setattr(cli, "load_calendar", fail)
+    staging, pages = ci_run(remote, str(tmp_path / "work"), "2026-10-03", futures_failure=True)
+    assert not os.path.exists(os.path.join(staging, "futures/index.html"))
+    assert read(os.path.join(pages, "futures/index.html")) == "old futures 2026-10-01"
+    assert "2026-10-03.html" in archives(pages)

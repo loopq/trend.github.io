@@ -132,6 +132,7 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
 
     # 行情日：正常运行时过旧检查保证其等于昨天；--force 于周末 / 节假日也不会产出非交易日页面
     record_date = data_date or yesterday
+    _set_github_output("record_date", record_date.isoformat())
     logger.info(f"=== 生成页面（行情日 {record_date}）===")
     for page_type, path in generator.generate_all(major_results, sector_results, record_date, datetime.now()).items():
         logger.info(f"Generated: {page_type} -> {path}")

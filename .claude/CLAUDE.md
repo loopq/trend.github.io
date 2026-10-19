@@ -3,6 +3,7 @@
 GitHub Pages 静态站；每日 AkShare/yfinance 取数算 MA20，无本地 DB。
 
 ## 子系统
+- `scripts/futures/`：期指观察（IC / IM 贴水曲线与移仓统计），每日全量重算，失败保留线上旧页。
 - `scripts/main.py`：主链路（每日趋势页面），plan 在 `agents/plans/`。
 - `scripts/quant/`：量化信号（13 指数 × 36 bucket），plan 见 `agents/plans/mvp-plan.md`。**已停用**（2026-10-19）：定时入口 `quant.yml` 与 `update.yml` 中的 morning-reconcile 已移除；代码、`docs/quant/` 前端与数据保留，`backtest.yml` 仍调用 `scripts/quant/build_quant_backtest.py`。
 - `scripts/backtest/`：离线回测，详见 `scripts/backtest/CLAUDE.md`。
@@ -11,6 +12,7 @@ GitHub Pages 静态站；每日 AkShare/yfinance 取数算 MA20，无本地 DB�
 
 ```bash
 source venv/bin/activate
+python -m scripts.futures --out /tmp/futures-site [--as-of YYYY-MM-DD]   # 期指本地生成；生产传主站 record_date
 python scripts/main.py --mode morning [--debug|--force|--mock-date YYYY-MM-DD --dry-run]
 python -m pytest scripts/tests scripts/backtest -q   # 主站 + 回测测试门禁（CI: trend-test.yml）
 cd docs && python -m http.server 8000   # 本地预览
