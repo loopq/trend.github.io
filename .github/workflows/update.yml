@@ -19,7 +19,7 @@ on:
     types: [morning]
 
 concurrency:
-  group: quant-state-main
+  group: trend-update
   cancel-in-progress: false
 
 jobs:
@@ -40,11 +40,6 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Configure git identity（quant morning-reconcile 内部 commit 用）
-        run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-
       - name: Install dependencies
         run: pip install -r requirements.txt
 
@@ -59,6 +54,9 @@ jobs:
             echo "mode=morning" >> $GITHUB_OUTPUT
           fi
 
+      - name: 从 gh-pages 恢复历史归档（失败即中止：宁可不部署，也不能抹掉线上归档）
+        run: python -m scripts.site_publish restore origin/gh-pages docs
+
       - name: Run update script
         id: run_script
         run: |
@@ -72,48 +70,43 @@ jobs:
           TZ: Asia/Shanghai
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
 
-      - name: Quant morning-reconcile（合并 reconcile + close-confirm；故障隔离不影响主链路）
-        # v4：解除 should_deploy 拦截。主站不部署的日子（节假日 / 数据延迟），quant
-        # morning-reconcile 仍然要跑，目的是：增量拉历史 K cache + 写"今日已检查"缓存，
-        # 让 14:48 signal 在节后第一交易日（如 5-6）能正常算 MA20（从 cache 读历史）。
-        if: steps.mode.outputs.mode == 'morning'
-        continue-on-error: true
-        run: |
-          python -m scripts.quant.run_signal morning-reconcile \
-            --mock-now "$(TZ=Asia/Shanghai date -Iseconds)" \
-            --writer-mode commit
-        env:
-          TZ: Asia/Shanghai
-
-      - name: Push quant morning-reconcile commits（不静默吞错）
-        if: steps.mode.outputs.mode == 'morning'
-        continue-on-error: true
-        run: |
-          set -e
-          for i in 1 2 3; do
-            if git pull --rebase --autostash origin main && git push origin main; then
-              echo "✅ quant morning-reconcile commits pushed"
-              exit 0
-            fi
-            echo "::warning::push 失败（attempt $i/3），sleep 后重试"
-            sleep $((RANDOM % 10 + 5))
-          done
-          echo "::error::quant morning-reconcile push failed after 3 retries"
-          exit 1
+      # gh-pages 有两个写入方：本 workflow 只发布主站文件；quant/、data/ 归 backtest.yml。
+      # keep_files 永不删除线上文件；并发 push 被拒时重试一次（peaceiris 每次重新 clone 最新 gh-pages）。
+      - name: 组装主站发布目录（不含 quant/、data/）
+        if: steps.run_script.outputs.should_deploy == 'true'
+        run: python -m scripts.site_publish stage docs /tmp/site-publish
 
       - name: Deploy to GitHub Pages
+        id: deploy
         if: steps.run_script.outputs.should_deploy == 'true'
+        continue-on-error: true
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          exclude_assets: '.github,data/quant/cache/**'
+          publish_dir: /tmp/site-publish
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Update trend data - ${{ steps.mode.outputs.mode }}'
+
+      - name: 部署失败，等待后重试
+        if: steps.run_script.outputs.should_deploy == 'true' && steps.deploy.outcome == 'failure'
+        run: sleep 20
+
+      - name: Deploy to GitHub Pages（重试）
+        id: deploy_retry
+        if: steps.run_script.outputs.should_deploy == 'true' && steps.deploy.outcome == 'failure'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/site-publish
+          keep_files: true
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'Update trend data - ${{ steps.mode.outputs.mode }}'
 
       - name: Send email notification
-        if: steps.run_script.outputs.should_deploy == 'true'
+        if: steps.run_script.outputs.should_deploy == 'true' && (steps.deploy.outcome == 'success' || steps.deploy_retry.outcome == 'success')
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com

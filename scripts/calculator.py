@@ -141,24 +141,17 @@ class Calculator:
             return None
         return ((current_price / change_ma20) - 1) * 100
     
-    def _period_ma20_status(self, period_df: pd.DataFrame, current_price: float) -> str:
-        """判断周期数据相对 MA20 的状态"""
-        if period_df is None or len(period_df) < 20:
+    def _period_ma20_status(self, df: pd.DataFrame, rule: str) -> str:
+        """周/月线相对 MA20 的状态。日线按 rule 重采样，最后一根是进行中的周期（收盘 = 现价），
+        MA20 取最后 20 根收盘；不足 20 根返回 "-"。要求 df 已按 date 升序排列。"""
+        closes = df.set_index("date")["close"].resample(rule).last().dropna().tolist()
+        if len(closes) < 20:
             return "-"
-        closes = period_df["close"].tolist()
-        ma20_prices = closes[-19:] + [current_price] if len(closes) >= 19 else closes + [current_price]
-        if len(ma20_prices) < 20:
-            return "-"
-        ma20 = sum(ma20_prices[-20:]) / 20
-        return "YES" if current_price >= ma20 else "NO"
+        return "YES" if closes[-1] >= sum(closes[-20:]) / 20 else "NO"
 
-    def calculate_big_cycle_status(self, current_price: float,
-                                   weekly_df: pd.DataFrame,
-                                   monthly_df: pd.DataFrame) -> str:
+    def calculate_big_cycle_status(self, df: pd.DataFrame) -> str:
         """计算大周期状态，如 "YES-YES"、"YES-NO"（周线-月线）"""
-        weekly = self._period_ma20_status(weekly_df, current_price)
-        monthly = self._period_ma20_status(monthly_df, current_price)
-        return f"{weekly}-{monthly}"
+        return f"{self._period_ma20_status(df, 'W-SUN')}-{self._period_ma20_status(df, 'ME')}"
     
     def _detect_extreme_trend(self, df: pd.DataFrame, n_days: int = 3) -> Optional[str]:
         """检测极强/极弱信号。内部方法，要求 df 已按 date 升序排列。"""
@@ -209,18 +202,13 @@ class Calculator:
             
         return current_volume / avg_vol
 
-    def calculate_all_metrics(self, df: pd.DataFrame, current_price: Optional[float] = None,
-                              weekly_df: pd.DataFrame = None,
-                              monthly_df: pd.DataFrame = None) -> Dict[str, Any]:
+    def calculate_all_metrics(self, df: Optional[pd.DataFrame]) -> Dict[str, Any]:
         """
-        计算所有指标
-        
+        计算所有指标（周/月线由同一份日线重采样）
+
         Args:
-            df: 历史数据 DataFrame
-            current_price: 当前价格（如果提供，用于尾盘计算；否则使用最新收盘价）
-            weekly_df: 周线数据（用于大周期状态计算）
-            monthly_df: 月线数据（用于大周期状态计算）
-            
+            df: 日线 DataFrame（截至计算日）；None / 空表视为数据异常
+
         Returns:
             包含所有计算指标的字典
         """
@@ -231,6 +219,7 @@ class Calculator:
             "status": None,
             "change": None,
             "deviation": None,
+            "prev_deviation": None,
             "change_date": None,
             "change_price": None,
             "interval_change": None,
@@ -239,6 +228,7 @@ class Calculator:
             "status_change": None,
             "extreme_trend": None,
             "sparkline_prices": [],
+            "latest_date": None,
             "error": None
         }
         
@@ -253,32 +243,17 @@ class Calculator:
             return result
         
         closes = df["close"].tolist()
+        result["latest_date"] = df["date"].iloc[-1]
         # 处理可能的缺失成交量
         if "volume" in df.columns:
             volumes = df["volume"].fillna(0).tolist()
         else:
             volumes = [0] * len(closes)
         
-        # 当前价格（尾盘模式：用当前价格 + 前19天收盘价；否则用最近20天）
-        if current_price is not None:
-            result["current_price"] = current_price
-            ma20_prices = closes[-19:] + [current_price]
-        else:
-            result["current_price"] = closes[-1]
-            ma20_prices = closes[-20:]
-        
-        # 前一交易日收盘价
-        if len(closes) >= 2:
-            result["prev_close"] = closes[-2]
-        else:
-            result["prev_close"] = closes[-1]
-        
-        # MA20
-        result["ma20"] = self.calculate_ma20(ma20_prices)
-        
-        if result["ma20"] is None:
-            result["error"] = "MA20计算失败"
-            return result
+        # 当前价格与前一交易日收盘价（已保证 ≥ 20 根）
+        result["current_price"] = closes[-1]
+        result["prev_close"] = closes[-2]
+        result["ma20"] = self.calculate_ma20(closes)
         
         # 状态
         result["status"] = self.calculate_status(result["current_price"], result["ma20"])
@@ -286,8 +261,10 @@ class Calculator:
         # 涨跌幅
         result["change"] = self.calculate_change(result["current_price"], result["prev_close"])
         
-        # 偏离率
+        # 偏离率；前一日偏离率用于推导前一日排名（强度变化）
         result["deviation"] = self.calculate_deviation(result["current_price"], result["ma20"])
+        if len(closes) >= 21:
+            result["prev_deviation"] = self.calculate_deviation(closes[-2], sum(closes[-21:-1]) / 20)
         
         # 状态转变时间
         change_date, change_ma20 = self._find_status_change_date(df, result["status"])
@@ -301,9 +278,7 @@ class Calculator:
         result["volume_ratio"] = self.calculate_volume_ratio(volumes)
         
         # 大周期状态
-        result["big_cycle_status"] = self.calculate_big_cycle_status(
-            result["current_price"], weekly_df, monthly_df
-        )
+        result["big_cycle_status"] = self.calculate_big_cycle_status(df)
         
         # 趋势拐点检测
         result["status_change"] = self._detect_status_change(df, result["status"])
@@ -329,8 +304,8 @@ class Calculator:
         valid_items = [item for item in items if item.get("deviation") is not None]
         error_items = [item for item in items if item.get("deviation") is None]
         
-        # 按偏离率降序排序
-        valid_items.sort(key=lambda x: x.get("deviation", float("-inf")), reverse=True)
+        # 按偏离率降序排序，并列按配置顺序（与前一日排名规则一致，见 apply_rank_changes）
+        valid_items.sort(key=lambda x: (-x["deviation"], x.get("order", 0)))
         
         # 添加趋势强度序号
         for i, item in enumerate(valid_items, 1):

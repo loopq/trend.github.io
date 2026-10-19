@@ -1,0 +1,47 @@
+name: Trend Tests
+
+# 主站 + backtest 测试门禁（quant 已停用，其测试见 quant-test.yml，不阻塞）
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/*.py'
+      - 'scripts/tests/**'
+      - 'scripts/backtest/**'
+      - 'scripts/config.yaml'
+      - 'templates/**'
+      - 'docs/css/**'
+      - 'requirements*.txt'
+      - '.github/workflows/update.yml'
+      - '.github/workflows/backtest.yml'
+      - '.github/workflows/trend-test.yml'
+  pull_request:
+    paths:
+      - 'scripts/*.py'
+      - 'scripts/tests/**'
+      - 'scripts/backtest/**'
+      - 'scripts/config.yaml'
+      - 'templates/**'
+      - 'docs/css/**'
+      - 'requirements*.txt'
+      - '.github/workflows/update.yml'
+      - '.github/workflows/backtest.yml'
+      - '.github/workflows/trend-test.yml'
+  workflow_dispatch: {}
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Pytest
+        run: python -m pytest scripts/tests scripts/backtest -q

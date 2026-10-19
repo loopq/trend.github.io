@@ -1,6 +1,6 @@
 import os
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from datetime import date, datetime
+from typing import Dict, List, Any, Optional
 from collections import OrderedDict
 from jinja2 import Environment, FileSystemLoader
 import logging
@@ -16,44 +16,36 @@ class Generator:
     BULL_COLOR = "#E53935"
     BEAR_COLOR = "#43A047"
     
-    def __init__(self, template_dir: str, output_dir: str,
-                 analytics_enabled: bool = False,
-                 ga_measurement_id: str = None):
+    def __init__(self, template_dir: str, output_dir: str, ga_id: Optional[str] = None):
         """
         初始化生成器
 
         Args:
             template_dir: 模板目录路径
-            output_dir: 输出目录路径（docs/）
-            analytics_enabled: 是否启用 Google Analytics
-            ga_measurement_id: GA4 测量 ID (G-XXXXXXXXXX)
+            output_dir: 站点根目录（docs/）
+            ga_id: GA4 测量 ID (G-XXXXXXXXXX)，None 表示不埋点
         """
-        self.template_dir = template_dir
         self.output_dir = output_dir
-        self.analytics_enabled = analytics_enabled
-        self.ga_measurement_id = ga_measurement_id
         self.archive_dir = os.path.join(output_dir, "archive")
-        
-        # 确保目录存在
-        os.makedirs(self.output_dir, exist_ok=True)
-        os.makedirs(self.archive_dir, exist_ok=True)
-        
-        # 初始化 Jinja2 环境
+        self.ga_id = ga_id
         self.env = Environment(
             loader=FileSystemLoader(template_dir),
             autoescape=True
         )
-    
-    def format_change_date(self, date: datetime) -> str:
-        """格式化状态转变时间为 YY.MM.DD"""
-        if date is None:
-            return None
-        return date.strftime("%y.%m.%d")
-    
-    def format_display_date(self, date: datetime) -> str:
-        """格式化显示日期为 YYYY.MM.DD"""
-        return date.strftime("%Y.%m.%d")
-    
+
+    def render(self, template: str, out: str, **ctx) -> str:
+        """渲染 template 到 output_dir/out（out 以 / 分隔），返回输出路径。
+
+        自动注入 root（从 out 回到站点根的相对前缀）与 ga_id，新页面（如 futures/index.html）一行接入。
+        """
+        path = os.path.join(self.output_dir, out)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        html = self.env.get_template(template).render(root="../" * out.count("/"), ga_id=self.ga_id, **ctx)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(html)
+        logger.info(f"Generated {path}")
+        return path
+
     def calculate_bull_bear_ratio(self, major_indices: List[Dict]) -> Dict[str, Any]:
         """
         计算多空比例（仅统计主要指数）
@@ -138,7 +130,7 @@ class Generator:
             formatted = item.copy()
             
             if formatted.get("change_date"):
-                formatted["change_date_str"] = self.format_change_date(formatted["change_date"])
+                formatted["change_date_str"] = formatted["change_date"].strftime("%y.%m.%d")
             else:
                 formatted["change_date_str"] = None
             
@@ -155,49 +147,32 @@ class Generator:
         
         return result
     
-    def _render_page(self, template_name: str, output_path: str,
-                     major_indices: List[Dict], sector_indices: List[Dict],
-                     display_date: str, update_time: str) -> str:
-        """渲染并写出页面，返回输出路径"""
-        template = self.env.get_template(template_name)
+    def _render_trend(self, template: str, out: str, major_indices: List[Dict],
+                      sector_indices: List[Dict], day: date, update_time: str) -> str:
+        """指数页（首页 / 归档详情）共用渲染"""
         bull_bear = self.calculate_bull_bear_ratio(major_indices)
-        html_content = template.render(
-            date=display_date,
+        return self.render(
+            template, out,
+            date=day.strftime("%Y.%m.%d"),
             update_time=update_time,
             major_indices=self.prepare_index_data(major_indices),
             sector_indices=self.prepare_index_data(sector_indices),
             bull_ratio=bull_bear["bull_ratio"],
             bear_ratio=bull_bear["bear_ratio"],
-            bull_count=bull_bear["bull_count"],
-            bear_count=bull_bear["bear_count"],
-            analytics_enabled=self.analytics_enabled,
-            ga_measurement_id=self.ga_measurement_id
         )
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
-        logger.info(f"Generated {output_path}")
-        return output_path
 
-    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict]) -> str:
-        """生成首页 HTML"""
-        now = datetime.now()
-        display_date = self.format_display_date(now - timedelta(days=1))
-        update_time = now.strftime("%Y-%m-%d %H:%M:%S")
-        output_path = os.path.join(self.output_dir, "index.html")
-        return self._render_page("index.html", output_path, major_indices, sector_indices,
-                                 display_date, update_time)
+    def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict],
+                       record_date: date, now: datetime) -> str:
+        """生成首页 HTML；record_date 为行情日，now 为生成时刻"""
+        return self._render_trend("index.html", "index.html", major_indices, sector_indices,
+                                  record_date, now.strftime("%Y-%m-%d %H:%M:%S"))
 
     def generate_archive_detail(self, major_indices: List[Dict], sector_indices: List[Dict],
-                                date: datetime = None) -> str:
-        """生成归档详情页"""
-        if date is None:
-            date = datetime.now()
-        display_date = self.format_display_date(date)
-        update_time = date.strftime("%H:%M:%S")
-        output_path = os.path.join(self.archive_dir, f"{date.strftime('%Y-%m-%d')}.html")
-        return self._render_page("archive_detail.html", output_path, major_indices, sector_indices,
-                                 display_date, update_time)
-    
+                                date: datetime) -> str:
+        """生成归档详情页；页脚归档时间取 date 的时分秒"""
+        return self._render_trend("archive_detail.html", f"archive/{date.strftime('%Y-%m-%d')}.html",
+                                  major_indices, sector_indices, date, date.strftime("%H:%M:%S"))
+
     def scan_archive_files(self) -> Dict[str, List[Dict[str, str]]]:
         """
         扫描归档目录，获取所有归档文件
@@ -244,43 +219,15 @@ class Generator:
         return archives
     
     def generate_archive_list(self) -> str:
-        """
-        生成归档列表页
-        
-        Returns:
-            生成的 HTML 文件路径
-        """
-        template = self.env.get_template("archive_list.html")
-        
-        archives = self.scan_archive_files()
-        
-        html_content = template.render(archives=archives)
-        
-        output_path = os.path.join(self.archive_dir, "index.html")
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
-        
-        logger.info(f"Generated archive list at {output_path}")
-        return output_path
-    
-    def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict]) -> Dict[str, str]:
-        """
-        生成所有页面
+        """生成归档列表页，返回输出路径"""
+        return self.render("archive_list.html", "archive/index.html", archives=self.scan_archive_files())
 
-        Args:
-            major_indices: 主要指数数据
-            sector_indices: 行业板块数据
-
-        Returns:
-            生成的文件路径字典
-        """
-        result = {}
-
-        result["index"] = self.generate_index(major_indices, sector_indices)
-
-        # 生成归档
-        archive_date = datetime.now() - timedelta(days=1)
-        result["archive_detail"] = self.generate_archive_detail(major_indices, sector_indices, archive_date)
-        result["archive_list"] = self.generate_archive_list()
-
-        return result
+    def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict],
+                     record_date: date, now: datetime) -> Dict[str, str]:
+        """生成首页 + 当日归档 + 归档列表；日期由调用方传入（单一来源）"""
+        return {
+            "index": self.generate_index(major_indices, sector_indices, record_date, now),
+            "archive_detail": self.generate_archive_detail(
+                major_indices, sector_indices, datetime.combine(record_date, now.time())),
+            "archive_list": self.generate_archive_list(),
+        }

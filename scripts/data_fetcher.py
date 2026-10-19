@@ -181,25 +181,23 @@ class DataFetcher:
             logger.debug(f"Cache hit for {cache_key}")
             return self._cache[cache_key].copy()
 
-        try:
-            if source == "cs_index":
-                result = self._fetch_cs_index(code, days)
-            elif source == "sina_index":
-                result = self._fetch_sina_index(code, days)
-            elif source == "spot_price":
-                result = self._fetch_spot_price(code, days)
-            elif source == "hk":
-                result = self._fetch_hk_index(code, days)
-            elif source == "us":
-                result = self._fetch_us_index(code, days)
-            elif source == "crypto":
-                result = self._fetch_crypto_hist(code, days)
-            else:
-                logger.error(f"Unknown source type: {source}")
-                return None
+        # 新增数据源：在此注册一行（如期指观察的 CFFEX 合约日线）
+        fetch = {
+            "cs_index": self._fetch_cs_index,
+            "sina_index": self._fetch_sina_index,
+            "spot_price": self._fetch_spot_price,
+            "hk": self._fetch_hk_index,
+            "us": self._fetch_us_index,
+            "crypto": self._fetch_crypto_hist,
+        }.get(source)
+        if fetch is None:
+            logger.error(f"Unknown source type: {source}")
+            return None
 
+        try:
+            result = fetch(code, days)
             if result is not None:
-                self._cache[cache_key] = result
+                self._cache[cache_key] = result.copy()
             return result
         except NETWORK_ERRORS as e:
             logger.warning(f"Network/data error fetching {code} from {source}: {e}")
@@ -365,31 +363,3 @@ class DataFetcher:
         except NETWORK_ERRORS as e:
             logger.warning(f"Alt US fetch failed for {code}: {e}")
             return None
-    
-    def _resample_data(self, df: pd.DataFrame, rule: str, periods: int) -> Optional[pd.DataFrame]:
-        """重采样日线数据为指定周期"""
-        if df is None or df.empty:
-            return None
-        try:
-            data = df.sort_values("date").set_index("date")
-            resampled = data.resample(rule).agg({
-                "open": "first", "high": "max", "low": "min", "close": "last"
-            }).dropna().reset_index()
-            return resampled.tail(periods) if not resampled.empty else None
-        except Exception as e:
-            logger.error(f"Error resampling data ({rule}): {e}")
-            return None
-
-    def process_weekly_data(self, df: pd.DataFrame, weeks: int = 20) -> Optional[pd.DataFrame]:
-        """处理周线数据 - 使用日线重采样"""
-        return self._resample_data(df, "W-SUN", weeks)
-
-    def process_monthly_data(self, df: pd.DataFrame, months: int = 20) -> Optional[pd.DataFrame]:
-        """处理月线数据 - 使用日线重采样"""
-        return self._resample_data(df, "ME", months)
-    
-    def get_latest_date(self, df: pd.DataFrame) -> Optional[datetime]:
-        """获取数据的最新日期"""
-        if df is None or df.empty:
-            return None
-        return df["date"].max()

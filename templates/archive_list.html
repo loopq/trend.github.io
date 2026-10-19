@@ -1,23 +1,15 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>历史归档 - 鱼盆趋势模型</title>
-    <link rel="stylesheet" href="../css/style.css">
-</head>
-<body>
-    <div class="container">
-        <!-- 头部 -->
-        <div class="header">
-            <h1>鱼盆趋势模型 - 历史归档</h1>
-        </div>
-        
+{% extends "base.html" %}
+
+{% block title %}历史归档 - 鱼盆趋势模型{% endblock %}
+
+{% block header %}<h1>鱼盆趋势模型 - 历史归档</h1>{% endblock %}
+
+{% block content %}
         <!-- 导航链接 -->
         <div class="nav-links">
-            <a href="../index.html">🏠 返回首页</a>
+            <a href="{{ root }}index.html">🏠 返回首页</a>
         </div>
-        
+
         <!-- 归档列表 -->
         <div class="archive-list">
             {% for month, dates in archives.items() %}
@@ -31,17 +23,8 @@
                     {% endfor %}
                 </ul>
             </div>
-            {% endfor %}
-            
-            {% if not archives %}
+            {% else %}
             <p style="text-align: center; color: #999; margin-top: 50px;">暂无历史数据</p>
-            {% endif %}
+            {% endfor %}
         </div>
-        
-        <!-- 页脚 -->
-        <div class="footer">
-            <p>Powered by AkShare</p>
-        </div>
-    </div>
-</body>
-</html>
+{% endblock %}

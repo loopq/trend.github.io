@@ -137,7 +137,25 @@ jobs:
             cp -r docs/data/quant /tmp/quant-publish/data/
           fi
 
+      # 与 update.yml 并发 push gh-pages 时后者被拒：重试一次（peaceiris 每次重新 clone 最新 gh-pages）
       - name: 同步到 gh-pages
+        id: deploy
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/quant-publish
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: '[backtest] sync /quant after online run ${{ inputs.code }}'
+
+      - name: 同步失败，等待后重试
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 20
+
+      - name: 同步到 gh-pages（重试）
+        if: steps.deploy.outcome == 'failure'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
