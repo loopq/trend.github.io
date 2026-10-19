@@ -272,3 +272,20 @@ def render(self, template: str, out: str, **ctx) -> str:
   3. `sort_by_deviation` 显式使用 `(−偏离率, order)`，与原稳定排序等价。
 - 归档恢复：115 个写入 `docs/archive/`，清单 `agents/results/2026-10-19-archive-recovery-manifest.md`。
 - 观察到的既有风险（未修，超出范围）：yfinance 被限流时内部抛 `TypeError`，`DataFetcher` 按原契约上抛，整次更新失败（旧代码同样如此）。
+
+## 9. 追加（2026-10-19 午间，用户确认「清理并修根因」）：force 语义 + 非交易日页清理
+
+**现象**：周一手动 `force` 运行 → `record_date = 昨天 = 10-18（周日）` → 首页标为 2026.10.18、生成 `archive/2026-10-18.html`；新流程 keep_files + restore 使其永久留存。另有 4 月遗留的周日页 `2026-04-12`（main 与 gh-pages 均有）。
+
+**根因修复**：行情日改为「沪深300 最新 K 线日期」，取数失败时回退昨天。
+- 正常运行（非 force）：过旧检查保证该日期 = 昨天，输出与现状完全一致。
+- force 于周末 / 节假日：页面与归档落在最近交易日（如 10-16），不再产出非交易日页面。
+- 实现：`_a_share_date()` 单一来源，供过旧检查与 `record_date` 共用。
+
+**TDD**：`test_main_flow` 新增「周一 force → 归档为 2026-10-16.html、首页日期 2026.10.16」（红 → 绿）；`test_deploy_when_data_fresh` 收紧为断言归档文件名 = 行情日。
+
+**清理顺序**（必须先清 gh-pages 再重跑，否则 restore 会把 10-18 带回来）：
+1. main：修复 + 测试 + 删除 `docs/archive/2026-04-12.html` → push。
+2. gh-pages：删除 `archive/2026-10-18.html`、`archive/2026-04-12.html`，以剩余归档重生成 `archive/index.html`（保留线上 GA ID）→ push。
+3. 手动 `force` 运行 update.yml → 首页回到 2026.10.16，10-16 归档以新模板重生成。
+4. 线上验收脚本期望全部通过（含「首页行情日为交易日」「归档无非交易日页」）。

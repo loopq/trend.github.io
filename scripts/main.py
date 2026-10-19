@@ -71,12 +71,16 @@ def get_last_trading_day(today: date) -> date:
         return today - timedelta(days=1)
 
 
-def _a_share_stale(major_results: List[Dict], check_date: date) -> bool:
-    """沪深300 最新 K 线早于最近交易日 → A 股数据未更新（节假日 / 数据源延迟）"""
-    hs300 = next((r for r in major_results if r.get("code") == "000300"), None)
-    if not hs300 or hs300.get("error"):
+def _a_share_date(major_results: List[Dict]) -> Optional[date]:
+    """A 股行情日 = 沪深300 最新 K 线日期；取数失败时为 None"""
+    hs300 = next((r for r in major_results if r.get("code") == "000300" and not r.get("error")), None)
+    return hs300["latest_date"].date() if hs300 else None
+
+
+def _a_share_stale(data_date: Optional[date], check_date: date) -> bool:
+    """A 股行情日早于最近交易日 → 数据未更新（节假日 / 数据源延迟）"""
+    if data_date is None:
         return False
-    data_date = hs300["latest_date"].date()
     last_trading_day = get_last_trading_day(check_date)
     if data_date < last_trading_day:
         logger.info(f"数据过旧（A股数据: {data_date}，最近交易日: {last_trading_day}），跳过更新")
@@ -115,7 +119,8 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
 
     logger.info("=== 处理主要指数 ===")
     major_results = process_indices(config.get("major_indices", []), get_df, calculator)
-    if not force and _a_share_stale(major_results, check_date):
+    data_date = _a_share_date(major_results)
+    if not force and _a_share_stale(data_date, check_date):
         return False
 
     logger.info("=== 处理行业板块 ===")
@@ -125,9 +130,10 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
     apply_rank_changes(major_results)
     apply_rank_changes(sector_results)
 
-    logger.info("=== 生成页面 ===")
-    # 记录日期 = 昨天（行情日）
-    for page_type, path in generator.generate_all(major_results, sector_results, yesterday, datetime.now()).items():
+    # 行情日：正常运行时过旧检查保证其等于昨天；--force 于周末 / 节假日也不会产出非交易日页面
+    record_date = data_date or yesterday
+    logger.info(f"=== 生成页面（行情日 {record_date}）===")
+    for page_type, path in generator.generate_all(major_results, sector_results, record_date, datetime.now()).items():
         logger.info(f"Generated: {page_type} -> {path}")
     return True
 

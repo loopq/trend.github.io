@@ -23,13 +23,25 @@ def test_deploy_when_data_fresh(run_cli):
     assert code is None and out == {"should_deploy": "true"}
     assert fetcher.calls == [("000300", "cs_index", 800), ("000905", "cs_index", 800)]  # 无重复请求
     assert (site / "index.html").exists() and (site / "archive" / "index.html").exists()
-    assert len([f for f in os.listdir(site / "archive") if f != "index.html"]) == 1
+    assert archive_days(site) == ["2026-10-16.html"]
 
 
 def test_skip_when_a_share_data_stale(run_cli):
     code, out, site, _ = run_cli(["--mock-date", "2026-10-17"], frames_ending("2026-10-15"), [HS300, OTHER])
     assert code is None and out == {"should_deploy": "false"}
     assert not (site / "index.html").exists()
+
+
+def archive_days(site):
+    return sorted(f for f in os.listdir(site / "archive") if f != "index.html")
+
+
+def test_force_on_non_trading_day_records_latest_a_share_date(run_cli):
+    """周一 force：行情日取沪深300 最新 K 线（10-16），不产出周日（10-18）页面"""
+    code, out, site, _ = run_cli(["--mock-date", "2026-10-19", "--force"], frames_ending("2026-10-16"), [HS300, OTHER])
+    assert code is None and out == {"should_deploy": "true"}
+    assert archive_days(site) == ["2026-10-16.html"]
+    assert "日期：2026.10.16" in (site / "index.html").read_text(encoding="utf-8")
 
 
 def test_force_bypasses_trading_day_and_staleness(run_cli):
