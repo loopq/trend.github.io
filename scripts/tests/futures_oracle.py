@@ -135,7 +135,7 @@ def compute(raw):
         roll_cells.append([str(n), *[num(p[k], ".0f" if k == "n" else ".2f") for p in paths for k in ("delta", "win_rate", "n")]])
     chart = dict(dates=[str(d) for d in days], series=[
         dict(name=role, data=[daily[d, i][6] for d in days], contracts=[contracts[d][i] for d in days])
-        for i, role in enumerate(ROLES) if i in SHOWN], start=three_months_ago(t))
+        for i, role in enumerate(ROLES) if i in SHOWN], start=months_ago(t, 3))
     hint = hint_text(dict(as_of=t, expiry=expiry, calendar=calendar), quotes, contracts[t], events, stats)
     return dict(daily=current, percentiles=quantiles, roll=roll_cells, chart=chart, hint=hint)
 
@@ -175,8 +175,36 @@ def hint_text(raw, quotes, codes, events, stats):
     return "".join(parts)
 
 
-def three_months_ago(day):
-    month = day.year * 12 + day.month - 4
+def months_ago(day, months):
+    month = day.year * 12 + day.month - 1 - months
     year, month = divmod(month, 12)
     month += 1
     return date(year, month, min(day.day, month_calendar.monthrange(year, month)[1])).isoformat()
+
+
+def compute_slope(raw):
+    t = raw["as_of"].date()
+    days = [d.date() for d in raw["calendar"] if date(2022, 7, 22) <= d.date() <= t]
+    quotes = defaultdict(dict)
+    for day, code, close in raw["bars"][["date", "contract", "close"]].itertuples(index=False, name=None):
+        quotes[day.date()][code] = float(close)
+    values, near, far = [], [], []
+    for day in days:
+        codes = sorted(quotes[day], key=raw["expiry"].get)
+        near.append(codes[2])
+        far.append(codes[3])
+        p, q = quotes[day][codes[2]], quotes[day][codes[3]]
+        values.append((p - q) / 3 * 12 / p * 100)
+    dates = [d.isoformat() for d in days]
+    year = [v for d, v in zip(dates, values) if d > months_ago(t, 12)]
+    half = [(v, d) for d, v in zip(dates, values) if d > months_ago(t, 6)]
+    deepest = max(v for v, d in half)
+    deepest_date = min(d for v, d in half if v == deepest)
+    year_rank = round(sum(v <= values[-1] for v in year) / len(year) * 100)
+    rank = round(sum(v <= values[-1] for v in values) / len(values) * 100)
+    summary = dict(value=values[-1], near=near[-1], far=far[-1], year_percentile=year_rank,
+                   percentile=rank, deepest=deepest, deepest_date=deepest_date)
+    payload = dict(dates=dates, values=values, near=near, far=far, summary=summary)
+    cells = [raw["symbol"], near[-1], far[-1], num(values[-1]), str(year_rank), str(rank),
+             f"{deepest:.2f}%（{deepest_date}）"]
+    return dict(payload=payload, cells=cells, start=months_ago(t, 12))

@@ -5,9 +5,11 @@ import json
 import logging
 import os
 
+import pandas as pd
+
 from scripts.data_fetcher import DataFetcher
 from scripts.futures import START, VARIETIES
-from scripts.futures.analysis import chart_series, daily_table, percentile_table, roll_events, roll_stats, today_hint
+from scripts.futures.analysis import chart_series, daily_table, percentile_table, roll_events, roll_stats, slope_series, slope_summary, today_hint
 from scripts.futures.data import as_of_date, load_calendar, load_variety, request_timeout
 from scripts.generator import Generator
 from scripts.main import PROJECT_ROOT, _ga_id
@@ -21,7 +23,7 @@ def run(out, as_of):
         calendar = load_calendar()
         day = as_of_date(as_of, calendar, fetcher)
         inputs = [load_variety(symbol, day, calendar, fetcher) for symbol in VARIETIES]
-    sections, charts = [], {}
+    sections, charts, slope = [], {}, {}
     for data in inputs:
         symbol = data["symbol"]
         events = roll_events(data)
@@ -31,10 +33,13 @@ def run(out, as_of):
                              daily=daily_table(data), percentiles=percentile_table(data), roll=stats,
                              hint=today_hint(data, events, stats)))
         charts[symbol] = chart_series(data)
+        series = slope_series(data)
+        slope[symbol] = dict(**series, summary=slope_summary(series, day))
     # 严格检查整个页面上下文；任何非有限值都不能进入模板和 JSON。
-    json.dumps([sections, charts], allow_nan=False)
+    json.dumps([sections, charts, slope], allow_nan=False)
     generator = Generator(os.path.join(PROJECT_ROOT, "templates"), out, ga_id=_ga_id(False))
     return generator.render("futures.html", "futures/index.html", sections=sections, data=charts,
+                            slope=slope, slope_start=(day - pd.DateOffset(years=1)).strftime("%Y-%m-%d"),
                             date=day.strftime("%Y-%m-%d"), start=START,
                             update_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 

@@ -22,7 +22,20 @@
 {% endblock %}
 {% block content %}
         <p class="disclaimer">多头吃贴水视角，数值越大表示贴水越深；历史统计不代表未来，不提供投资建议。</p>
-        <div class="nav-links"><a href="#IC">IC · 中证500</a><a href="#IM">IM · 中证1000</a></div>
+        <div class="nav-links"><a href="#slope">季月斜率年化贴水</a><a href="#IC">IC · 中证500</a><a href="#IM">IM · 中证1000</a></div>
+        <section id="slope" class="futures-section">
+            <h2 class="module-title">IM / IC 年化贴水（当季 − 下季，季月斜率）</h2>
+            <div class="table-wrapper">
+                <table data-table="slope">
+                    <thead><tr>{% for label in ['品种', '当季', '下季', '年化贴水%', '近 1 年分位%', '全样本分位%', '近半年最深'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+                    <tbody>{% for symbol, data in slope.items() %}{% set row = data.summary %}
+                        <tr><td>{{ symbol }}</td><td>{{ row.near }}</td><td>{{ row.far }}</td><td>{{ number(row.value) }}</td><td>{{ number(row.year_percentile, '%.0f') }}</td><td>{{ number(row.percentile, '%.0f') }}</td><td>{{ number(row.deepest) }}%（{{ row.deepest_date }}）</td></tr>
+                    {% endfor %}</tbody>
+                </table>
+            </div>
+            <div id="chart-slope" class="futures-chart" data-start="{{ slope_start }}" role="img" aria-label="IC / IM 季月斜率年化贴水历史曲线，单位百分比，越大越深；上方提供当前值、分位及近半年最深值表"></div>
+            <p class="disclaimer">年化贴水 =（当季收盘 − 下季收盘）÷ 3 × 12 ÷ 当季收盘 × 100%（收盘价口径；当季 / 下季为当日第 3 / 4 个合约，相隔 3 个月）。贴水为正、越大越深，分位越高越深；原图以负值绘制，数值相同。全样本自 {{ start }} 起；默认显示近 1 年，拖动底部滑块查看全部历史。</p>
+        </section>
         {% for section in sections %}
         <section id="{{ section.symbol }}" class="futures-section">
             <h2 class="module-title">{{ section.symbol }} · {{ section.name }}　现货收盘 {{ number(section.spot) }}</h2>
@@ -64,6 +77,7 @@
 {% endblock %}
 {% block footer %}数据来源：新浪期货、中金所、中证指数 · 生成时间：{{ update_time }}{% endblock %}
 {% block body_end %}
+    <script id="slope-data" type="application/json">{{ slope|tojson }}</script>
     <script id="futures-data" type="application/json">{{ data|tojson }}</script>
     <script src="echarts.min.js"></script>
     <script>
@@ -100,5 +114,40 @@
         });
         window.addEventListener('resize', () => chart.resize());
     });
+    </script>
+    <script id="slope-chart-init">
+    const slopeData = JSON.parse(document.getElementById('slope-data').textContent);
+    const slopeElement = document.getElementById('chart-slope');
+    const slopeStart = slopeElement.dataset.start;
+    const slopeChart = echarts.init(slopeElement);
+    slopeChart.setOption({
+        color: ['--color-bull-primary', '--color-bear-primary'].map(color),
+        textStyle: {color: color('--color-text-primary')},
+        legend: {top: 0, data: ['IC', 'IM']},
+        grid: {left: 15, right: 20, top: 45, bottom: 75, containLabel: true},
+        xAxis: {type: 'time', boundaryGap: false, axisLabel: {hideOverlap: true}},
+        yAxis: {type: 'value', name: '年化贴水 %', axisLabel: {formatter: '{value}%'}},
+        tooltip: {
+            trigger: 'axis',
+            confine: true,
+            formatter: params => {
+                const param = params[0], data = slopeData[param.seriesName];
+                return [data.dates[param.dataIndex], ...params.map(param => {
+                    const data = slopeData[param.seriesName];
+                    return param.marker + param.seriesName + '：' + data.values[param.dataIndex].toFixed(2) +
+                        '%（当季 ' + data.near[param.dataIndex] + ' / 下季 ' + data.far[param.dataIndex] + '）';
+                })].join('<br>');
+            }
+        },
+        dataZoom: [
+            {type: 'inside', startValue: slopeStart, endValue: slopeData.IC.dates[slopeData.IC.dates.length - 1]},
+            {type: 'slider', startValue: slopeStart, endValue: slopeData.IC.dates[slopeData.IC.dates.length - 1]}
+        ],
+        series: Object.entries(slopeData).map(([symbol, data]) => ({
+            name: symbol, type: 'line', data: data.values.map((value, i) => [data.dates[i], value]),
+            showSymbol: false
+        }))
+    });
+    window.addEventListener('resize', () => slopeChart.resize());
     </script>
 {% endblock %}

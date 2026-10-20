@@ -19,12 +19,17 @@ def targets(contract):
     return [contract[:2] + m.strftime("%y%m") for m in [month, *quarters[:2]]]
 
 
-def _history(data):
+def _role_bars(data):
     bars = data["bars"]
     bars = bars[bars.date.between(START, data["as_of"])].copy()
     bars["expiry"] = bars.contract.map(data["expiry"])
     bars = bars.sort_values(["date", "expiry"])
     bars["role"] = bars.groupby("date").cumcount().map(dict(enumerate(ROLES)))
+    return bars
+
+
+def _history(data):
+    bars = _role_bars(data)
     bars = bars[bars.role.isin(SHOWN_ROLES)]
     spots = data["spot"].set_index("date").close
     return [_basis_row(row, float(spots[row.date])) for row in bars.itertuples(index=False)]
@@ -72,6 +77,30 @@ def chart_series(data):
         series.append(dict(name=role, data=[r["monthly"] for r in rows], contracts=[r["contract"] for r in rows]))
     return dict(dates=sorted({r["date"] for r in history}), series=series,
                 start=(data["as_of"] - pd.DateOffset(months=3)).strftime("%Y-%m-%d"))
+
+
+def slope_series(data):
+    bars = _role_bars(data).set_index(["date", "role"])
+    close, contracts = bars.close.unstack("role"), bars.contract.unstack("role")
+    # 相邻季月固定相隔三个月；贴水为正，不按到期自然日折算。
+    values = (close["当季"] - close["下季"]) / 3 * 12 / close["当季"] * 100
+    return dict(dates=close.index.strftime("%Y-%m-%d").tolist(), values=values.tolist(),
+                near=contracts["当季"].tolist(), far=contracts["下季"].tolist())
+
+
+def slope_summary(series, as_of):
+    t = pd.Timestamp(as_of)
+    rows = [(d, v, n, f) for d, v, n, f in zip(series["dates"], series["values"], series["near"], series["far"])
+            if START <= d <= t.strftime("%Y-%m-%d")]
+    year = (t - pd.DateOffset(years=1)).strftime("%Y-%m-%d")
+    half = (t - pd.DateOffset(months=6)).strftime("%Y-%m-%d")
+    current = rows[-1]
+    # 序列按日期升序，max 遇到并列保留最早一日。
+    deepest = max((r for r in rows if r[0] > half), key=lambda r: r[1])
+    return dict(value=current[1], near=current[2], far=current[3],
+                year_percentile=_rank(current[1], [r[1] for r in rows if r[0] > year]),
+                percentile=_rank(current[1], [r[1] for r in rows]),
+                deepest=deepest[1], deepest_date=deepest[0])
 
 
 def _prices(data):

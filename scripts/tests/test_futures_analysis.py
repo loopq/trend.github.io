@@ -117,3 +117,78 @@ def test_event_window_excludes_days_before_start(monkeypatch):
 def test_no_expired_events_has_no_history():
     hint = a.today_hint(synthetic(end="2022-07-22"))
     assert hint["history"] is None
+
+
+@pytest.mark.parametrize("far_close, expected", [(97, 12), (100, 0), (103, -12)])
+def test_slope_formula_and_input_unchanged(far_close, expected):
+    data = deepcopy(synthetic(end="2022-07-22"))
+    data["bars"]["close"] = [80, 110, 100, far_close]
+    data["bars"] = data["bars"].sample(frac=1, random_state=7)
+    before = deepcopy(data)
+    series = a.slope_series(data)
+    assert series == dict(dates=["2022-07-22"], values=[expected], near=["IC2212"], far=["IC2303"])
+    json.dumps([series, a.slope_summary(series, data["as_of"])], allow_nan=False)
+    pd.testing.assert_frame_equal(data["bars"], before["bars"])
+    pd.testing.assert_frame_equal(data["spot"], before["spot"])
+    pd.testing.assert_index_equal(data["calendar"], before["calendar"])
+    assert data["expiry"] == before["expiry"]
+
+
+@pytest.mark.parametrize("day, near, far", [
+    ("2026-10-16", "IC2612", "IC2703"),
+    ("2026-10-19", "IC2703", "IC2706"),
+    ("2026-12-31", "IC2703", "IC2706"),
+    ("2027-01-18", "IC2706", "IC2709"),
+])
+def test_slope_uses_daily_roles_across_roll_and_year(day, near, far):
+    series = a.slope_series(synthetic(end=day))
+    assert (series["dates"][-1], series["near"][-1], series["far"][-1]) == (day, near, far)
+    summary = a.slope_summary(series, pd.Timestamp(day))
+    assert (summary["near"], summary["far"]) == (near, far)
+
+
+def test_slope_series_only_uses_start_through_as_of():
+    data = deepcopy(synthetic(end="2022-07-26"))
+    early = data["bars"].iloc[:4].assign(date=pd.Timestamp("2022-07-21"))
+    data["bars"] = pd.concat([early, data["bars"]], ignore_index=True)
+    data["as_of"] = pd.Timestamp("2022-07-25")
+    assert a.slope_series(data)["dates"] == ["2022-07-22", "2022-07-25"]
+
+
+def slope_fixture(dates, values):
+    return dict(dates=dates, values=values, near=["IC2703"] * len(dates), far=["IC2706"] * len(dates))
+
+
+def test_slope_summary_windows_equal_rank_and_earliest_maximum():
+    series = slope_fixture([
+        "2022-07-21", "2022-07-22", "2025-10-19", "2025-10-20", "2026-04-19",
+        "2026-04-20", "2026-09-11", "2026-10-19", "2026-10-20",
+    ], [0, 4, -20, 2, 90, 9, 9, 9, 1000])
+    before = deepcopy(series)
+    assert a.slope_summary(series, pd.Timestamp("2026-10-19")) == dict(
+        value=9, near="IC2703", far="IC2706", year_percentile=80, percentile=86,
+        deepest=9, deepest_date="2026-04-20")
+    assert series == before
+
+
+@pytest.mark.parametrize("day, year_edge, half_edge", [
+    ("2024-02-29", "2023-02-28", "2023-08-29"),
+    ("2026-08-31", "2025-08-31", "2026-02-28"),
+])
+def test_slope_calendar_windows_leap_day_and_month_end(day, year_edge, half_edge):
+    after_year, after_half = [(pd.Timestamp(d) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+                              for d in (year_edge, half_edge)]
+    series = slope_fixture([year_edge, after_year, half_edge, after_half, day], [0, 2, 90, 9, 9])
+    summary = a.slope_summary(series, pd.Timestamp(day))
+    assert summary == dict(value=9, near="IC2703", far="IC2706", year_percentile=75, percentile=80,
+                           deepest=9, deepest_date=after_half)
+
+
+@pytest.mark.parametrize("dates, values, rank, deepest", [
+    (["2022-07-22"], [2], 100, 2),
+    (["2022-07-22", "2022-07-25"], [3, 2], 50, 3),
+])
+def test_slope_short_history(dates, values, rank, deepest):
+    summary = a.slope_summary(slope_fixture(dates, values), pd.Timestamp(dates[-1]))
+    assert summary == dict(value=values[-1], near="IC2703", far="IC2706", year_percentile=rank,
+                           percentile=rank, deepest=deepest, deepest_date="2022-07-22")
