@@ -1,4 +1,5 @@
 # Trend Watcher Scripts Package
+import json
 import logging
 from typing import Callable, Dict, List, Optional
 
@@ -9,6 +10,11 @@ logger = logging.getLogger(__name__)
 
 # 单指数日线取数长度：覆盖 ≥20 根月线与 250 日状态回溯
 HISTORY_DAYS = 800
+
+# 首页偏离率折线：内嵌近 CHART_YEARS 年，默认显示近 CHART_ZOOM_MONTHS 个月
+CHART_YEARS = 1
+CHART_ZOOM_MONTHS = 3
+CHART_STALE_DAYS = 10    # 截至当日取值的最大回看自然日，超过视为断更（覆盖港美股长假）
 
 
 def load_config(config_path: str) -> Dict:
@@ -47,3 +53,48 @@ def apply_rank_changes(results: List[Dict]) -> None:
     for result in results:
         p = prev_rank.get(result["code"])
         result["rank_change"] = p - result["rank"] if p is not None else None
+
+
+def deviation_series(indices: List[Dict], frames: Dict[str, Optional[pd.DataFrame]],
+                     dates: pd.DatetimeIndex) -> List[Dict]:
+    """同组指数在 dates 上截至当日的偏离率 (收盘 / MA20 − 1) × 100，保留两位；与归档页同口径（backfill 的 _until）。
+
+    取数失败 / 不足 20 根的指数保留为全 None：颜色槽位只由配置决定，不因当日失败重排。
+    默认显示的在前、chart_hidden 的在后，组内保持配置顺序（sorted 稳定）。
+    """
+    series = []
+    for cfg in sorted(indices, key=lambda c: bool(c.get("chart_hidden"))):
+        df = frames.get(cfg["code"])
+        data = [None] * len(dates)
+        if df is not None and len(df) >= 20:
+            close = df.groupby(df["date"].dt.normalize())["close"].last()  # 按日去重、升序
+            dev = ((close / close.rolling(20).mean() - 1) * 100).dropna()
+            # 源数据断更超过 CHART_STALE_DAYS 的日期留空：回退源停在多年前时不把陈旧值拉成平线
+            asof = dev.reindex(dates, method="ffill", tolerance=pd.Timedelta(days=CHART_STALE_DAYS))
+            data = [None if pd.isna(v) else round(float(v), 2) for v in asof]
+        series.append({"name": cfg["name"], "hidden": bool(cfg.get("chart_hidden")), "data": data})
+    return series
+
+
+def deviation_charts(config: Dict, frames: Dict[str, Optional[pd.DataFrame]]) -> Optional[Dict]:
+    """首页两张偏离率折线（主要指数 / 行业板块）的数据；横轴 = 沪深300 近 CHART_YEARS 年交易日。
+
+    折线是附加信息：沪深300 无数据或计算异常时返回 None（首页不显示图，表格照常更新）。
+    """
+    try:
+        hs300 = frames.get("000300")
+        if hs300 is None or hs300.empty:
+            logger.warning("沪深300 无数据，首页不显示偏离率折线")
+            return None
+        days = pd.DatetimeIndex(hs300["date"].dt.normalize()).sort_values()
+        last = days[-1]
+        dates = days[days > last - pd.DateOffset(years=CHART_YEARS)]
+        charts = {"dates": [d.strftime("%Y-%m-%d") for d in dates],
+                  "start": (last - pd.DateOffset(months=CHART_ZOOM_MONTHS)).strftime("%Y-%m-%d"),
+                  "major": deviation_series(config.get("major_indices", []), frames, dates),
+                  "sector": deviation_series(config.get("sector_indices", []), frames, dates)}
+        json.dumps(charts, allow_nan=False)  # inf / NaN 不得进入页面
+        return charts
+    except Exception:
+        logger.exception("偏离率折线计算失败，首页不显示折线图")
+        return None

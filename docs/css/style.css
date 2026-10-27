@@ -663,3 +663,10 @@ tr:hover {
 .futures-section td {
     padding: 6px 8px;
 }
+
+/* 首页偏离率走势 */
+.trend-chart {
+    width: 100%;
+    height: 420px;
+    margin-bottom: 20px;
+}

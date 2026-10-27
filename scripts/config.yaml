@@ -12,10 +12,12 @@ major_indices:
   - code: "XAG"
     name: "白银现价"
     source: "spot_price"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   # ---- 加密货币 ----
   - code: "BTC"
     name: "比特币"
     source: "crypto"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   # ---- A股指数 ----
   - code: "000688"
     name: "科创50"
@@ -26,12 +28,15 @@ major_indices:
   - code: "000852"
     name: "中证1000"
     source: "cs_index"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   - code: "932000"
     name: "中证2000"
     source: "cs_index"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   - code: "899050"
     name: "北证50"
     source: "cs_index"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   - code: "399673"
     name: "创业板50"
     source: "sina_index"
@@ -41,13 +46,16 @@ major_indices:
   - code: "000016"
     name: "上证50"
     source: "cs_index"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   # ---- 港股指数 ----
   - code: "HSI"
     name: "恒生指数"
     source: "hk"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   - code: "HSCEI"
     name: "国企指数"
     source: "hk"
+    chart_hidden: true   # 首页偏离率折线默认隐藏
   - code: "HSTECH"
     name: "恒生科技"
     source: "hk"

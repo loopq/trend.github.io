@@ -156,7 +156,7 @@ class Generator:
         return result
     
     def _render_trend(self, template: str, out: str, major_indices: List[Dict],
-                      sector_indices: List[Dict], day: date, update_time: str) -> str:
+                      sector_indices: List[Dict], day: date, update_time: str, **extra) -> str:
         """指数页（首页 / 归档详情）共用渲染"""
         bull_bear = self.calculate_bull_bear_ratio(major_indices)
         return self.render(
@@ -167,13 +167,14 @@ class Generator:
             sector_indices=self.prepare_index_data(sector_indices),
             bull_ratio=bull_bear["bull_ratio"],
             bear_ratio=bull_bear["bear_ratio"],
+            **extra,
         )
 
     def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict],
-                       record_date: date, now: datetime) -> str:
-        """生成首页 HTML；record_date 为行情日，now 为生成时刻"""
+                       record_date: date, now: datetime, charts: Optional[Dict] = None) -> str:
+        """生成首页 HTML；record_date 为行情日，now 为生成时刻，charts 为偏离率折线数据（None 不显示）"""
         return self._render_trend("index.html", "index.html", major_indices, sector_indices,
-                                  record_date, now.strftime("%Y-%m-%d %H:%M:%S"))
+                                  record_date, now.strftime("%Y-%m-%d %H:%M:%S"), charts=charts)
 
     def generate_archive_detail(self, major_indices: List[Dict], sector_indices: List[Dict],
                                 date: datetime) -> str:
@@ -231,10 +232,10 @@ class Generator:
         return self.render("archive_list.html", "archive/index.html", archives=self.scan_archive_files())
 
     def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict],
-                     record_date: date, now: datetime) -> Dict[str, str]:
+                     record_date: date, now: datetime, charts: Optional[Dict] = None) -> Dict[str, str]:
         """生成首页 + 当日归档 + 归档列表；日期由调用方传入（单一来源）"""
         return {
-            "index": self.generate_index(major_indices, sector_indices, record_date, now),
+            "index": self.generate_index(major_indices, sector_indices, record_date, now, charts),
             "archive_detail": self.generate_archive_detail(
                 major_indices, sector_indices, datetime.combine(record_date, now.time())),
             "archive_list": self.generate_archive_list(),

@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from scripts import HISTORY_DAYS, apply_rank_changes, load_config, process_indices
+from scripts import HISTORY_DAYS, apply_rank_changes, deviation_charts, load_config, process_indices
 from scripts.data_fetcher import DataFetcher
 from scripts.calculator import Calculator
 from scripts.generator import Generator
@@ -114,8 +114,11 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
 
     calculator = Calculator(lookback_days=config.get("lookback_days", 250))
 
+    frames = {}  # 代码 → 日线，供偏离率折线复用
+
     def get_df(idx):
-        return fetcher.fetch_index(idx["code"], idx["source"], name=idx["name"], days=HISTORY_DAYS)
+        frames[idx["code"]] = fetcher.fetch_index(idx["code"], idx["source"], name=idx["name"], days=HISTORY_DAYS)
+        return frames[idx["code"]]
 
     logger.info("=== 处理主要指数 ===")
     major_results = process_indices(config.get("major_indices", []), get_df, calculator)
@@ -134,7 +137,9 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
     record_date = data_date or yesterday
     _set_github_output("record_date", record_date.isoformat())
     logger.info(f"=== 生成页面（行情日 {record_date}）===")
-    for page_type, path in generator.generate_all(major_results, sector_results, record_date, datetime.now()).items():
+    charts = deviation_charts(config, frames)
+    for page_type, path in generator.generate_all(major_results, sector_results, record_date, datetime.now(),
+                                                  charts).items():
         logger.info(f"Generated: {page_type} -> {path}")
     return True
 

@@ -99,6 +99,7 @@
         <h2 class="module-title">板块轮动数据　日期：{{ date }} <button class="help-btn" onclick="openColumnHelp()">列说明 <span class="help-btn-icon">?</span></button></h2>
         <p class="disclaimer">数据仅供市场板块趋势分析，不提供投资建议</p>
 {{ index_table(sector_indices) }}
+{% block charts %}{% endblock %}
 {% endblock %}
 
 {% block body_end %}

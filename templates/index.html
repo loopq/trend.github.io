@@ -7,4 +7,72 @@
 
 {% block nav %}<a href="{{ root }}archive/index.html">📁 历史归档</a>{% endblock %}
 
+{% block charts %}{% if charts %}
+        <!-- 偏离率走势模块（仅首页） -->
+        {% for key, title in [("major", "主要指数"), ("sector", "板块轮动")] %}
+        <h2 class="module-title">{{ title }} · 偏离率走势</h2>
+        <div id="chart-{{ key }}" class="trend-chart" role="img" aria-label="{{ title }}各指数偏离率（相对 MA20）近 1 年走势，单位百分比；当日数值见上方表格"></div>
+        {% endfor %}
+        <p class="disclaimer">偏离率 =（收盘 − MA20）÷ MA20，0 轴以上为站上 MA20。横轴为沪深300 交易日，其他市场取截至当日的最新收盘。点击图例切换单条，「全选 / 反选」批量切换，拖动底部滑块查看近 1 年。</p>
+{% endif %}{% endblock %}
+
 {% block footer %}Powered by AkShare | 数据更新时间：{{ update_time }}{% endblock %}
+
+{% block body_end %}{{ super() }}{% if charts %}
+    <script id="trend-chart-data" type="application/json">{{ charts|tojson }}</script>
+    <script src="{{ root }}futures/echarts.min.js"></script>
+    <script id="trend-chart-init">
+    (() => {
+        const charts = JSON.parse(document.getElementById('trend-chart-data').textContent);
+        const styles = getComputedStyle(document.documentElement);
+        const color = name => styles.getPropertyValue(name).trim();
+        // dataviz 参考分类色板（已在 #FAFAF8 上校验）；第 9 条起改虚线，颜色随配置位置固定
+        const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+        const last = charts.dates[charts.dates.length - 1];
+        ['major', 'sector'].forEach(key => {
+            const series = charts[key];
+            const chart = echarts.init(document.getElementById('chart-' + key));
+            chart.setOption({
+                textStyle: {color: color('--color-text-primary')},
+                legend: {
+                    type: 'scroll', top: 0, data: series.map(s => s.name),
+                    selected: Object.fromEntries(series.map(s => [s.name, !s.hidden])),
+                    selector: [{type: 'all', title: '全选'}, {type: 'inverse', title: '反选'}]
+                },
+                grid: {left: 15, right: 20, top: 45, bottom: 75, containLabel: true},
+                xAxis: {type: 'time', boundaryGap: false, axisLine: {onZero: false}, axisLabel: {hideOverlap: true}},
+                yAxis: {type: 'value', name: '偏离率 %', axisLabel: {formatter: '{value}%'}},
+                tooltip: {
+                    trigger: 'axis',
+                    confine: true,
+                    formatter: params => params.length ? [charts.dates[params[0].dataIndex], ...params
+                        .filter(p => p.value[1] !== null)
+                        .sort((a, b) => b.value[1] - a.value[1])
+                        .map(p => p.marker + p.seriesName + '：<span style="color:' +
+                            color(p.value[1] >= 0 ? '--color-bull-primary' : '--color-bear-primary') + '">' +
+                            p.value[1].toFixed(2) + '%</span>')].join('<br>') : ''
+                },
+                dataZoom: [
+                    {type: 'inside', startValue: charts.start, endValue: last},
+                    {type: 'slider', startValue: charts.start, endValue: last}
+                ],
+                series: [...series.map((s, i) => ({
+                    name: s.name, type: 'line', showSymbol: false, emphasis: {focus: 'series'},
+                    color: PALETTE[i % PALETTE.length],
+                    lineStyle: {width: 2, type: i < PALETTE.length ? 'solid' : 'dashed'},
+                    data: s.data.map((value, j) => [charts.dates[j], value])
+                })), {
+                    // 0 轴参考线挂在不进图例的空序列上：隐藏任何指数都不会带走它
+                    type: 'line', data: [], silent: true,
+                    markLine: {
+                        silent: true, symbol: 'none', label: {show: false},
+                        lineStyle: {color: color('--color-text-secondary'), width: 1.5, type: 'solid'},
+                        data: [{yAxis: 0}]
+                    }
+                }]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        });
+    })();
+    </script>
+{% endif %}{% endblock %}
