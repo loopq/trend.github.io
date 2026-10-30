@@ -4,6 +4,7 @@
 
 gh-pages 有两个写入方：update.yml 发布主站文件，backtest.yml 发布 quant/ 与 data/。
 主站只发布自己拥有的文件，并在生成前从 gh-pages 恢复历史归档，配合 keep_files 永不抹掉线上内容。
+archive/ 同时承载首页偏离率历史 deviation.json（增量状态），随归档一起恢复与发布。
 
 Usage:
     python -m scripts.site_publish restore origin/gh-pages docs   # 生成前：恢复归档（失败即非零退出）

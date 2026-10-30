@@ -1,5 +1,6 @@
 """页面结构测试：经真实 main() 链路渲染，bs4 解析。"""
 import os
+import re
 
 import pytest
 from bs4 import BeautifulSoup
@@ -15,7 +16,7 @@ def soup(path):
 
 
 def archive_page(site):
-    [name] = [f for f in os.listdir(site / "archive") if f != "index.html"]
+    [name] = [f for f in os.listdir(site / "archive") if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.html", f)]
     return site / "archive" / name
 
 

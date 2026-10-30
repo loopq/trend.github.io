@@ -1,6 +1,7 @@
 """B4 发布流程：从 gh-pages 恢复归档 → 生成 → 只发布主站文件（keep_files 语义）。
 临时 git 仓库模拟 CI checkout、backtest.yml 先发布的新报告、连续两天部署与幂等。"""
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from scripts.generator import Generator
 from scripts.tests.conftest import TEMPLATES
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+HISTORY = '{"dates":["2016-01-04","2026-10-02"],"series":{"000300":[1.23,null]}}'
 
 
 def git(cwd, *args):
@@ -45,7 +47,8 @@ def remote(tmp_path):
     git(seed, "push", "-q", "origin", "main")
     git(seed, "checkout", "-q", "--orphan", "gh-pages"); git(seed, "rm", "-rqf", ".")
     for rel, text in {"index.html": "home", "CNAME": "trend.loopq.cn", "archive/2026-10-01.html": "d1-pages",
-                      "archive/2026-10-02.html": "d2-pages", "quant/backtest/x.md": "report-NEW", "futures/index.html": "old futures 2026-10-01"}.items():
+                      "archive/2026-10-02.html": "d2-pages", "archive/deviation.json": HISTORY,
+                      "quant/backtest/x.md": "report-NEW", "futures/index.html": "old futures 2026-10-01"}.items():
         write(os.path.join(seed, rel), text)
     git(seed, "add", "-A"); git(seed, "commit", "-qm", "pages"); git(seed, "push", "-q", "origin", "gh-pages")
     return bare
@@ -78,23 +81,25 @@ def ci_run(remote, workdir, day, futures_failure=False):
 
 
 def archives(pages):
-    return sorted(f for f in os.listdir(os.path.join(pages, "archive")) if f != "index.html")
+    return sorted(f for f in os.listdir(os.path.join(pages, "archive")) if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.html", f))
 
 
 def test_restore_brings_back_gh_pages_archives(remote, tmp_path):
     work = str(tmp_path / "work")
     git(str(tmp_path), "clone", "-q", remote, work)
     n = site_publish.restore_archives("origin/gh-pages", os.path.join(work, "docs"), repo=work)
-    assert n == 2
+    assert n == 3
     assert read(os.path.join(work, "docs/archive/2026-10-01.html")) == "d1-pages"
     assert read(os.path.join(work, "docs/archive/2026-10-02.html")) == "d2-pages"
+    assert read(os.path.join(work, "docs/archive/deviation.json")) == HISTORY
 
 
 def test_stage_contains_only_site_owned_files(remote, tmp_path):
     staging, _ = ci_run(remote, str(tmp_path / "work"), "2026-10-03")
     tree = sorted(os.path.relpath(os.path.join(d, f), staging) for d, _, fs in os.walk(staging) for f in fs)
     assert tree == ["CNAME", "archive/2026-10-01.html", "archive/2026-10-02.html", "archive/2026-10-03.html",
-                    "archive/index.html", "css/style.css", "futures/echarts.min.js", "index.html"]
+                    "archive/deviation.json", "archive/index.html", "css/style.css", "futures/echarts.min.js", "index.html"]
+    assert read(os.path.join(staging, "archive/deviation.json")) == HISTORY
 
 
 def test_deploy_keeps_newer_backtest_report_and_all_archives(remote, tmp_path):

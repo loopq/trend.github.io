@@ -33,26 +33,29 @@ class Generator:
             autoescape=True
         )
 
-    def render(self, template: str, out: str, **ctx) -> str:
-        """渲染 template 到 output_dir/out（out 以 / 分隔），返回输出路径。
-
-        自动注入 root（从 out 回到站点根的相对前缀）与 ga_id，新页面（如 futures/index.html）一行接入。
-        """
+    def write(self, out: str, text: str) -> str:
+        """原子写 output_dir/out：先写 .tmp/（不在 SITE_DIRS，被强杀留下的残片不会被 stage 发布），写完再替换"""
         path = os.path.join(self.output_dir, out)
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        html = self.env.get_template(template).render(root="../" * out.count("/"), ga_id=self.ga_id, **ctx)
-        # 原子写：先写 .tmp/（不在 SITE_DIRS，被强杀留下的残片不会被 stage 发布），写完再替换正式文件
         tmp = os.path.join(self.output_dir, ".tmp", f"{os.getpid()}-{os.path.basename(path)}")
         os.makedirs(os.path.dirname(tmp), exist_ok=True)
         try:
             with open(tmp, "w", encoding="utf-8") as f:
-                f.write(html)
+                f.write(text)
             os.replace(tmp, path)
         finally:
             if os.path.exists(tmp):
                 os.remove(tmp)
         logger.info(f"Generated {path}")
         return path
+
+    def render(self, template: str, out: str, **ctx) -> str:
+        """渲染 template 到 output_dir/out（out 以 / 分隔），返回输出路径。
+
+        自动注入 root（从 out 回到站点根的相对前缀）与 ga_id，新页面（如 futures/index.html）一行接入。
+        """
+        html = self.env.get_template(template).render(root="../" * out.count("/"), ga_id=self.ga_id, **ctx)
+        return self.write(out, html)
 
     def calculate_bull_bear_ratio(self, major_indices: List[Dict]) -> Dict[str, Any]:
         """
@@ -172,7 +175,7 @@ class Generator:
 
     def generate_index(self, major_indices: List[Dict], sector_indices: List[Dict],
                        record_date: date, now: datetime, charts: Optional[Dict] = None) -> str:
-        """生成首页 HTML；record_date 为行情日，now 为生成时刻，charts 为偏离率折线数据（None 不显示）"""
+        """生成首页 HTML；record_date 为行情日，now 为生成时刻，charts 为首页偏离率折线图例元数据（None 不显示）"""
         return self._render_trend("index.html", "index.html", major_indices, sector_indices,
                                   record_date, now.strftime("%Y-%m-%d %H:%M:%S"), charts=charts)
 
@@ -233,7 +236,7 @@ class Generator:
 
     def generate_all(self, major_indices: List[Dict], sector_indices: List[Dict],
                      record_date: date, now: datetime, charts: Optional[Dict] = None) -> Dict[str, str]:
-        """生成首页 + 当日归档 + 归档列表；日期由调用方传入（单一来源）"""
+        """生成首页 + 当日归档 + 归档列表；日期由调用方传入（单一来源），charts 为首页偏离率折线图例元数据（None 不显示）"""
         return {
             "index": self.generate_index(major_indices, sector_indices, record_date, now, charts),
             "archive_detail": self.generate_archive_detail(

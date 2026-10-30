@@ -1,6 +1,8 @@
 """DataFetcher.fetch_index 契约测试（quant run_signal / backtest data_loader 依赖此接口）。"""
 import inspect
+from datetime import datetime, timedelta
 
+import pandas as pd
 import pytest
 import requests
 
@@ -61,3 +63,33 @@ def test_public_signature_unchanged():
     params = inspect.signature(DataFetcher.fetch_index).parameters
     assert list(params) == ["self", "code", "source", "name", "days"]
     assert params["name"].default is None and params["days"].default == 300
+
+
+@pytest.mark.parametrize("age", [20, 2])
+def test_csindex_truncation_falls_back_to_sina(monkeypatch, age):
+    frame = make_df(range(100, 140), end=(datetime.now() - timedelta(days=age)).strftime("%Y-%m-%d"), calendar="D")
+    fallback = make_df(range(200, 240))
+    monkeypatch.setattr("scripts.data_fetcher.ak.stock_zh_index_hist_csindex", lambda **kw: frame.copy())
+    f = DataFetcher()
+    calls = []
+    monkeypatch.setattr(f, "_fetch_sina_index", lambda code, days: calls.append((code, days)) or fallback)
+    result = f.fetch_index("H30184", "cs_index", days=800)
+    pd.testing.assert_frame_equal(result, fallback if age == 20 else frame)
+    assert calls == ([("shH30184", 800)] if age == 20 else [])
+
+
+@pytest.mark.parametrize("sina_succeeds", [True, False])
+def test_csindex_invalid_closes_fall_back_without_crashing(monkeypatch, sina_succeeds):
+    frame = make_df(range(100, 140), end=(datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"), calendar="D")
+    monkeypatch.setattr("scripts.data_fetcher.ak.stock_zh_index_hist_csindex",
+                        lambda **kw: frame.assign(close="invalid"))
+    fallback = frame if sina_succeeds else None
+    f = DataFetcher()
+    calls = []
+    monkeypatch.setattr(f, "_fetch_sina_index", lambda code, days: calls.append((code, days)) or fallback)
+    result = f.fetch_index("H30184", "cs_index", days=800)
+    assert calls == [("shH30184", 800)]
+    if sina_succeeds:
+        pd.testing.assert_frame_equal(result, frame)
+    else:
+        assert result is None

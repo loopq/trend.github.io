@@ -39,3 +39,6 @@ agents
 # 期指生成物与原子写临时目录
 docs/futures/index.html
 docs/.tmp/
+
+# 首页偏离率历史：线上由 update.yml 在 gh-pages 维护，本地运行产物不入 main
+docs/archive/deviation.json

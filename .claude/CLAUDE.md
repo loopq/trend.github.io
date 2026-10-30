@@ -20,6 +20,7 @@ cd docs && python -m http.server 8000   # 本地预览
 
 ## 发布（gh-pages 两个写入方，均 keep_files，永不删除线上文件）
 - `update.yml`：生成前 `site_publish restore` 从 gh-pages 恢复归档，生成后只发布主站文件（`scripts/site_publish.py` 的 `SITE_FILES` / `SITE_DIRS`）。
+- `archive/deviation.json`：首页偏离率历史（2016 起增量状态），随 `site_publish restore` 恢复、随 `archive/` 发布；缺列自动回填。
 - `backtest.yml`：只发布 `quant/`、`data/`。
 - main 上的 `docs/index.html`、`docs/archive/` 是历史快照，不是部署源的全部；本地跑 `main.py` 产生的改动不要提交（pre-commit hook 会拦）。
 

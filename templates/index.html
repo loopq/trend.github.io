@@ -11,26 +11,31 @@
         <!-- 偏离率走势模块（仅首页） -->
         {% for key, title in [("major", "主要指数"), ("sector", "板块轮动")] %}
         <h2 class="module-title">{{ title }} · 偏离率走势</h2>
-        <div id="chart-{{ key }}" class="trend-chart" role="img" aria-label="{{ title }}各指数偏离率（相对 MA20）近 1 年走势，单位百分比；当日数值见上方表格"></div>
+        <div id="chart-{{ key }}" class="trend-chart" role="img" aria-label="{{ title }}各指数偏离率（相对 MA20）2016 年以来走势，单位百分比；当日数值见上方表格"></div>
         {% endfor %}
-        <p class="disclaimer">偏离率 =（收盘 − MA20）÷ MA20，0 轴以上为站上 MA20。横轴为沪深300 交易日，其他市场取截至当日的最新收盘。点击图例切换单条，「全选 / 反选」批量切换，拖动底部滑块查看近 1 年。</p>
+        <p class="disclaimer">偏离率 =（收盘 − MA20）÷ MA20，0 轴以上为站上 MA20。横轴为沪深300 交易日，其他市场取截至当日的最新收盘；缺数据的日期曲线断开。点击图例切换单条，「全选 / 反选」批量切换；默认显示近 6 个月，拖动底部滑块可查看 2016 年以来。</p>
 {% endif %}{% endblock %}
 
 {% block footer %}Powered by AkShare | 数据更新时间：{{ update_time }}{% endblock %}
 
 {% block body_end %}{{ super() }}{% if charts %}
-    <script id="trend-chart-data" type="application/json">{{ charts|tojson }}</script>
+    <script id="trend-chart-meta" type="application/json">{{ charts|tojson }}</script>
     <script src="{{ root }}futures/echarts.min.js"></script>
     <script id="trend-chart-init">
     (() => {
-        const charts = JSON.parse(document.getElementById('trend-chart-data').textContent);
+        const meta = JSON.parse(document.getElementById('trend-chart-meta').textContent);
+        const ZOOM_MONTHS = 6;   // 默认显示近 6 个月
         const styles = getComputedStyle(document.documentElement);
         const color = name => styles.getPropertyValue(name).trim();
         // dataviz 参考分类色板（已在 #FAFAF8 上校验）；第 9 条起改虚线，颜色随配置位置固定
         const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
-        const last = charts.dates[charts.dates.length - 1];
-        ['major', 'sector'].forEach(key => {
-            const series = charts[key];
+        const draw = (key, history) => {
+            const dates = history.dates;
+            const blank = dates.map(() => null);           // 历史里还没有的指数（如当天回填失败）画空线
+            const last = dates[dates.length - 1];
+            const start = new Date(last);
+            start.setMonth(start.getMonth() - ZOOM_MONTHS);
+            const series = meta[key];
             const chart = echarts.init(document.getElementById('chart-' + key));
             chart.setOption({
                 textStyle: {color: color('--color-text-primary')},
@@ -45,7 +50,7 @@
                 tooltip: {
                     trigger: 'axis',
                     confine: true,
-                    formatter: params => params.length ? [charts.dates[params[0].dataIndex], ...params
+                    formatter: params => params.length ? [params[0].value[0], ...params
                         .filter(p => p.value[1] !== null)
                         .sort((a, b) => b.value[1] - a.value[1])
                         .map(p => p.marker + p.seriesName + '：<span style="color:' +
@@ -53,14 +58,16 @@
                             p.value[1].toFixed(2) + '%</span>')].join('<br>') : ''
                 },
                 dataZoom: [
-                    {type: 'inside', startValue: charts.start, endValue: last},
-                    {type: 'slider', startValue: charts.start, endValue: last}
+                    {type: 'inside', startValue: +start, endValue: last},
+                    {type: 'slider', startValue: +start, endValue: last}
                 ],
                 series: [...series.map((s, i) => ({
                     name: s.name, type: 'line', showSymbol: false, emphasis: {focus: 'series'},
+                    // 默认平滑在 ECharts 6 中把控制点夹在相邻两点之间，不会冲过真实高低点；不开 sampling 以保 tooltip 同日对齐
+                    smooth: true,
                     color: PALETTE[i % PALETTE.length],
                     lineStyle: {width: 2, type: i < PALETTE.length ? 'solid' : 'dashed'},
-                    data: s.data.map((value, j) => [charts.dates[j], value])
+                    data: (history.series[s.code] || blank).map((value, j) => [dates[j], value])
                 })), {
                     // 0 轴参考线挂在不进图例的空序列上：隐藏任何指数都不会带走它
                     type: 'line', data: [], silent: true,
@@ -72,7 +79,20 @@
                 }]
             });
             window.addEventListener('resize', () => chart.resize());
-        });
+        };
+        fetch('{{ root }}archive/deviation.json?v={{ date }}')
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(history => {
+                if (!history.dates.length) throw new Error('empty');
+                ['major', 'sector'].forEach(key => draw(key, history));
+            })
+            .catch(() => ['major', 'sector'].forEach(key => {
+                // 历史缺失 / 加载失败：图位显示降级文案，表格不受影响
+                const el = document.getElementById('chart-' + key);
+                window.echarts?.getInstanceByDom(el)?.dispose();
+                el.classList.add('trend-chart-empty');
+                el.textContent = '偏离率走势暂时无法加载，请稍后刷新';
+            }));
     })();
     </script>
 {% endif %}{% endblock %}

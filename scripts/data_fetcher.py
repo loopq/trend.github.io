@@ -59,6 +59,10 @@ SINA_EXCHANGE_CODES = {
 # 魔法数字常量化
 EXTRA_DAYS_BUFFER = 30
 
+# csindex 偶发静默截断（实测 H30184 自 2018-07-14 起拉只返回到 2018-12-10）：
+# 末根 K 线早于今天超过此天数视为截断，走新浪回退。取值 > 春节最长休市间隔，正常长假只会多走一次等价回退
+CS_TRUNCATED_DAYS = 15
+
 # 网络相关异常类型（用于区分可恢复错误）
 NETWORK_ERRORS = (
     requests.exceptions.RequestException,
@@ -292,8 +296,11 @@ class DataFetcher:
                 df = df.rename(columns={"日期": "date", "收盘": "close", "开盘": "open",
                                         "最高": "high", "最低": "low", "成交量": "volume"})
                 result = self._standardize_dataframe(df, days)
-                if result is not None:
+                # 标准化后可能是非 None 的空表（收盘全非法被 dropna）：先判空再取末行，否则 IndexError 会中止整批（review R3）
+                last = None if result is None or result.empty else result["date"].iloc[-1]
+                if last is not None and (datetime.now() - last).days <= CS_TRUNCATED_DAYS:
                     return result
+                logger.warning(f"CS index {code} 无有效数据或疑似截断（末根 {last}），回退新浪")
         except NETWORK_ERRORS as e:
             logger.warning(f"CS index {code} failed: {e}")
 

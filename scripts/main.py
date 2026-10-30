@@ -20,7 +20,8 @@ from typing import Dict, List, Optional
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from scripts import HISTORY_DAYS, apply_rank_changes, deviation_charts, load_config, process_indices
+from scripts import (CHART_SEED_FROM, DEVIATION_HISTORY, HISTORY_DAYS, apply_rank_changes, chart_meta,
+                     history_json, load_config, load_history, process_indices, update_history)
 from scripts.data_fetcher import DataFetcher
 from scripts.calculator import Calculator
 from scripts.generator import Generator
@@ -114,10 +115,14 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
 
     calculator = Calculator(lookback_days=config.get("lookback_days", 250))
 
-    frames = {}  # 代码 → 日线，供偏离率折线复用
+    history = load_history(os.path.join(generator.output_dir, DEVIATION_HISTORY))   # 永不抛异常
+    seed_days = max(HISTORY_DAYS, (check_date - CHART_SEED_FROM).days)
+    frames = {}  # 代码 → 日线，供偏离率历史复用
 
     def get_df(idx):
-        frames[idx["code"]] = fetcher.fetch_index(idx["code"], idx["source"], name=idx["name"], days=HISTORY_DAYS)
+        # 历史里没有这一列（首次上线 / 新增指数 / 文件丢失）→ 当天长窗口回填；表格计算只看尾部，不受窗口长度影响
+        days = HISTORY_DAYS if idx["code"] in history.columns else seed_days
+        frames[idx["code"]] = fetcher.fetch_index(idx["code"], idx["source"], name=idx["name"], days=days)
         return frames[idx["code"]]
 
     logger.info("=== 处理主要指数 ===")
@@ -137,9 +142,15 @@ def run(config: Dict, check_date: date, fetcher: DataFetcher, generator: Generat
     record_date = data_date or yesterday
     _set_github_output("record_date", record_date.isoformat())
     logger.info(f"=== 生成页面（行情日 {record_date}）===")
-    charts = deviation_charts(config, frames)
+    try:
+        merged = update_history(history, frames, record_date)
+        if not merged.empty:
+            generator.write(DEVIATION_HISTORY, history_json(merged))
+    except Exception:
+        # 折线是附加信息：失败时不写，发布的仍是 restore 回来的旧历史，表格照常
+        logger.exception("偏离率历史更新失败，保留旧文件")
     for page_type, path in generator.generate_all(major_results, sector_results, record_date, datetime.now(),
-                                                  charts).items():
+                                                  chart_meta(config)).items():
         logger.info(f"Generated: {page_type} -> {path}")
     return True
 
