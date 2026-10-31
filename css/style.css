@@ -670,3 +670,10 @@ tr:hover {
     height: 420px;
     margin-bottom: 20px;
 }
+
+.trend-chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+}
