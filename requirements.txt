@@ -1,6 +1,9 @@
-akshare>=1.12.0
-pandas>=2.0.0
-jinja2>=3.1.0
-pyyaml>=6.0
-requests>=2.31.0
-yfinance>=0.2.0
+# 运行时依赖精确锁定：版本取自 2026-11-14 update.yml 生产实测通过的组合。
+# akshare 1.20.44~1.20.46 批量改名了本仓库在用的 9 个接口（如 futures_foreign_hist → futures_foreign_hist_sina），
+# 不锁版本时 CI 每天装最新版，上游一改名就整站停更。升级须手动改版本号并跑通取数 + 测试。
+akshare==1.20.42
+pandas==3.1.1
+jinja2==3.1.6
+pyyaml==6.0.3
+requests==2.34.2
+yfinance==1.8.0
